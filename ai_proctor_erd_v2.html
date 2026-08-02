@@ -1,0 +1,87 @@
+<div id="erd" style="overflow-x:auto"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '14px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    lineColor: dark ? '#9c9a92' : '#73726c',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+    primaryColor: dark ? '#085041' : '#E1F5EE',
+    primaryBorderColor: dark ? '#5DCAA5' : '#0F6E56',
+    primaryTextColor: dark ? '#9FE1CB' : '#04342C'
+  },
+});
+const src = `erDiagram
+  USERS ||--o{ EXAMS : creates
+  USERS ||--o{ EXAM_ASSIGNMENTS : assigned
+  EXAMS ||--o{ EXAM_ASSIGNMENTS : assigned_to
+  EXAMS ||--o{ QUESTIONS : contains
+  EXAMS ||--o{ EXAM_SESSIONS : has
+  USERS ||--o{ EXAM_SESSIONS : attempts
+  EXAM_SESSIONS ||--o{ ANSWERS : contains
+  QUESTIONS ||--o{ ANSWERS : answered_in
+  EXAM_SESSIONS ||--o{ VIOLATIONS : has
+
+  USERS {
+    uuid id PK
+    string name
+    string email
+    string password_hash
+    string role
+  }
+  EXAMS {
+    uuid id PK
+    string title
+    int duration_minutes
+    timestamp start_time
+    timestamp end_time
+    uuid created_by FK
+  }
+  EXAM_ASSIGNMENTS {
+    uuid id PK
+    uuid exam_id FK
+    uuid student_id FK
+  }
+  QUESTIONS {
+    uuid id PK
+    uuid exam_id FK
+    string question_text
+    json options
+    string correct_option
+    int marks
+  }
+  EXAM_SESSIONS {
+    uuid id PK
+    uuid exam_id FK
+    uuid student_id FK
+    int attempt_number
+    string status
+    timestamp start_time
+    timestamp end_time
+    int score
+  }
+  ANSWERS {
+    uuid id PK
+    uuid session_id FK
+    uuid question_id FK
+    string selected_option
+    boolean is_correct
+  }
+  VIOLATIONS {
+    uuid id PK
+    uuid session_id FK
+    string type
+    string severity
+    timestamp created_at
+    boolean reviewed
+  }`;
+const { svg } = await mermaid.render('erd-svg', src);
+document.getElementById('erd').innerHTML = svg;
+</script>
