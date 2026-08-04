@@ -1,0 +1,17 @@
+services:
+
+  spring-backend:
+    build:
+      context: ./proctorbackend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
