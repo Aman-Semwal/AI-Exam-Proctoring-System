@@ -20,5 +20,7 @@ public class ExamResponse {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private String createdByName;
+    private Long orgId;
+    private String orgSlug;
     private LocalDateTime createdAt;
 }

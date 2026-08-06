@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,44 +28,56 @@ public class ViolationController {
 
     @PostMapping
     @Operation(summary = "Record a new violation for a session")
-    @PreAuthorize("hasRole('EXAMINER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<ViolationResponse>> recordViolation(
-            @Valid @RequestBody ViolationRequest request) {
-        ViolationResponse response = violationService.recordViolation(request);
+            @Valid @RequestBody ViolationRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        ViolationResponse response = violationService.recordViolation(request, userDetails.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Violation recorded", response));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get a violation by ID")
-    @PreAuthorize("hasRole('EXAMINER') or hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<ViolationResponse>> getViolation(@PathVariable Long id) {
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<ViolationResponse>> getViolation(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(
-                ApiResponse.success("Violation fetched", violationService.getViolationById(id)));
+                ApiResponse.success("Violation fetched",
+                        violationService.getViolationById(id, userDetails.getUsername())));
     }
 
     @GetMapping("/session/{sessionId}")
     @Operation(summary = "Get all violations for a session")
-    @PreAuthorize("hasRole('EXAMINER') or hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<List<ViolationResponse>>> getBySession(@PathVariable Long sessionId) {
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<List<ViolationResponse>>> getBySession(
+            @PathVariable Long sessionId,
+            @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(
-                ApiResponse.success("Violations fetched", violationService.getViolationsBySession(sessionId)));
+                ApiResponse.success("Violations fetched",
+                        violationService.getViolationsBySession(sessionId, userDetails.getUsername())));
     }
 
     @GetMapping("/session/{sessionId}/unreviewed")
     @Operation(summary = "Get unreviewed violations for a session")
-    @PreAuthorize("hasRole('EXAMINER') or hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<List<ViolationResponse>>> getUnreviewed(@PathVariable Long sessionId) {
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<List<ViolationResponse>>> getUnreviewed(
+            @PathVariable Long sessionId,
+            @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(
                 ApiResponse.success("Unreviewed violations fetched",
-                        violationService.getUnreviewedBySession(sessionId)));
+                        violationService.getUnreviewedBySession(sessionId, userDetails.getUsername())));
     }
 
     @PatchMapping("/{id}/review")
     @Operation(summary = "Mark a violation as reviewed")
-    @PreAuthorize("hasRole('EXAMINER') or hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<ViolationResponse>> markReviewed(@PathVariable Long id) {
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<ViolationResponse>> markReviewed(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(
-                ApiResponse.success("Violation marked as reviewed", violationService.markReviewed(id)));
+                ApiResponse.success("Violation marked as reviewed",
+                        violationService.markReviewed(id, userDetails.getUsername())));
     }
 }

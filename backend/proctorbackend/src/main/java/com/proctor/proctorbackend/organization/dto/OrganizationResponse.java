@@ -1,6 +1,5 @@
-package com.proctor.proctorbackend.user.dto;
+package com.proctor.proctorbackend.organization.dto;
 
-import com.proctor.proctorbackend.common.enums.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,13 +11,12 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserDto {
+public class OrganizationResponse {
 
     private Long id;
     private String name;
-    private String email;
-    private Role role;
-    private Long orgId;
-    private String orgSlug;
+    private String slug;
+    private String plan;
+    private Boolean isActive;
     private LocalDateTime createdAt;
 }

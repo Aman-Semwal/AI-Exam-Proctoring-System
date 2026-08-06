@@ -9,4 +9,8 @@ import java.util.List;
 public interface ExamRepository extends JpaRepository<Exam, Long> {
 
     List<Exam> findByCreatedByIdOrderByStartTimeDesc(Long createdById);
+
+    List<Exam> findByOrganizationIdOrderByStartTimeDesc(Long organizationId);
+
+    List<Exam> findByCreatedByIdAndOrganizationIdOrderByStartTimeDesc(Long createdById, Long organizationId);
 }

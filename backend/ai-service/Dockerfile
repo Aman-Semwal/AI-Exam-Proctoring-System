@@ -9,7 +9,12 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Heavy packages pehle install karo (torch ~2GB) — timeout 300s
+RUN pip install --no-cache-dir --timeout=300 \
+    torch==2.13.0 \
+    torchvision==0.28.0
+# Baaki sab packages
+RUN pip install --no-cache-dir --timeout=300 -r requirements.txt
 
 COPY . .
 

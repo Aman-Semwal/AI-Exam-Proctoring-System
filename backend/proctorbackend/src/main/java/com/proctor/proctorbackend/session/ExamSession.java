@@ -1,6 +1,7 @@
 package com.proctor.proctorbackend.session;
 
 import com.proctor.proctorbackend.exam.Exam;
+import com.proctor.proctorbackend.organization.Organization;
 import com.proctor.proctorbackend.user.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -37,6 +38,10 @@ public class ExamSession {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)
     private User student;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organization_id", nullable = false)
+    private Organization organization;
 
     /** Attempt number for this student on this exam (1 = first attempt). */
     @Column(nullable = false)

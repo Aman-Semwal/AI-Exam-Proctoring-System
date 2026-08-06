@@ -12,6 +12,11 @@ public class WebClientConfig {
     private String aiServiceUrl;
 
     @Bean
+    public WebClient.Builder webClientBuilder() {
+        return WebClient.builder();
+    }
+
+    @Bean
     public WebClient aiServiceWebClient(WebClient.Builder builder) {
         return builder
                 .baseUrl(aiServiceUrl)

@@ -19,6 +19,8 @@ public class SessionResponse {
     private String examTitle;
     private Long studentId;
     private String studentName;
+    private Long orgId;
+    private String orgSlug;
     private Integer attemptNumber;
     private SessionStatus status;
     private LocalDateTime startTime;

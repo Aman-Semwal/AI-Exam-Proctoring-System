@@ -23,6 +23,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UserDto getCurrentUser(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -44,6 +45,8 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
+                .orgId(user.getOrganization() != null ? user.getOrganization().getId() : null)
+                .orgSlug(user.getOrganization() != null ? user.getOrganization().getSlug() : null)
                 .createdAt(user.getCreatedAt())
                 .build();
     }

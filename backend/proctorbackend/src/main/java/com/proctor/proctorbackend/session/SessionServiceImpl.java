@@ -1,6 +1,7 @@
 package com.proctor.proctorbackend.session;
 
 import com.proctor.proctorbackend.answer.AnswerRepository;
+import com.proctor.proctorbackend.common.enums.Role;
 import com.proctor.proctorbackend.common.exception.BadRequestException;
 import com.proctor.proctorbackend.common.exception.ResourceNotFoundException;
 import com.proctor.proctorbackend.common.exception.UnauthorizedException;
@@ -9,6 +10,7 @@ import com.proctor.proctorbackend.exam.ExamRepository;
 import com.proctor.proctorbackend.question.QuestionRepository;
 import com.proctor.proctorbackend.session.dto.SessionRequest;
 import com.proctor.proctorbackend.session.dto.SessionResponse;
+import com.proctor.proctorbackend.organization.Organization;
 import com.proctor.proctorbackend.user.User;
 import com.proctor.proctorbackend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -29,7 +32,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SessionServiceImpl implements SessionService {
 
-    private final SessionRepository sessionRepository;
+    private final ExamSessionRepository sessionRepository;
     private final ExamRepository examRepository;
     private final UserRepository userRepository;
     private final AnswerRepository answerRepository;
@@ -48,6 +51,7 @@ public class SessionServiceImpl implements SessionService {
         User student = getUserByEmail(studentEmail);
         Exam exam = examRepository.findById(request.getExamId())
                 .orElseThrow(() -> new ResourceNotFoundException("Exam", request.getExamId()));
+        validateSameOrganization(student, exam);
 
         boolean alreadyActive = sessionRepository.existsByExamIdAndStudentIdAndStatus(
                 exam.getId(), student.getId(), SessionStatus.ACTIVE);
@@ -60,9 +64,10 @@ public class SessionServiceImpl implements SessionService {
         ExamSession session = ExamSession.builder()
                 .exam(exam)
                 .student(student)
+                .organization(exam.getOrganization())
                 .status(SessionStatus.ACTIVE)
                 .attemptNumber((int) priorAttempts + 1)
-                .startTime(LocalDateTime.now())
+                .startTime(LocalDateTime.now(ZoneId.of("UTC")))
                 .build();
 
         return toResponse(sessionRepository.save(session));
@@ -75,8 +80,9 @@ public class SessionServiceImpl implements SessionService {
     @Override
     @Transactional
     public SessionResponse endSession(Long sessionId, String studentEmail) {
-        ExamSession session = findSessionById(sessionId);
         User student = getUserByEmail(studentEmail);
+        ExamSession session = findSessionById(sessionId);
+        validateSameOrganization(student, session);
 
         if (!session.getStudent().getId().equals(student.getId())) {
             throw new UnauthorizedException("You are not authorized to end this session");
@@ -90,26 +96,47 @@ public class SessionServiceImpl implements SessionService {
         int score = calculateScore(session);
 
         session.setStatus(SessionStatus.COMPLETED);
-        session.setEndTime(LocalDateTime.now());
+        session.setEndTime(LocalDateTime.now(ZoneId.of("UTC")));
         session.setScore(score);
         return toResponse(sessionRepository.save(session));
     }
 
     @Override
-    public SessionResponse getSessionById(Long sessionId) {
-        return toResponse(findSessionById(sessionId));
+    public SessionResponse getSessionById(Long sessionId, String requesterEmail) {
+        User requester = getUserByEmail(requesterEmail);
+        ExamSession session = findSessionById(sessionId);
+        validateSameOrganization(requester, session);
+        if (requester.getRole() == Role.STUDENT && !session.getStudent().getId().equals(requester.getId())) {
+            throw new UnauthorizedException("You are not authorized to access this session");
+        }
+        return toResponse(session);
     }
 
     @Override
     public List<SessionResponse> getMySessionsAsStudent(String studentEmail) {
         User student = getUserByEmail(studentEmail);
-        return sessionRepository.findByStudentIdOrderByCreatedAtDesc(student.getId())
+        if (student.getRole() == Role.SUPER_ADMIN) {
+            return sessionRepository.findByStudentIdOrderByCreatedAtDesc(student.getId())
+                    .stream().map(this::toResponse).toList();
+        }
+        return sessionRepository.findByStudentIdAndOrganizationIdOrderByCreatedAtDesc(
+                        student.getId(), student.getOrganization().getId())
                 .stream().map(this::toResponse).toList();
     }
 
     @Override
     public List<SessionResponse> getSessionsByExam(Long examId, String examinerEmail) {
-        return sessionRepository.findByExamIdOrderByCreatedAtDesc(examId)
+        User requester = getUserByEmail(examinerEmail);
+        Exam exam = examRepository.findById(examId)
+                .orElseThrow(() -> new ResourceNotFoundException("Exam", examId));
+        validateSameOrganization(requester, exam);
+
+        if (requester.getRole() == Role.SUPER_ADMIN) {
+            return sessionRepository.findByExamIdOrderByCreatedAtDesc(examId)
+                    .stream().map(this::toResponse).toList();
+        }
+        return sessionRepository.findByExamIdAndOrganizationIdOrderByCreatedAtDesc(
+                        examId, requester.getOrganization().getId())
                 .stream().map(this::toResponse).toList();
     }
 
@@ -140,6 +167,34 @@ public class SessionServiceImpl implements SessionService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
+    private void validateSameOrganization(User user, Exam exam) {
+        Organization organization = exam.getOrganization();
+        if (organization == null || !Boolean.TRUE.equals(organization.getIsActive())) {
+            throw new BadRequestException("Organization is inactive");
+        }
+        if (user.getRole() == Role.SUPER_ADMIN) {
+            return;
+        }
+        if (user.getOrganization() == null || !Boolean.TRUE.equals(user.getOrganization().getIsActive())
+                || !user.getOrganization().getId().equals(organization.getId())) {
+            throw new UnauthorizedException("You are not authorized to access this exam");
+        }
+    }
+
+    private void validateSameOrganization(User user, ExamSession session) {
+        Organization organization = session.getOrganization();
+        if (organization == null || !Boolean.TRUE.equals(organization.getIsActive())) {
+            throw new BadRequestException("Organization is inactive");
+        }
+        if (user.getRole() == Role.SUPER_ADMIN) {
+            return;
+        }
+        if (user.getOrganization() == null || !Boolean.TRUE.equals(user.getOrganization().getIsActive())
+                || !user.getOrganization().getId().equals(organization.getId())) {
+            throw new UnauthorizedException("You are not authorized to access this session");
+        }
+    }
+
     private SessionResponse toResponse(ExamSession session) {
         return SessionResponse.builder()
                 .id(session.getId())
@@ -147,6 +202,8 @@ public class SessionServiceImpl implements SessionService {
                 .examTitle(session.getExam().getTitle())
                 .studentId(session.getStudent().getId())
                 .studentName(session.getStudent().getName())
+                .orgId(session.getOrganization() != null ? session.getOrganization().getId() : null)
+                .orgSlug(session.getOrganization() != null ? session.getOrganization().getSlug() : null)
                 .attemptNumber(session.getAttemptNumber())
                 .status(session.getStatus())
                 .startTime(session.getStartTime())

@@ -49,9 +49,11 @@ public class SessionController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get session by ID")
-    public ResponseEntity<ApiResponse<SessionResponse>> getSession(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<SessionResponse>> getSession(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(ApiResponse.success("Session fetched",
-                sessionService.getSessionById(id)));
+                sessionService.getSessionById(id, userDetails.getUsername())));
     }
 
     @GetMapping("/my")
@@ -64,8 +66,8 @@ public class SessionController {
     }
 
     @GetMapping("/exam/{examId}")
-    @Operation(summary = "Get all sessions for an exam (examiner view)")
-    @PreAuthorize("hasRole('EXAMINER') or hasRole('ADMIN')")
+    @Operation(summary = "Get all sessions for an exam (proctor/admin view)")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<SessionResponse>>> getSessionsByExam(
             @PathVariable Long examId,
             @AuthenticationPrincipal UserDetails userDetails) {

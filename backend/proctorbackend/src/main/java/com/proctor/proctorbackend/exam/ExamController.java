@@ -28,7 +28,7 @@ public class ExamController {
 
     @PostMapping
     @Operation(summary = "Create a new exam")
-    @PreAuthorize("hasRole('EXAMINER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<ExamResponse>> createExam(
             @Valid @RequestBody ExamRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -39,19 +39,24 @@ public class ExamController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get exam by ID")
-    public ResponseEntity<ApiResponse<ExamResponse>> getExam(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.success("Exam fetched", examService.getExamById(id)));
+    public ResponseEntity<ApiResponse<ExamResponse>> getExam(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(ApiResponse.success("Exam fetched",
+                examService.getExamById(id, userDetails.getUsername())));
     }
 
     @GetMapping
     @Operation(summary = "Get all exams")
-    public ResponseEntity<ApiResponse<List<ExamResponse>>> getAllExams() {
-        return ResponseEntity.ok(ApiResponse.success("Exams fetched", examService.getAllExams()));
+    public ResponseEntity<ApiResponse<List<ExamResponse>>> getAllExams(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(ApiResponse.success("Exams fetched",
+                examService.getAllExams(userDetails.getUsername())));
     }
 
     @GetMapping("/my")
-    @Operation(summary = "Get exams created by current examiner")
-    @PreAuthorize("hasRole('EXAMINER') or hasRole('ADMIN')")
+    @Operation(summary = "Get exams created by current user")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<ExamResponse>>> getMyExams(
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(ApiResponse.success("My exams fetched",
@@ -60,7 +65,7 @@ public class ExamController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update an exam")
-    @PreAuthorize("hasRole('EXAMINER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<ExamResponse>> updateExam(
             @PathVariable Long id,
             @Valid @RequestBody ExamRequest request,
@@ -71,7 +76,7 @@ public class ExamController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete an exam")
-    @PreAuthorize("hasRole('EXAMINER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteExam(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {

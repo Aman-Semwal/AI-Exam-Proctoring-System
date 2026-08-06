@@ -1,6 +1,7 @@
 package com.proctor.proctorbackend.assignment;
 
 import com.proctor.proctorbackend.exam.Exam;
+import com.proctor.proctorbackend.organization.Organization;
 import com.proctor.proctorbackend.user.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -39,6 +40,10 @@ public class ExamAssignment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)
     private User student;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organization_id", nullable = false)
+    private Organization organization;
 
     @Column(updatable = false)
     private LocalDateTime assignedAt;

@@ -11,7 +11,11 @@ public interface ExamAssignmentRepository extends JpaRepository<ExamAssignment, 
 
     List<ExamAssignment> findByExamId(Long examId);
 
+    List<ExamAssignment> findByExamIdAndOrganizationId(Long examId, Long organizationId);
+
     List<ExamAssignment> findByStudentId(Long studentId);
+
+    List<ExamAssignment> findByStudentIdAndOrganizationId(Long studentId, Long organizationId);
 
     Optional<ExamAssignment> findByExamIdAndStudentId(Long examId, Long studentId);
 

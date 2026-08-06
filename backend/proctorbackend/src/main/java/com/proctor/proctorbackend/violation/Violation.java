@@ -1,5 +1,6 @@
 package com.proctor.proctorbackend.violation;
 
+import com.proctor.proctorbackend.organization.Organization;
 import com.proctor.proctorbackend.session.ExamSession;
 import jakarta.persistence.*;
 import lombok.*;
@@ -28,6 +29,10 @@ public class Violation {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id", nullable = false)
     private ExamSession session;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organization_id", nullable = false)
+    private Organization organization;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

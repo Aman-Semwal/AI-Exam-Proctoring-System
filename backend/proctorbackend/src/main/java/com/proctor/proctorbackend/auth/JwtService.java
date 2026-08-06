@@ -20,6 +20,14 @@ import java.util.function.Function;
  * <p>Tokens are signed with HMAC-SHA using a base64-encoded secret key configured via
  * {@code spring.security.jwt.secret}. Expiry is controlled by
  * {@code spring.security.jwt.expiration-ms} (default 86400000 ms = 24 hours).
+ *
+ * <p>Multi-tenant claims embedded in each token:
+ * <ul>
+ *   <li>{@code userId}  — numeric user ID (avoids DB lookup in services)</li>
+ *   <li>{@code role}    — e.g. {@code EXAM_CREATOR} (for authorization decisions)</li>
+ *   <li>{@code orgId}   — organization ID for tenant scoping (null for SUPER_ADMIN)</li>
+ *   <li>{@code orgSlug} — human-readable org identifier for logs/audits (null for SUPER_ADMIN)</li>
+ * </ul>
  */
 @Service
 public class JwtService {
@@ -29,6 +37,10 @@ public class JwtService {
 
     @Value("${spring.security.jwt.expiration-ms}")
     private long expirationMs;
+
+    // -----------------------------------------------------------------------
+    // Standard claim extractors
+    // -----------------------------------------------------------------------
 
     /**
      * Extracts the username (email) stored in the JWT {@code sub} claim.
@@ -52,6 +64,62 @@ public class JwtService {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
+
+    // -----------------------------------------------------------------------
+    // Multi-tenant claim extractors
+    // -----------------------------------------------------------------------
+
+    /**
+     * Extracts the numeric user ID from the {@code userId} claim.
+     *
+     * @param token the signed JWT string
+     * @return the user's database ID
+     */
+    public Long extractUserId(String token) {
+        return extractClaim(token, claims -> {
+            Object v = claims.get("userId");
+            return v != null ? Long.valueOf(v.toString()) : null;
+        });
+    }
+
+    /**
+     * Extracts the role string from the {@code role} claim.
+     *
+     * @param token the signed JWT string
+     * @return the role name (e.g. {@code "EXAM_CREATOR"})
+     */
+    public String extractRole(String token) {
+        return extractClaim(token, claims -> (String) claims.get("role"));
+    }
+
+    /**
+     * Extracts the organization ID from the {@code orgId} claim.
+     * Returns {@code null} for SUPER_ADMIN tokens (no org scope).
+     *
+     * @param token the signed JWT string
+     * @return the organization's database ID, or {@code null}
+     */
+    public Long extractOrgId(String token) {
+        return extractClaim(token, claims -> {
+            Object v = claims.get("orgId");
+            return v != null ? Long.valueOf(v.toString()) : null;
+        });
+    }
+
+    /**
+     * Extracts the organization slug from the {@code orgSlug} claim.
+     * Returns {@code null} for SUPER_ADMIN tokens.
+     *
+     * @param token the signed JWT string
+     * @return the URL-safe org slug (e.g. {@code "mit-eecs"}), or {@code null}
+     */
+    public String extractOrgSlug(String token) {
+        return extractClaim(token, claims -> (String) claims.get("orgSlug"));
+    }
+
+    // -----------------------------------------------------------------------
+    // Token generation
+    // -----------------------------------------------------------------------
 
     /**
      * Generates a JWT with no extra claims for the given user.
@@ -80,6 +148,10 @@ public class JwtService {
                 .compact();
     }
 
+    // -----------------------------------------------------------------------
+    // Validation
+    // -----------------------------------------------------------------------
+
     /**
      * Validates a JWT against the given user details.
      *
@@ -92,33 +164,18 @@ public class JwtService {
         return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
     }
 
-    /**
-     * Checks whether the token's expiration date is in the past.
-     *
-     * @param token the signed JWT string
-     * @return {@code true} if expired
-     */
+    // -----------------------------------------------------------------------
+    // Private helpers
+    // -----------------------------------------------------------------------
+
     private boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }
 
-    /**
-     * Extracts the expiration date from the token.
-     *
-     * @param token the signed JWT string
-     * @return the expiration {@link Date}
-     */
     private Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
 
-    /**
-     * Parses and verifies the JWT signature, returning all claims.
-     *
-     * @param token the signed JWT string
-     * @return the full {@link Claims} payload
-     * @throws io.jsonwebtoken.JwtException if the token is malformed or the signature is invalid
-     */
     private Claims extractAllClaims(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
@@ -127,11 +184,6 @@ public class JwtService {
                 .getPayload();
     }
 
-    /**
-     * Decodes the base64 secret and builds the HMAC-SHA signing key.
-     *
-     * @return the {@link SecretKey} used for signing and verification
-     */
     private SecretKey getSigningKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);

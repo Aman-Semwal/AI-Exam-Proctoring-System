@@ -1,6 +1,7 @@
 package com.proctor.proctorbackend.exam;
 
 import com.proctor.proctorbackend.user.User;
+import com.proctor.proctorbackend.organization.Organization;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -49,6 +50,10 @@ public class Exam {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organization_id", nullable = false)
+    private Organization organization;
 
     @Column(updatable = false)
     private LocalDateTime createdAt;

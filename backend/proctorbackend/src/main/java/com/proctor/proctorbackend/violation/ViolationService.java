@@ -7,13 +7,13 @@ import java.util.List;
 
 public interface ViolationService {
 
-    ViolationResponse recordViolation(ViolationRequest request);
+    ViolationResponse recordViolation(ViolationRequest request, String requesterEmail);
 
-    ViolationResponse getViolationById(Long id);
+    ViolationResponse getViolationById(Long id, String requesterEmail);
 
-    List<ViolationResponse> getViolationsBySession(Long sessionId);
+    List<ViolationResponse> getViolationsBySession(Long sessionId, String requesterEmail);
 
-    List<ViolationResponse> getUnreviewedBySession(Long sessionId);
+    List<ViolationResponse> getUnreviewedBySession(Long sessionId, String requesterEmail);
 
-    ViolationResponse markReviewed(Long id);
+    ViolationResponse markReviewed(Long id, String requesterEmail);
 }

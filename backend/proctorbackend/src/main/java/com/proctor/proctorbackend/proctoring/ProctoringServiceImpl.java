@@ -1,13 +1,16 @@
 package com.proctor.proctorbackend.proctoring;
 
+import com.proctor.proctorbackend.common.enums.Role;
 import com.proctor.proctorbackend.common.exception.ResourceNotFoundException;
 import com.proctor.proctorbackend.common.exception.UnauthorizedException;
 import com.proctor.proctorbackend.proctoring.dto.FaceInferenceResult;
 import com.proctor.proctorbackend.proctoring.dto.FrameUploadRequest;
 import com.proctor.proctorbackend.proctoring.dto.ProctoringEventResponse;
 import com.proctor.proctorbackend.session.ExamSession;
-import com.proctor.proctorbackend.session.SessionRepository;
+import com.proctor.proctorbackend.session.ExamSessionRepository;
 import com.proctor.proctorbackend.session.SessionStatus;
+import com.proctor.proctorbackend.user.User;
+import com.proctor.proctorbackend.user.UserRepository;
 import com.proctor.proctorbackend.websocket.dto.AlertMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +34,8 @@ import java.util.List;
 public class ProctoringServiceImpl implements ProctoringService {
 
     private final ProctoringEventRepository eventRepository;
-    private final SessionRepository sessionRepository;
+    private final ExamSessionRepository sessionRepository;
+    private final UserRepository userRepository;
     private final AiServiceClient aiServiceClient;
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -124,9 +128,24 @@ public class ProctoringServiceImpl implements ProctoringService {
      * @return list of {@link ProctoringEventResponse} DTOs
      */
     @Override
-    public List<ProctoringEventResponse> getEventsBySession(Long sessionId) {
+    public List<ProctoringEventResponse> getEventsBySession(Long sessionId, String requesterEmail) {
+        User requester = userRepository.findByEmail(requesterEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        ExamSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Session", sessionId));
+        validateSameOrganization(requester, session);
         return eventRepository.findBySessionIdOrderByDetectedAtDesc(sessionId)
                 .stream().map(this::toResponse).toList();
+    }
+
+    private void validateSameOrganization(User user, ExamSession session) {
+        if (user.getRole() == Role.SUPER_ADMIN) {
+            return;
+        }
+        if (user.getOrganization() == null || session.getOrganization() == null
+                || !user.getOrganization().getId().equals(session.getOrganization().getId())) {
+            throw new UnauthorizedException("You are not authorized to access this session");
+        }
     }
 
     /**

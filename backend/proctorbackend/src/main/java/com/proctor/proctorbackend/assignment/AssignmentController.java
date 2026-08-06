@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,35 +28,44 @@ public class AssignmentController {
 
     @PostMapping
     @Operation(summary = "Assign a student to an exam")
-    @PreAuthorize("hasRole('EXAMINER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<AssignmentResponse>> assignStudent(
-            @Valid @RequestBody AssignmentRequest request) {
-        AssignmentResponse response = assignmentService.assignStudent(request);
+            @Valid @RequestBody AssignmentRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        AssignmentResponse response = assignmentService.assignStudent(request, userDetails.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Student assigned to exam", response));
     }
 
     @GetMapping("/exam/{examId}")
     @Operation(summary = "Get all assignments for an exam")
-    @PreAuthorize("hasRole('EXAMINER') or hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<List<AssignmentResponse>>> getByExam(@PathVariable Long examId) {
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<List<AssignmentResponse>>> getByExam(
+            @PathVariable Long examId,
+            @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(
-                ApiResponse.success("Assignments fetched", assignmentService.getAssignmentsByExam(examId)));
+                ApiResponse.success("Assignments fetched",
+                        assignmentService.getAssignmentsByExam(examId, userDetails.getUsername())));
     }
 
     @GetMapping("/student/{studentId}")
     @Operation(summary = "Get all exam assignments for a student")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('EXAMINER') or hasRole('STUDENT')")
-    public ResponseEntity<ApiResponse<List<AssignmentResponse>>> getByStudent(@PathVariable Long studentId) {
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN', 'STUDENT')")
+    public ResponseEntity<ApiResponse<List<AssignmentResponse>>> getByStudent(
+            @PathVariable Long studentId,
+            @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(
-                ApiResponse.success("Assignments fetched", assignmentService.getAssignmentsByStudent(studentId)));
+                ApiResponse.success("Assignments fetched",
+                        assignmentService.getAssignmentsByStudent(studentId, userDetails.getUsername())));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Remove a student assignment")
-    @PreAuthorize("hasRole('EXAMINER') or hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> removeAssignment(@PathVariable Long id) {
-        assignmentService.removeAssignment(id);
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> removeAssignment(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        assignmentService.removeAssignment(id, userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success("Assignment removed"));
     }
 }

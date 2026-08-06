@@ -1,17 +1,19 @@
 package com.proctor.proctorbackend.session;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
-@Repository
-public interface SessionRepository extends JpaRepository<ExamSession, Long> {
+public interface ExamSessionRepository extends JpaRepository<ExamSession, Long> {
 
     List<ExamSession> findByStudentIdOrderByCreatedAtDesc(Long studentId);
 
+    List<ExamSession> findByStudentIdAndOrganizationIdOrderByCreatedAtDesc(Long studentId, Long organizationId);
+
     List<ExamSession> findByExamIdOrderByCreatedAtDesc(Long examId);
+
+    List<ExamSession> findByExamIdAndOrganizationIdOrderByCreatedAtDesc(Long examId, Long organizationId);
 
     Optional<ExamSession> findByExamIdAndStudentId(Long examId, Long studentId);
 

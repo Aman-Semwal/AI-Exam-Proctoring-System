@@ -26,7 +26,7 @@ public class QuestionController {
 
     @PostMapping
     @Operation(summary = "Add a question to an exam")
-    @PreAuthorize("hasRole('EXAMINER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<QuestionResponse>> createQuestion(
             @Valid @RequestBody QuestionRequest request) {
         QuestionResponse response = questionService.createQuestion(request);
@@ -40,7 +40,8 @@ public class QuestionController {
             @PathVariable Long id,
             @RequestParam(defaultValue = "false") boolean includeAnswer) {
         return ResponseEntity.ok(
-                ApiResponse.success("Question fetched", questionService.getQuestionById(id, includeAnswer)));
+                ApiResponse.success("Question fetched",
+                        questionService.getQuestionById(id, includeAnswer)));
     }
 
     @GetMapping("/exam/{examId}")
@@ -55,17 +56,18 @@ public class QuestionController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update a question")
-    @PreAuthorize("hasRole('EXAMINER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<QuestionResponse>> updateQuestion(
             @PathVariable Long id,
             @Valid @RequestBody QuestionRequest request) {
         return ResponseEntity.ok(
-                ApiResponse.success("Question updated", questionService.updateQuestion(id, request)));
+                ApiResponse.success("Question updated",
+                        questionService.updateQuestion(id, request)));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a question")
-    @PreAuthorize("hasRole('EXAMINER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteQuestion(@PathVariable Long id) {
         questionService.deleteQuestion(id);
         return ResponseEntity.ok(ApiResponse.success("Question deleted"));

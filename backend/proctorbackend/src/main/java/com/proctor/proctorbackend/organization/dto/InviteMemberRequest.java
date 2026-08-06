@@ -1,4 +1,4 @@
-package com.proctor.proctorbackend.auth.dto;
+package com.proctor.proctorbackend.organization.dto;
 
 import com.proctor.proctorbackend.common.enums.Role;
 import jakarta.validation.constraints.Email;
@@ -7,15 +7,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-/**
- * Request DTO for {@code POST /api/auth/register}.
- *
- * <p>{@code orgId} is optional: it is required for all roles except {@code SUPER_ADMIN}.
- * A {@code SUPER_ADMIN} registers via a one-time platform setup endpoint and has no org.
- * The application service validates the orgId presence based on the requested role.
- */
 @Data
-public class RegisterRequest {
+public class InviteMemberRequest {
 
     @NotBlank(message = "Name is required")
     private String name;
@@ -30,11 +23,4 @@ public class RegisterRequest {
 
     @NotNull(message = "Role is required")
     private Role role;
-
-    /**
-     * Organization ID the new user belongs to.
-     * Required for all roles except {@code SUPER_ADMIN}.
-     * {@code null} is accepted for SUPER_ADMIN self-registration.
-     */
-    private Long orgId;
 }

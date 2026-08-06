@@ -9,9 +9,9 @@ public interface ExamService {
 
     ExamResponse createExam(ExamRequest request, String creatorEmail);
 
-    ExamResponse getExamById(Long id);
+    ExamResponse getExamById(Long id, String requesterEmail);
 
-    List<ExamResponse> getAllExams();
+    List<ExamResponse> getAllExams(String requesterEmail);
 
     List<ExamResponse> getMyExams(String creatorEmail);
 

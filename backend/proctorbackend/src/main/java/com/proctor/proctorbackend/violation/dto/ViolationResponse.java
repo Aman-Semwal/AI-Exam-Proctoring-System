@@ -17,6 +17,8 @@ public class ViolationResponse {
 
     private Long id;
     private Long sessionId;
+    private Long orgId;
+    private String orgSlug;
     private ViolationType type;
     private ViolationSeverity severity;
     private String details;

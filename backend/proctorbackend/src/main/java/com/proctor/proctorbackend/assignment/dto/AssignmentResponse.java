@@ -19,5 +19,7 @@ public class AssignmentResponse {
     private Long studentId;
     private String studentName;
     private String studentEmail;
+    private Long orgId;
+    private String orgSlug;
     private LocalDateTime assignedAt;
 }

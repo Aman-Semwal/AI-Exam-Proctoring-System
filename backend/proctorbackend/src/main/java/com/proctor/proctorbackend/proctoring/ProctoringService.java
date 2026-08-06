@@ -9,5 +9,5 @@ public interface ProctoringService {
 
     ProctoringEventResponse processFrame(FrameUploadRequest request, String studentEmail);
 
-    List<ProctoringEventResponse> getEventsBySession(Long sessionId);
+    List<ProctoringEventResponse> getEventsBySession(Long sessionId, String requesterEmail);
 }

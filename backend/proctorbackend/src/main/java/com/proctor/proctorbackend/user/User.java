@@ -1,6 +1,7 @@
 package com.proctor.proctorbackend.user;
 
 import com.proctor.proctorbackend.common.enums.Role;
+import com.proctor.proctorbackend.organization.Organization;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -12,7 +13,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * JPA entity representing a system user (student, examiner, or admin).
+ * JPA entity representing a system user (student, examiner, admin, etc.).
  *
  * <p>Implements {@link UserDetails} so Spring Security can load this entity
  * directly from the database and use it as the authenticated principal throughout
@@ -21,9 +22,12 @@ import java.util.List;
  * <p>The {@code email} field acts as the Spring Security username
  * (see {@link #getUsername()}).
  *
+ * <p>Every user except {@code SUPER_ADMIN} belongs to an {@link Organization}.
+ * SUPER_ADMIN users have {@code organization = null} — this is the platform-level
+ * signal for cross-tenant access.
+ *
  * <p>Timestamps ({@code createdAt}, {@code updatedAt}) are managed by
- * {@link jakarta.persistence.PrePersist} and {@link jakarta.persistence.PreUpdate}
- * lifecycle callbacks.
+ * {@link PrePersist} and {@link PreUpdate} lifecycle callbacks.
  */
 @Entity
 @Table(name = "users")
@@ -49,6 +53,14 @@ public class User implements UserDetails {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
+
+    /**
+     * The organization this user belongs to.
+     * {@code null} only for {@code SUPER_ADMIN} — enforced at application level.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organization_id")
+    private Organization organization;
 
     @Column(updatable = false)
     private LocalDateTime createdAt;

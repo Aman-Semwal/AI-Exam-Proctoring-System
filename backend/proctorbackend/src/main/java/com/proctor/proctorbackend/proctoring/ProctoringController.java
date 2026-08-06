@@ -38,10 +38,11 @@ public class ProctoringController {
 
     @GetMapping("/session/{sessionId}/events")
     @Operation(summary = "Get all proctoring events for a session")
-    @PreAuthorize("hasRole('EXAMINER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<ProctoringEventResponse>>> getSessionEvents(
-            @PathVariable Long sessionId) {
+            @PathVariable Long sessionId,
+            @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(ApiResponse.success("Events fetched",
-                proctoringService.getEventsBySession(sessionId)));
+                proctoringService.getEventsBySession(sessionId, userDetails.getUsername())));
     }
 }

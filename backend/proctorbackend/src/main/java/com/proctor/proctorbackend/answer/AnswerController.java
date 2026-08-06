@@ -36,7 +36,7 @@ public class AnswerController {
 
     @GetMapping("/session/{sessionId}")
     @Operation(summary = "Get all answers for a session")
-    @PreAuthorize("hasRole('EXAMINER') or hasRole('ADMIN') or hasRole('STUDENT')")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN', 'STUDENT')")
     public ResponseEntity<ApiResponse<List<AnswerResponse>>> getBySession(@PathVariable Long sessionId) {
         return ResponseEntity.ok(
                 ApiResponse.success("Answers fetched", answerService.getAnswersBySession(sessionId)));
@@ -44,7 +44,7 @@ public class AnswerController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get a specific answer by ID")
-    @PreAuthorize("hasRole('EXAMINER') or hasRole('ADMIN') or hasRole('STUDENT')")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN', 'STUDENT')")
     public ResponseEntity<ApiResponse<AnswerResponse>> getAnswer(@PathVariable Long id) {
         return ResponseEntity.ok(
                 ApiResponse.success("Answer fetched", answerService.getAnswerById(id)));

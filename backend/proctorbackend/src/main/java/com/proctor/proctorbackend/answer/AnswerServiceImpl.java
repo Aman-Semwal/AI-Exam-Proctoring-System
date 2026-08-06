@@ -7,7 +7,7 @@ import com.proctor.proctorbackend.common.exception.ResourceNotFoundException;
 import com.proctor.proctorbackend.question.Question;
 import com.proctor.proctorbackend.question.QuestionRepository;
 import com.proctor.proctorbackend.session.ExamSession;
-import com.proctor.proctorbackend.session.SessionRepository;
+import com.proctor.proctorbackend.session.ExamSessionRepository;
 import com.proctor.proctorbackend.session.SessionStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,7 @@ import java.util.List;
 public class AnswerServiceImpl implements AnswerService {
 
     private final AnswerRepository answerRepository;
-    private final SessionRepository sessionRepository;
+    private final ExamSessionRepository sessionRepository;
     private final QuestionRepository questionRepository;
 
     @Override

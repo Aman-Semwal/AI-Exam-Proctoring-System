@@ -11,7 +11,7 @@ public interface SessionService {
 
     SessionResponse endSession(Long sessionId, String studentEmail);
 
-    SessionResponse getSessionById(Long sessionId);
+    SessionResponse getSessionById(Long sessionId, String requesterEmail);
 
     List<SessionResponse> getMySessionsAsStudent(String studentEmail);
 

@@ -3,6 +3,7 @@ package com.proctor.proctorbackend.exam;
 import com.proctor.proctorbackend.common.exception.BadRequestException;
 import com.proctor.proctorbackend.common.exception.ResourceNotFoundException;
 import com.proctor.proctorbackend.common.exception.UnauthorizedException;
+import com.proctor.proctorbackend.common.enums.Role;
 import com.proctor.proctorbackend.exam.dto.ExamRequest;
 import com.proctor.proctorbackend.exam.dto.ExamResponse;
 import com.proctor.proctorbackend.user.User;
@@ -33,17 +34,26 @@ public class ExamServiceImpl implements ExamService {
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
                 .createdBy(creator)
+                .organization(requireOrganization(creator))
                 .build();
         return toResponse(examRepository.save(exam));
     }
 
     @Override
-    public ExamResponse getExamById(Long id) {
-        return toResponse(findExamById(id));
+    public ExamResponse getExamById(Long id, String requesterEmail) {
+        Exam exam = findExamById(id);
+        validateSameOrganization(getUserByEmail(requesterEmail), exam);
+        return toResponse(exam);
     }
 
     @Override
-    public List<ExamResponse> getAllExams() {
+    public List<ExamResponse> getAllExams(String requesterEmail) {
+        User requester = getUserByEmail(requesterEmail);
+        if (requester.getRole() != Role.SUPER_ADMIN) {
+            return examRepository.findByOrganizationIdOrderByStartTimeDesc(requireOrganization(requester).getId()).stream()
+                    .map(this::toResponse)
+                    .toList();
+        }
         return examRepository.findAll().stream()
                 .map(this::toResponse)
                 .toList();
@@ -52,7 +62,14 @@ public class ExamServiceImpl implements ExamService {
     @Override
     public List<ExamResponse> getMyExams(String creatorEmail) {
         User creator = getUserByEmail(creatorEmail);
-        return examRepository.findByCreatedByIdOrderByStartTimeDesc(creator.getId())
+        if (creator.getRole() == Role.SUPER_ADMIN) {
+            return examRepository.findByCreatedByIdOrderByStartTimeDesc(creator.getId())
+                    .stream()
+                    .map(this::toResponse)
+                    .toList();
+        }
+        return examRepository.findByCreatedByIdAndOrganizationIdOrderByStartTimeDesc(
+                        creator.getId(), requireOrganization(creator).getId())
                 .stream()
                 .map(this::toResponse)
                 .toList();
@@ -63,6 +80,7 @@ public class ExamServiceImpl implements ExamService {
     public ExamResponse updateExam(Long id, ExamRequest request, String creatorEmail) {
         Exam exam = findExamById(id);
         validateOwnership(exam, creatorEmail);
+        validateSameOrganization(getUserByEmail(creatorEmail), exam);
         validateExamWindow(request);
 
         exam.setTitle(request.getTitle());
@@ -79,6 +97,7 @@ public class ExamServiceImpl implements ExamService {
     public void deleteExam(Long id, String creatorEmail) {
         Exam exam = findExamById(id);
         validateOwnership(exam, creatorEmail);
+        validateSameOrganization(getUserByEmail(creatorEmail), exam);
         examRepository.delete(exam);
     }
 
@@ -100,8 +119,29 @@ public class ExamServiceImpl implements ExamService {
     }
 
     private void validateOwnership(Exam exam, String requesterEmail) {
+        User requester = getUserByEmail(requesterEmail);
+        if (requester.getRole() == Role.SUPER_ADMIN || requester.getRole() == Role.ORG_ADMIN) {
+            return;
+        }
         if (!exam.getCreatedBy().getEmail().equals(requesterEmail)) {
             throw new UnauthorizedException("You are not authorized to modify this exam");
+        }
+    }
+
+    private com.proctor.proctorbackend.organization.Organization requireOrganization(User user) {
+        if (user.getOrganization() == null) {
+            throw new BadRequestException("User must belong to an organization for this operation");
+        }
+        return user.getOrganization();
+    }
+
+    private void validateSameOrganization(User requester, Exam exam) {
+        if (requester.getRole() == Role.SUPER_ADMIN) {
+            return;
+        }
+        if (exam.getOrganization() == null || requester.getOrganization() == null
+                || !exam.getOrganization().getId().equals(requester.getOrganization().getId())) {
+            throw new UnauthorizedException("You are not authorized to access this exam");
         }
     }
 
@@ -114,6 +154,8 @@ public class ExamServiceImpl implements ExamService {
                 .startTime(exam.getStartTime())
                 .endTime(exam.getEndTime())
                 .createdByName(exam.getCreatedBy().getName())
+                .orgId(exam.getOrganization() != null ? exam.getOrganization().getId() : null)
+                .orgSlug(exam.getOrganization() != null ? exam.getOrganization().getSlug() : null)
                 .createdAt(exam.getCreatedAt())
                 .build();
     }
