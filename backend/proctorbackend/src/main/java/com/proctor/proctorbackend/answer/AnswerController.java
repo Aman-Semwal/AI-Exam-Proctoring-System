@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,8 +30,9 @@ public class AnswerController {
     @Operation(summary = "Submit an answer for a question in an active session")
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<ApiResponse<AnswerResponse>> submitAnswer(
-            @Valid @RequestBody AnswerRequest request) {
-        AnswerResponse response = answerService.submitAnswer(request);
+            @Valid @RequestBody AnswerRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        AnswerResponse response = answerService.submitAnswer(request, userDetails.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Answer submitted", response));
     }
@@ -48,5 +51,16 @@ public class AnswerController {
     public ResponseEntity<ApiResponse<AnswerResponse>> getAnswer(@PathVariable Long id) {
         return ResponseEntity.ok(
                 ApiResponse.success("Answer fetched", answerService.getAnswerById(id)));
+    }
+
+    @PatchMapping("/{id}/grade")
+    @Operation(summary = "Manually grade a CODING or DESCRIPTIVE answer")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<AnswerResponse>> gradeAnswer(
+            @PathVariable Long id,
+            @RequestParam Boolean isCorrect,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(
+                ApiResponse.success("Answer graded", answerService.gradeAnswer(id, isCorrect, userDetails.getUsername())));
     }
 }

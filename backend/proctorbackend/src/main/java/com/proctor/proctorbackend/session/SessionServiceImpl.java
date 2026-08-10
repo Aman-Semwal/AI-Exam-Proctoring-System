@@ -1,13 +1,20 @@
 package com.proctor.proctorbackend.session;
 
+import com.proctor.proctorbackend.answer.Answer;
 import com.proctor.proctorbackend.answer.AnswerRepository;
+import com.proctor.proctorbackend.assignment.ExamAssignmentRepository;
+import com.proctor.proctorbackend.violation.ViolationRepository;
+import com.proctor.proctorbackend.violation.ViolationSeverity;
 import com.proctor.proctorbackend.common.enums.Role;
 import com.proctor.proctorbackend.common.exception.BadRequestException;
 import com.proctor.proctorbackend.common.exception.ResourceNotFoundException;
 import com.proctor.proctorbackend.common.exception.UnauthorizedException;
 import com.proctor.proctorbackend.exam.Exam;
+import com.proctor.proctorbackend.examproctor.ExamProctorService;
 import com.proctor.proctorbackend.exam.ExamRepository;
+import com.proctor.proctorbackend.question.Question;
 import com.proctor.proctorbackend.question.QuestionRepository;
+import com.proctor.proctorbackend.session.dto.ExamResultResponse;
 import com.proctor.proctorbackend.session.dto.SessionRequest;
 import com.proctor.proctorbackend.session.dto.SessionResponse;
 import com.proctor.proctorbackend.organization.Organization;
@@ -20,6 +27,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.LinkedHashMap;
 
 /**
  * Concrete implementation of {@link SessionService}.
@@ -37,6 +48,9 @@ public class SessionServiceImpl implements SessionService {
     private final UserRepository userRepository;
     private final AnswerRepository answerRepository;
     private final QuestionRepository questionRepository;
+    private final ExamAssignmentRepository assignmentRepository;
+    private final ExamProctorService examProctorService;
+    private final ViolationRepository violationRepository;
 
     /**
      * Starts a new exam session for a student.
@@ -52,6 +66,20 @@ public class SessionServiceImpl implements SessionService {
         Exam exam = examRepository.findById(request.getExamId())
                 .orElseThrow(() -> new ResourceNotFoundException("Exam", request.getExamId()));
         validateSameOrganization(student, exam);
+
+        // Verify the student is assigned to this exam
+        if (!assignmentRepository.existsByExamIdAndStudentId(exam.getId(), student.getId())) {
+            throw new com.proctor.proctorbackend.common.exception.UnauthorizedException(
+                    "You are not assigned to this exam");
+        }
+
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("UTC"));
+        if (exam.getStartTime() != null && now.isBefore(exam.getStartTime())) {
+            throw new BadRequestException("Exam has not started yet");
+        }
+        if (exam.getEndTime() != null && now.isAfter(exam.getEndTime())) {
+            throw new BadRequestException("Exam window has already closed");
+        }
 
         boolean alreadyActive = sessionRepository.existsByExamIdAndStudentIdAndStatus(
                 exam.getId(), student.getId(), SessionStatus.ACTIVE);
@@ -92,7 +120,7 @@ public class SessionServiceImpl implements SessionService {
             throw new BadRequestException("Session is not active");
         }
 
-        // Calculate score: sum marks of correctly answered questions
+        // Calculate score: sum marks of correctly answered questions filtered by student's track
         int score = calculateScore(session);
 
         session.setStatus(SessionStatus.COMPLETED);
@@ -135,9 +163,128 @@ public class SessionServiceImpl implements SessionService {
             return sessionRepository.findByExamIdOrderByCreatedAtDesc(examId)
                     .stream().map(this::toResponse).toList();
         }
+        if (requester.getRole() == Role.PROCTOR
+                && !examProctorService.isProctorAssignedToExam(requester.getId(), examId)) {
+            throw new UnauthorizedException("You are not assigned to proctor this exam");
+        }
         return sessionRepository.findByExamIdAndOrganizationIdOrderByCreatedAtDesc(
                         examId, requester.getOrganization().getId())
                 .stream().map(this::toResponse).toList();
+    }
+
+    @Override
+    @Transactional
+    public SessionResponse recalculateScore(Long sessionId, String requesterEmail) {
+        User requester = getUserByEmail(requesterEmail);
+        ExamSession session = findSessionById(sessionId);
+        validateSameOrganization(requester, session);
+        session.setScore(calculateScore(session));
+        return toResponse(sessionRepository.save(session));
+    }
+
+    @Override
+    public ExamResultResponse getExamResult(Long sessionId, String requesterEmail) {
+        User requester = getUserByEmail(requesterEmail);
+        ExamSession session = findSessionById(sessionId);
+        validateSameOrganization(requester, session);
+        if (requester.getRole() != Role.SUPER_ADMIN
+                && requester.getRole() != Role.ORG_ADMIN
+                && requester.getRole() != Role.EXAM_CREATOR) {
+            throw new UnauthorizedException("You are not authorized to view this result");
+        }
+
+        List<Question> questions = questionRepository.findByExamId(session.getExam().getId());
+        Map<Long, Answer> answerMap = answerRepository.findBySessionId(sessionId).stream()
+                .collect(Collectors.toMap(
+                        a -> a.getQuestion().getId(),
+                        Function.identity(),
+                        (existing, replacement) -> {
+                            if (existing.getAnsweredAt() == null) {
+                                return replacement;
+                            }
+                            if (replacement.getAnsweredAt() == null) {
+                                return existing;
+                            }
+                            return replacement.getAnsweredAt().isAfter(existing.getAnsweredAt()) ? replacement : existing;
+                        },
+                        LinkedHashMap::new));
+
+        int totalMarks = questions.stream().mapToInt(Question::getMarks).sum();
+        int correct    = 0, incorrect = 0, pendingReview = 0, unattempted = 0;
+
+        List<ExamResultResponse.QuestionResultDetail> breakdown = new java.util.ArrayList<>();
+        for (Question q : questions) {
+            Answer a = answerMap.get(q.getId());
+            if (a == null) {
+                unattempted++;
+            } else if (a.getIsCorrect() == null) {
+                pendingReview++;
+            } else if (Boolean.TRUE.equals(a.getIsCorrect())) {
+                correct++;
+            } else if (Boolean.FALSE.equals(a.getIsCorrect())) {
+                incorrect++;
+            }
+            breakdown.add(ExamResultResponse.QuestionResultDetail.builder()
+                    .questionId(q.getId())
+                    .questionText(q.getQuestionText())
+                    .questionType(q.getQuestionType().name())
+                    .marks(q.getMarks())
+                    .selectedOption(a != null ? a.getSelectedOption() : null)
+                    .textAnswer(a != null ? a.getTextAnswer() : null)
+                    .isCorrect(a != null ? a.getIsCorrect() : null)
+                    .build());
+        }
+
+        int score = session.getScore() != null ? session.getScore() : 0;
+        double percentage = totalMarks > 0 ? (score * 100.0 / totalMarks) : 0.0;
+        boolean provisional = pendingReview > 0;
+
+        long totalViolations = violationRepository.countBySessionId(sessionId);
+        long criticalViolations = violationRepository.countBySessionIdAndSeverity(sessionId, ViolationSeverity.CRITICAL);
+
+        String appliedRole = assignmentRepository.findByExamIdAndStudentId(
+                session.getExam().getId(), session.getStudent().getId())
+                .map(a -> a.getTrack())
+                .orElse(null);
+
+        long timeTaken = (session.getStartTime() != null && session.getEndTime() != null)
+                ? java.time.Duration.between(session.getStartTime(), session.getEndTime()).toMinutes()
+                : 0L;
+
+        return ExamResultResponse.builder()
+                .sessionId(session.getId())
+                .examId(session.getExam().getId())
+                .examTitle(session.getExam().getTitle())
+                .studentName(session.getStudent().getName())
+                .studentEmail(session.getStudent().getEmail())
+                .appliedRole(appliedRole)
+                .sessionStatus(session.getStatus().name())
+                .score(score)
+                .totalMarks(totalMarks)
+                .percentage(provisional ? null : Math.round(percentage * 100.0) / 100.0)
+                .grade(provisional ? null : toGrade(percentage))
+                .totalQuestions(questions.size())
+                .attempted(correct + incorrect + pendingReview)
+                .correct(correct)
+                .incorrect(incorrect)
+                .pendingReview(pendingReview)
+                .unattempted(unattempted)
+                .startTime(session.getStartTime())
+                .endTime(session.getEndTime())
+                .timeTakenMinutes(timeTaken)
+                .totalViolations(totalViolations)
+                .criticalViolations(criticalViolations)
+                .breakdown(breakdown)
+                .build();
+    }
+
+    private String toGrade(double percentage) {
+        if (percentage >= 90) return "A+";
+        if (percentage >= 80) return "A";
+        if (percentage >= 70) return "B";
+        if (percentage >= 60) return "C";
+        if (percentage >= 50) return "D";
+        return "F";
     }
 
     // ---------------------------------------------------------------------------
@@ -145,8 +292,9 @@ public class SessionServiceImpl implements SessionService {
     // ---------------------------------------------------------------------------
 
     private int calculateScore(ExamSession session) {
-        return session.getExam().getId() != null
-                ? questionRepository.findByExamId(session.getExam().getId()).stream()
+        List<String> tracks = resolveTracksForSession(session);
+        return (session.getExam().getId() != null
+                ? questionRepository.findByExamIdAndTrackIn(session.getExam().getId(), tracks).stream()
                         .filter(q -> {
                             var answer = answerRepository
                                     .findBySessionIdAndQuestionId(session.getId(), q.getId());
@@ -154,7 +302,13 @@ public class SessionServiceImpl implements SessionService {
                         })
                         .mapToInt(q -> q.getMarks())
                         .sum()
-                : 0;
+                : 0);
+    }
+
+    private List<String> resolveTracksForSession(ExamSession session) {
+        return assignmentRepository.findByExamIdAndStudentId(session.getExam().getId(), session.getStudent().getId())
+                .map(a -> a.getTrack() != null ? List.of(a.getTrack(), "COMMON") : List.of("COMMON"))
+                .orElse(List.of("COMMON"));
     }
 
     private ExamSession findSessionById(Long id) {
@@ -186,12 +340,14 @@ public class SessionServiceImpl implements SessionService {
         if (organization == null || !Boolean.TRUE.equals(organization.getIsActive())) {
             throw new BadRequestException("Organization is inactive");
         }
-        if (user.getRole() == Role.SUPER_ADMIN) {
-            return;
-        }
+        if (user.getRole() == Role.SUPER_ADMIN) return;
         if (user.getOrganization() == null || !Boolean.TRUE.equals(user.getOrganization().getIsActive())
                 || !user.getOrganization().getId().equals(organization.getId())) {
             throw new UnauthorizedException("You are not authorized to access this session");
+        }
+        if (user.getRole() == Role.PROCTOR
+                && !examProctorService.isProctorAssignedToExam(user.getId(), session.getExam().getId())) {
+            throw new UnauthorizedException("You are not assigned to proctor this exam");
         }
     }
 

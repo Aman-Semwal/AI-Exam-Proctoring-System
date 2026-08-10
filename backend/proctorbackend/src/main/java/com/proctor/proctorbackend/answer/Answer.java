@@ -21,7 +21,8 @@ import java.time.LocalDateTime;
         columnNames = {"session_id", "question_id"}
     )
 )
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -39,10 +40,17 @@ public class Answer {
     @JoinColumn(name = "question_id", nullable = false)
     private Question question;
 
-    @Column(name = "selected_option", nullable = false)
+    @Column(name = "selected_option", nullable = true)
     private String selectedOption;
 
-    @Column(name = "is_correct", nullable = false)
+    /**
+     * Text-based answer for CODING, DESCRIPTIVE, FILL_BLANK question types.
+     * Stored as TEXT to accommodate large code submissions.
+     */
+    @Column(name = "text_answer", columnDefinition = "TEXT")
+    private String textAnswer;
+
+    @Column(name = "is_correct")
     private Boolean isCorrect;
 
     @Column(updatable = false)

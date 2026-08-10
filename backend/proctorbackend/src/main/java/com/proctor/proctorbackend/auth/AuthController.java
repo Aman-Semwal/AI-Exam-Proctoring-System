@@ -5,7 +5,9 @@ import com.proctor.proctorbackend.auth.dto.LoginRequest;
 import com.proctor.proctorbackend.auth.dto.RegisterRequest;
 import com.proctor.proctorbackend.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -38,5 +40,16 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success("Login successful", response));
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "Logout — invalidate the current JWT token")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            authService.logout(authHeader.substring(7));
+        }
+        return ResponseEntity.ok(ApiResponse.success("Logged out successfully"));
     }
 }

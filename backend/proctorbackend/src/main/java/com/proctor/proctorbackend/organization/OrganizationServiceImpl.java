@@ -5,8 +5,11 @@ import com.proctor.proctorbackend.common.exception.BadRequestException;
 import com.proctor.proctorbackend.common.exception.ResourceNotFoundException;
 import com.proctor.proctorbackend.common.exception.UnauthorizedException;
 import com.proctor.proctorbackend.organization.dto.InviteMemberRequest;
+import com.proctor.proctorbackend.organization.dto.InvitationActivationRequest;
 import com.proctor.proctorbackend.organization.dto.OrganizationRequest;
 import com.proctor.proctorbackend.organization.dto.OrganizationResponse;
+import com.proctor.proctorbackend.mail.MailService;
+import com.proctor.proctorbackend.user.InvitationStatus;
 import com.proctor.proctorbackend.user.User;
 import com.proctor.proctorbackend.user.UserRepository;
 import com.proctor.proctorbackend.user.dto.UserDto;
@@ -15,6 +18,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Base64;
 import java.util.List;
 
 @Service
@@ -24,6 +33,11 @@ public class OrganizationServiceImpl implements OrganizationService {
     private final OrganizationRepository organizationRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final MailService mailService;
+
+    private static final String CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!";
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final int INVITATION_TTL_HOURS = 48;
 
     @Override
     @Transactional
@@ -40,6 +54,13 @@ public class OrganizationServiceImpl implements OrganizationService {
                 .build();
 
         return toResponse(organizationRepository.save(organization));
+    }
+
+    @Override
+    public List<OrganizationResponse> listAllOrganizations() {
+        return organizationRepository.findAll().stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @Override
@@ -70,19 +91,58 @@ public class OrganizationServiceImpl implements OrganizationService {
         if (request.getRole() == Role.SUPER_ADMIN) {
             throw new BadRequestException("SUPER_ADMIN cannot be invited into an organization");
         }
-        if (userRepository.existsByEmail(request.getEmail())) {
+
+        User user = userRepository.findByEmail(request.getEmail()).orElseGet(() -> User.builder()
+                .name(request.getName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(generatePassword()))
+                .role(request.getRole())
+                .organization(organization)
+                .invitationStatus(InvitationStatus.PENDING)
+                .build());
+
+        if (user.getInvitationStatus() != InvitationStatus.PENDING && user.getId() != null) {
             throw new BadRequestException("Email is already registered");
         }
 
-        User user = User.builder()
-                .name(request.getName())
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole())
-                .organization(organization)
-                .build();
+        String token = generateActivationToken();
+        user.setName(request.getName());
+        user.setRole(request.getRole());
+        user.setOrganization(organization);
+        user.setInvitationStatus(InvitationStatus.PENDING);
+        user.setInvitationTokenHash(passwordEncoder.encode(token));
+        user.setInvitationTokenExpiresAt(LocalDateTime.now(ZoneId.of("UTC")).plusHours(INVITATION_TTL_HOURS));
+        user.setInvitationAcceptedAt(null);
 
-        return toUserDto(userRepository.save(user));
+        User saved = userRepository.save(user);
+        mailService.sendInvitationLink(saved.getEmail(), saved.getName(), buildActivationLink(saved.getEmail(), token),
+                organization.getName(), saved.getRole().name());
+        return toUserDto(saved);
+    }
+
+    @Override
+    @Transactional
+    public void activateInvitation(InvitationActivationRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (user.getInvitationStatus() != InvitationStatus.PENDING) {
+            throw new BadRequestException("Invitation is no longer pending");
+        }
+        if (user.getInvitationTokenExpiresAt() == null
+                || LocalDateTime.now(ZoneId.of("UTC")).isAfter(user.getInvitationTokenExpiresAt())) {
+            throw new BadRequestException("Invitation token has expired");
+        }
+        if (user.getInvitationTokenHash() == null
+                || !passwordEncoder.matches(request.getToken(), user.getInvitationTokenHash())) {
+            throw new BadRequestException("Invalid invitation token");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setInvitationStatus(InvitationStatus.ACTIVE);
+        user.setInvitationTokenHash(null);
+        user.setInvitationTokenExpiresAt(null);
+        user.setInvitationAcceptedAt(LocalDateTime.now(ZoneId.of("UTC")));
+        userRepository.save(user);
     }
 
     @Override
@@ -133,6 +193,12 @@ public class OrganizationServiceImpl implements OrganizationService {
         return organization;
     }
 
+    private String generatePassword() {
+        StringBuilder sb = new StringBuilder(12);
+        for (int i = 0; i < 12; i++) sb.append(CHARS.charAt(RANDOM.nextInt(CHARS.length())));
+        return sb.toString();
+    }
+
     private User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -157,7 +223,30 @@ public class OrganizationServiceImpl implements OrganizationService {
                 .role(user.getRole())
                 .orgId(user.getOrganization() != null ? user.getOrganization().getId() : null)
                 .orgSlug(user.getOrganization() != null ? user.getOrganization().getSlug() : null)
+                .rollNo(user.getRollNo())
+                .semester(user.getSemester())
+                .batch(user.getBatch())
+                .course(user.getCourse())
+                .stream(user.getStream())
+                .appliedRole(user.getAppliedRole())
+                .invitationStatus(user.getInvitationStatus())
                 .createdAt(user.getCreatedAt())
                 .build();
+    }
+
+    private String generateActivationToken() {
+        byte[] bytes = new byte[32];
+        RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    @org.springframework.beans.factory.annotation.Value("${app.frontend-url:http://localhost:5173}")
+    private String frontendUrl;
+
+    private String buildActivationLink(String email, String token) {
+        return frontendUrl + "/activate-invitation?email="
+                + URLEncoder.encode(email, StandardCharsets.UTF_8)
+                + "&token="
+                + URLEncoder.encode(token, StandardCharsets.UTF_8);
     }
 }

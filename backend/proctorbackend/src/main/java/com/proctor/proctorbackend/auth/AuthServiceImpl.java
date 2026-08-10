@@ -9,6 +9,7 @@ import com.proctor.proctorbackend.common.exception.ResourceNotFoundException;
 import com.proctor.proctorbackend.organization.Organization;
 import com.proctor.proctorbackend.organization.OrganizationRepository;
 import com.proctor.proctorbackend.user.User;
+import com.proctor.proctorbackend.user.InvitationStatus;
 import com.proctor.proctorbackend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -40,6 +43,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final JwtBlacklistService jwtBlacklistService;
 
     /**
      * Registers a new user account.
@@ -113,6 +117,10 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BadRequestException("User not found"));
 
+        if (user.getInvitationStatus() == InvitationStatus.PENDING) {
+            throw new BadRequestException("Account invitation is pending");
+        }
+
         if (user.getRole() != Role.SUPER_ADMIN) {
             Organization organization = user.getOrganization();
             if (organization == null || !Boolean.TRUE.equals(organization.getIsActive())) {
@@ -125,6 +133,29 @@ public class AuthServiceImpl implements AuthService {
         String token = jwtService.generateToken(buildClaims(user), user);
 
         return buildAuthResponse(token, user);
+    }
+
+    /**
+     * Invalidates a JWT by storing it in the Redis blacklist until it naturally expires.
+     *
+     * <p>Algorithm: compute remaining TTL = expiry - now (milliseconds). Store the token
+     * string as a Redis key with that TTL. Redis auto-evicts the key when the token would
+     * have expired anyway, so no manual cleanup is needed. Lookup in JwtAuthFilter is O(1).
+     *
+     * @param token the raw JWT string from the Authorization header (without "Bearer " prefix)
+     */
+    @Override
+    public void logout(String token) {
+        try {
+            Date expiry = jwtService.getExpirationDate(token);
+            long ttlMillis = expiry.getTime() - System.currentTimeMillis();
+            if (ttlMillis > 0) {
+                jwtBlacklistService.blacklist(token, Duration.ofMillis(ttlMillis));
+                log.info("Token blacklisted, expires in {}ms", ttlMillis);
+            }
+        } catch (Exception ex) {
+            log.warn("Logout: could not blacklist token — {}", ex.getMessage());
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -157,6 +188,11 @@ public class AuthServiceImpl implements AuthService {
 
         if (request.getRole() == Role.ORG_ADMIN) {
             throw new BadRequestException("ORG_ADMIN registration requires an authenticated admin or signed invitation");
+        }
+
+        if (request.getRole() == Role.EXAM_CREATOR || request.getRole() == Role.PROCTOR
+                || request.getRole() == Role.STUDENT) {
+            throw new BadRequestException("This role requires an invitation from an organization admin");
         }
     }
 

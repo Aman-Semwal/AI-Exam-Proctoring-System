@@ -16,4 +16,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
 
     List<User> findByOrganizationIdOrderByCreatedAtDesc(Long organizationId);
+
+    List<User> findByOrganizationIdAndRole(Long organizationId, com.proctor.proctorbackend.common.enums.Role role);
 }

@@ -17,7 +17,8 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "organizations")
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

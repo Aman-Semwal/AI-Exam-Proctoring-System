@@ -31,7 +31,8 @@ import java.util.List;
  */
 @Entity
 @Table(name = "users")
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -54,6 +55,20 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private Role role;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "invitation_status", nullable = false)
+    @Builder.Default
+    private InvitationStatus invitationStatus = InvitationStatus.ACTIVE;
+
+    @Column(name = "invitation_token_hash")
+    private String invitationTokenHash;
+
+    @Column(name = "invitation_token_expires_at")
+    private LocalDateTime invitationTokenExpiresAt;
+
+    @Column(name = "invitation_accepted_at")
+    private LocalDateTime invitationAcceptedAt;
+
     /**
      * The organization this user belongs to.
      * {@code null} only for {@code SUPER_ADMIN} — enforced at application level.
@@ -61,6 +76,17 @@ public class User implements UserDetails {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organization_id")
     private Organization organization;
+
+    // Optional student profile fields (populated via bulk import)
+    private String rollNo;
+    private String semester;
+    private String batch;
+    private String course;
+    private String stream;
+
+    /** Job role the student applied for — e.g. "SDE1", "SDE2", "DevOps". Used for exam track filtering. */
+    @Column(name = "applied_role")
+    private String appliedRole;
 
     @Column(updatable = false)
     private LocalDateTime createdAt;

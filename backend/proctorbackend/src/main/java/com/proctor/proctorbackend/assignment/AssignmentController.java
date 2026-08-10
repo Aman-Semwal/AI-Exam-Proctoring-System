@@ -26,6 +26,17 @@ public class AssignmentController {
 
     private final AssignmentService assignmentService;
 
+    @PostMapping("/exam/{examId}/assign-all")
+    @Operation(summary = "Assign all org students to an exam (track auto-set from appliedRole)")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<List<AssignmentResponse>>> assignAll(
+            @PathVariable Long examId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        List<AssignmentResponse> responses = assignmentService.assignAllStudents(examId, userDetails.getUsername());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(responses.size() + " students assigned", responses));
+    }
+
     @PostMapping
     @Operation(summary = "Assign a student to an exam")
     @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'ORG_ADMIN', 'SUPER_ADMIN')")

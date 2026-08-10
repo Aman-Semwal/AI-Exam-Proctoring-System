@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.Map;
 
 /**
@@ -45,6 +46,7 @@ public class AiServiceClient {
                 .bodyValue(Map.of("image", frameBase64))
                 .retrieve()
                 .bodyToMono(FaceInferenceResult.class)
+                .timeout(Duration.ofSeconds(5))
                 .onErrorResume(ex -> {
                     log.error("AI service call failed: {}", ex.getMessage());
                     // Return empty result on AI service failure — do not break proctoring flow

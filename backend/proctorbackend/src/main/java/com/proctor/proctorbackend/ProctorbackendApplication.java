@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import net.javacrumbs.shedlock.spring.annotation.EnableSchedulerLock;
 
 /**
  * Entry point for the AI Exam Proctoring backend.
@@ -23,6 +24,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableJpaAuditing
 @EnableAsync
 @EnableScheduling
+@EnableSchedulerLock(defaultLockAtMostFor = "PT5M")
 public class ProctorbackendApplication {
 
 	public static void main(String[] args) {

@@ -1,5 +1,8 @@
 package com.proctor.proctorbackend.proctoring;
 
+import com.proctor.proctorbackend.answer.AnswerRepository;
+import com.proctor.proctorbackend.question.Question;
+import com.proctor.proctorbackend.question.QuestionRepository;
 import com.proctor.proctorbackend.common.enums.Role;
 import com.proctor.proctorbackend.common.exception.ResourceNotFoundException;
 import com.proctor.proctorbackend.common.exception.UnauthorizedException;
@@ -11,14 +14,24 @@ import com.proctor.proctorbackend.session.ExamSessionRepository;
 import com.proctor.proctorbackend.session.SessionStatus;
 import com.proctor.proctorbackend.user.User;
 import com.proctor.proctorbackend.user.UserRepository;
+import com.proctor.proctorbackend.violation.Violation;
+import com.proctor.proctorbackend.violation.ViolationRepository;
+import com.proctor.proctorbackend.violation.ViolationSeverity;
+import com.proctor.proctorbackend.violation.ViolationType;
+import com.proctor.proctorbackend.examproctor.ExamProctorService;
 import com.proctor.proctorbackend.websocket.dto.AlertMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Core proctoring business logic.
@@ -38,6 +51,21 @@ public class ProctoringServiceImpl implements ProctoringService {
     private final UserRepository userRepository;
     private final AiServiceClient aiServiceClient;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ViolationRepository violationRepository;
+    private final ExamProctorService examProctorService;
+
+    private final AnswerRepository answerRepository;
+    private final QuestionRepository questionRepository;
+
+    /** Sessions with CRITICAL violations >= this threshold are auto-terminated. */
+    @Value("${proctoring.violation.critical-threshold:5}")
+    private int criticalThreshold;
+
+    /** Suppress repeated multi-face violations for the same session within this interval. */
+    @Value("${proctoring.violation.multiple-faces.min-interval-seconds:30}")
+    private long multipleFacesMinIntervalSeconds;
+
+    private final Map<Long, LocalDateTime> lastMultipleFacesViolationAt = new ConcurrentHashMap<>();
 
     /**
      * Processes a single webcam frame submitted by a student.
@@ -107,6 +135,63 @@ public class ProctoringServiceImpl implements ProctoringService {
 
         // Push real-time alert to examiner for violations only
         if (eventType != ProctoringEvent.EventType.FACE_DETECTED) {
+            boolean shouldPersistViolation = true;
+            // Automatically persist a Violation record
+            ViolationType violationType = (eventType == ProctoringEvent.EventType.NO_FACE_DETECTED)
+                    ? ViolationType.NO_FACE_DETECTED
+                    : ViolationType.MULTIPLE_FACES_DETECTED;
+            ViolationSeverity severity = (eventType == ProctoringEvent.EventType.NO_FACE_DETECTED)
+                    ? ViolationSeverity.HIGH
+                    : ViolationSeverity.CRITICAL;
+
+            if (eventType == ProctoringEvent.EventType.MULTIPLE_FACES_DETECTED) {
+                LocalDateTime lastViolationAt = lastMultipleFacesViolationAt.get(session.getId());
+                LocalDateTime now = LocalDateTime.now(ZoneId.of("UTC"));
+                if (lastViolationAt != null && now.isBefore(lastViolationAt.plusSeconds(multipleFacesMinIntervalSeconds))) {
+                    shouldPersistViolation = false;
+                } else {
+                    lastMultipleFacesViolationAt.put(session.getId(), now);
+                }
+            }
+
+            if (shouldPersistViolation) {
+                Violation violation = Violation.builder()
+                        .session(session)
+                        .organization(session.getOrganization())
+                        .type(violationType)
+                        .severity(severity)
+                        .details(details)
+                        .reviewed(false)
+                        .build();
+                violationRepository.save(violation);
+            }
+
+            // Auto-terminate session if CRITICAL violation threshold exceeded
+            long criticalCount = violationRepository
+                .countBySessionIdAndSeverity(session.getId(), ViolationSeverity.CRITICAL);
+            if (criticalCount >= criticalThreshold && session.getStatus() == SessionStatus.ACTIVE) {
+                int score = questionRepository.findByExamId(session.getExam().getId()).stream()
+                        .filter(q -> answerRepository.findBySessionIdAndQuestionId(session.getId(), q.getId())
+                                .map(a -> Boolean.TRUE.equals(a.getIsCorrect())).orElse(false))
+                        .mapToInt(Question::getMarks).sum();
+                session.setScore(score);
+                session.setStatus(SessionStatus.TERMINATED);
+                session.setEndTime(LocalDateTime.now(ZoneId.of("UTC")));
+                sessionRepository.save(session);
+                log.warn("Session {} auto-terminated: {} CRITICAL violations", session.getId(), criticalCount);
+
+                AlertMessage terminationAlert = AlertMessage.builder()
+                        .sessionId(session.getId())
+                        .studentName(session.getStudent().getName())
+                        .eventType("SESSION_TERMINATED")
+                        .details("Session terminated after repeated proctoring violations")
+                        .build();
+                messagingTemplate.convertAndSendToUser(
+                        session.getStudent().getEmail(),
+                        "/queue/session-events",
+                        terminationAlert);
+            }
+
             AlertMessage alert = AlertMessage.builder()
                     .sessionId(session.getId())
                     .studentName(session.getStudent().getName())
@@ -139,12 +224,14 @@ public class ProctoringServiceImpl implements ProctoringService {
     }
 
     private void validateSameOrganization(User user, ExamSession session) {
-        if (user.getRole() == Role.SUPER_ADMIN) {
-            return;
-        }
+        if (user.getRole() == Role.SUPER_ADMIN) return;
         if (user.getOrganization() == null || session.getOrganization() == null
                 || !user.getOrganization().getId().equals(session.getOrganization().getId())) {
             throw new UnauthorizedException("You are not authorized to access this session");
+        }
+        if (user.getRole() == Role.PROCTOR
+                && !examProctorService.isProctorAssignedToExam(user.getId(), session.getExam().getId())) {
+            throw new UnauthorizedException("You are not assigned to proctor this exam");
         }
     }
 

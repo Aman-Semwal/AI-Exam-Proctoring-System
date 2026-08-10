@@ -18,7 +18,8 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "proctoring_events")
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

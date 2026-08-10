@@ -21,5 +21,6 @@ public class AssignmentResponse {
     private String studentEmail;
     private Long orgId;
     private String orgSlug;
+    private String track;
     private LocalDateTime assignedAt;
 }

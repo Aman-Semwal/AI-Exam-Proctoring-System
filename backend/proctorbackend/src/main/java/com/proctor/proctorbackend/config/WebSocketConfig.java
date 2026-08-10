@@ -1,50 +1,40 @@
 package com.proctor.proctorbackend.config;
 
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
-/**
- * Configures the STOMP over WebSocket message broker for real-time proctoring alerts.
- *
- * <p>Topology:
- * <ul>
- *   <li>Clients connect to {@code /ws} (with SockJS fallback for environments that
- *       block WebSocket upgrades).</li>
- *   <li>Broadcast subscriptions use the {@code /topic} prefix
- *       (e.g. {@code /topic/alerts/{examId}}).</li>
- *   <li>Client-to-server messages are prefixed with {@code /app}
- *       (routed to {@code @MessageMapping} methods).</li>
- * </ul>
- */
 @Configuration
 @EnableWebSocketMessageBroker
+@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-    /**
-     * Configures the in-memory simple message broker.
-     *
-     * @param registry the {@link MessageBrokerRegistry} to configure
-     */
+    private final WebSocketAuthInterceptor authInterceptor;
+    private final WebSocketSubscriptionInterceptor subscriptionInterceptor;
+
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        // Clients subscribe to /topic/... for broadcast messages
         registry.enableSimpleBroker("/topic");
-        // Server-side @MessageMapping methods are prefixed with /app
         registry.setApplicationDestinationPrefixes("/app");
     }
 
-    /**
-     * Registers the STOMP endpoint with SockJS fallback.
-     *
-     * @param registry the {@link StompEndpointRegistry} to configure
-     */
+    @Value("${app.websocket.allowed-origins:http://localhost:5173}")
+    private String allowedOrigins;
+
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*")
+                .setAllowedOriginPatterns(allowedOrigins)
                 .withSockJS();
+    }
+
+    @Override
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        registration.interceptors(authInterceptor, subscriptionInterceptor);
     }
 }

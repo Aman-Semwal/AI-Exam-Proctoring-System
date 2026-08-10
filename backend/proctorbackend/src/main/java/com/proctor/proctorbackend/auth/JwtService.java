@@ -49,7 +49,7 @@ public class JwtService {
      * @return the subject claim value (user email)
      */
     public String extractUsername(String token) {
-        return extractClaim(token, Claims::getSubject);
+        return extractClaim(token, claims -> claims.getSubject());
     }
 
     /**
@@ -62,6 +62,7 @@ public class JwtService {
      */
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
+        if (claims == null) return null;
         return claimsResolver.apply(claims);
     }
 
@@ -161,7 +162,18 @@ public class JwtService {
      */
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+        return username != null && username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+    }
+
+    /**
+     * Returns the expiration {@link Date} of a given token.
+     * Used by the logout flow to calculate the Redis TTL for token blacklisting.
+     *
+     * @param token the signed JWT string
+     * @return the token's expiry timestamp
+     */
+    public Date getExpirationDate(String token) {
+        return extractExpiration(token);
     }
 
     // -----------------------------------------------------------------------
@@ -173,7 +185,7 @@ public class JwtService {
     }
 
     private Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
+        return extractClaim(token, claims -> claims.getExpiration());
     }
 
     private Claims extractAllClaims(String token) {

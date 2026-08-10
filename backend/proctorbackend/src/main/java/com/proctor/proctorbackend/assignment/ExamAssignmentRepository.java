@@ -13,6 +13,8 @@ public interface ExamAssignmentRepository extends JpaRepository<ExamAssignment, 
 
     List<ExamAssignment> findByExamIdAndOrganizationId(Long examId, Long organizationId);
 
+    List<ExamAssignment> findByExamIdAndOrganizationIdAndStudentRole(Long examId, Long organizationId, com.proctor.proctorbackend.common.enums.Role role);
+
     List<ExamAssignment> findByStudentId(Long studentId);
 
     List<ExamAssignment> findByStudentIdAndOrganizationId(Long studentId, Long organizationId);
