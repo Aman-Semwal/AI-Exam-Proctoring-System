@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -44,9 +45,36 @@ public class AssignmentServiceImpl implements AssignmentService {
                 .exam(exam)
                 .student(student)
                 .organization(exam.getOrganization())
+                .track(student.getAppliedRole())
                 .build();
 
         return toResponse(assignmentRepository.save(assignment));
+    }
+
+    @Override
+    @Transactional
+    public List<AssignmentResponse> assignAllStudents(Long examId, String requesterEmail) {
+        User requester = getUserByEmail(requesterEmail);
+        Exam exam = examRepository.findById(examId)
+                .orElseThrow(() -> new ResourceNotFoundException("Exam", examId));
+        validateSameOrganization(requester, exam);
+
+        List<User> students = userRepository.findByOrganizationIdAndRole(
+                exam.getOrganization().getId(), Role.STUDENT);
+
+        List<ExamAssignment> toSave = students.stream()
+                .filter(s -> !assignmentRepository.existsByExamIdAndStudentId(examId, s.getId()))
+                .map(s -> ExamAssignment.builder()
+                        .exam(exam)
+                        .student(s)
+                        .organization(exam.getOrganization())
+                        .track(s.getAppliedRole())
+                        .build())
+                .collect(Collectors.toList());
+
+        return assignmentRepository.saveAll(toSave).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @Override
@@ -131,6 +159,7 @@ public class AssignmentServiceImpl implements AssignmentService {
                 .studentEmail(a.getStudent().getEmail())
                 .orgId(a.getOrganization() != null ? a.getOrganization().getId() : null)
                 .orgSlug(a.getOrganization() != null ? a.getOrganization().getSlug() : null)
+                .track(a.getTrack())
                 .assignedAt(a.getAssignedAt())
                 .build();
     }

@@ -21,7 +21,8 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "exam_sessions")
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

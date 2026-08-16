@@ -23,7 +23,8 @@ import java.time.LocalDateTime;
         columnNames = {"exam_id", "student_id"}
     )
 )
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -47,6 +48,10 @@ public class ExamAssignment {
 
     @Column(updatable = false)
     private LocalDateTime assignedAt;
+
+    /** Copied from student's appliedRole at assignment time — e.g. "SDE1", "SDE2", "DevOps". */
+    @Column(length = 100)
+    private String track;
 
     @PrePersist
     protected void onCreate() {

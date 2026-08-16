@@ -38,6 +38,7 @@ public class SecurityConfig {
     /** URL patterns that do not require a JWT (public access). */
     private static final String[] PUBLIC_URLS = {
             "/api/auth/**",
+            "/api/organizations/invitations/**",
             "/api/health",
             "/swagger-ui/**",
             "/v3/api-docs/**",

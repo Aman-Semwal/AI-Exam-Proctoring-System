@@ -13,6 +13,10 @@ public interface QuestionService {
 
     List<QuestionResponse> getQuestionsByExam(Long examId, boolean includeAnswer);
 
+    List<QuestionResponse> getQuestionsByExam(Long examId, boolean includeAnswer, String requesterEmail);
+
+    List<QuestionResponse> getQuestionsForSession(Long sessionId, String studentEmail);
+
     QuestionResponse updateQuestion(Long id, QuestionRequest request);
 
     void deleteQuestion(Long id);

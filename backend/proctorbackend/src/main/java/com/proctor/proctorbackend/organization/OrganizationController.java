@@ -2,6 +2,7 @@ package com.proctor.proctorbackend.organization;
 
 import com.proctor.proctorbackend.common.response.ApiResponse;
 import com.proctor.proctorbackend.organization.dto.InviteMemberRequest;
+import com.proctor.proctorbackend.organization.dto.InvitationActivationRequest;
 import com.proctor.proctorbackend.organization.dto.OrganizationRequest;
 import com.proctor.proctorbackend.organization.dto.OrganizationResponse;
 import com.proctor.proctorbackend.user.dto.UserDto;
@@ -36,6 +37,14 @@ public class OrganizationController {
         OrganizationResponse response = organizationService.createOrganization(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Organization created", response));
+    }
+
+    @GetMapping
+    @Operation(summary = "List all organizations (SUPER_ADMIN only)")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<List<OrganizationResponse>>> listAllOrganizations() {
+        return ResponseEntity.ok(ApiResponse.success("Organizations fetched",
+                organizationService.listAllOrganizations()));
     }
 
     @GetMapping("/{id}")
@@ -80,4 +89,12 @@ public class OrganizationController {
         organizationService.removeMember(id, userId, userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success("Member removed"));
     }
+
+        @PostMapping("/invitations/activate")
+        @Operation(summary = "Activate an invited member account")
+        public ResponseEntity<ApiResponse<Void>> activateInvitation(
+                        @Valid @RequestBody InvitationActivationRequest request) {
+                organizationService.activateInvitation(request);
+                return ResponseEntity.ok(ApiResponse.success("Invitation activated"));
+        }
 }

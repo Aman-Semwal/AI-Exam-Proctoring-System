@@ -10,5 +10,7 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
 
     List<Question> findByExamId(Long examId);
 
+    List<Question> findByExamIdAndTrackIn(Long examId, List<String> tracks);
+
     long countByExamId(Long examId);
 }

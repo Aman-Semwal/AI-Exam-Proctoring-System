@@ -47,6 +47,12 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                 .role(user.getRole())
                 .orgId(user.getOrganization() != null ? user.getOrganization().getId() : null)
                 .orgSlug(user.getOrganization() != null ? user.getOrganization().getSlug() : null)
+                .rollNo(user.getRollNo())
+                .semester(user.getSemester())
+                .batch(user.getBatch())
+                .course(user.getCourse())
+                .stream(user.getStream())
+                .invitationStatus(user.getInvitationStatus())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

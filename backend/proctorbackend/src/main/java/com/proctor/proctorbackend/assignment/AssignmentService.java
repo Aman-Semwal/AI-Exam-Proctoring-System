@@ -9,6 +9,8 @@ public interface AssignmentService {
 
     AssignmentResponse assignStudent(AssignmentRequest request, String requesterEmail);
 
+    List<AssignmentResponse> assignAllStudents(Long examId, String requesterEmail);
+
     List<AssignmentResponse> getAssignmentsByExam(Long examId, String requesterEmail);
 
     List<AssignmentResponse> getAssignmentsByStudent(Long studentId, String requesterEmail);

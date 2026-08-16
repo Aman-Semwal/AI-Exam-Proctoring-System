@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -48,10 +50,11 @@ public class QuestionController {
     @Operation(summary = "Get all questions for an exam")
     public ResponseEntity<ApiResponse<List<QuestionResponse>>> getByExam(
             @PathVariable Long examId,
-            @RequestParam(defaultValue = "false") boolean includeAnswer) {
+            @RequestParam(defaultValue = "false") boolean includeAnswer,
+            @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(
                 ApiResponse.success("Questions fetched",
-                        questionService.getQuestionsByExam(examId, includeAnswer)));
+                        questionService.getQuestionsByExam(examId, includeAnswer, userDetails.getUsername())));
     }
 
     @PutMapping("/{id}")

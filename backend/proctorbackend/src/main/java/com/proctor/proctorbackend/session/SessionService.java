@@ -1,5 +1,6 @@
 package com.proctor.proctorbackend.session;
 
+import com.proctor.proctorbackend.session.dto.ExamResultResponse;
 import com.proctor.proctorbackend.session.dto.SessionRequest;
 import com.proctor.proctorbackend.session.dto.SessionResponse;
 
@@ -16,4 +17,8 @@ public interface SessionService {
     List<SessionResponse> getMySessionsAsStudent(String studentEmail);
 
     List<SessionResponse> getSessionsByExam(Long examId, String examinerEmail);
+
+    SessionResponse recalculateScore(Long sessionId, String requesterEmail);
+
+    ExamResultResponse getExamResult(Long sessionId, String requesterEmail);
 }

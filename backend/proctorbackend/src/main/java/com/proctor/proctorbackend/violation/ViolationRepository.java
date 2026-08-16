@@ -17,4 +17,6 @@ public interface ViolationRepository extends JpaRepository<Violation, Long> {
     List<Violation> findBySessionIdAndOrganizationIdAndReviewed(Long sessionId, Long organizationId, boolean reviewed);
 
     long countBySessionId(Long sessionId);
+
+    long countBySessionIdAndSeverity(Long sessionId, com.proctor.proctorbackend.violation.ViolationSeverity severity);
 }

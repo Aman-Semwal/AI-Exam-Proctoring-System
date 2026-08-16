@@ -3,6 +3,7 @@ package com.proctor.proctorbackend.violation;
 import com.proctor.proctorbackend.common.exception.ResourceNotFoundException;
 import com.proctor.proctorbackend.common.enums.Role;
 import com.proctor.proctorbackend.common.exception.UnauthorizedException;
+import com.proctor.proctorbackend.examproctor.ExamProctorService;
 import com.proctor.proctorbackend.session.ExamSession;
 import com.proctor.proctorbackend.session.ExamSessionRepository;
 import com.proctor.proctorbackend.user.User;
@@ -22,6 +23,7 @@ public class ViolationServiceImpl implements ViolationService {
     private final ViolationRepository violationRepository;
     private final ExamSessionRepository sessionRepository;
     private final UserRepository userRepository;
+    private final ExamProctorService examProctorService;
 
     @Override
     @Transactional
@@ -105,22 +107,26 @@ public class ViolationServiceImpl implements ViolationService {
     }
 
     private void validateSameOrganization(User user, ExamSession session) {
-        if (user.getRole() == Role.SUPER_ADMIN) {
-            return;
-        }
+        if (user.getRole() == Role.SUPER_ADMIN) return;
         if (user.getOrganization() == null || session.getOrganization() == null
                 || !user.getOrganization().getId().equals(session.getOrganization().getId())) {
             throw new UnauthorizedException("You are not authorized to access this session");
         }
+        if (user.getRole() == Role.PROCTOR
+                && !examProctorService.isProctorAssignedToExam(user.getId(), session.getExam().getId())) {
+            throw new UnauthorizedException("You are not assigned to proctor this exam");
+        }
     }
 
     private void validateSameOrganization(User user, Violation violation) {
-        if (user.getRole() == Role.SUPER_ADMIN) {
-            return;
-        }
+        if (user.getRole() == Role.SUPER_ADMIN) return;
         if (user.getOrganization() == null || violation.getOrganization() == null
                 || !user.getOrganization().getId().equals(violation.getOrganization().getId())) {
             throw new UnauthorizedException("You are not authorized to access this violation");
+        }
+        if (user.getRole() == Role.PROCTOR
+                && !examProctorService.isProctorAssignedToExam(user.getId(), violation.getSession().getExam().getId())) {
+            throw new UnauthorizedException("You are not assigned to proctor this exam");
         }
     }
 

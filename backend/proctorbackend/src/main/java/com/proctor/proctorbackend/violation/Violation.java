@@ -16,7 +16,8 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "violations")
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

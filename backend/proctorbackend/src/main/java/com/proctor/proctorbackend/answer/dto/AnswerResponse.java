@@ -18,6 +18,7 @@ public class AnswerResponse {
     private Long questionId;
     private String questionText;
     private String selectedOption;
+    private String textAnswer;
     private Boolean isCorrect;
     private LocalDateTime answeredAt;
 }

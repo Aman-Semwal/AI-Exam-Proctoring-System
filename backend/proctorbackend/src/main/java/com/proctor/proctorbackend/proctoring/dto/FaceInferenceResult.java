@@ -8,7 +8,7 @@ import java.util.List;
 @Data
 public class FaceInferenceResult {
 
-    @JsonProperty("face_count")
+    @JsonProperty("faces_detected")
     private int faceCount;
 
     @JsonProperty("faces")
