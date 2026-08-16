@@ -108,7 +108,7 @@ const SuperAdminSidebar = () => {
                 onClick={() => navigate(item.path)}
                 className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition ${
                   active
-                    ? "bg-cyan-500 text-black"
+                    ? "bg-cyan-500 text-black font-semibold"
                     : "text-gray-300 hover:bg-slate-800 hover:text-cyan-400"
                 }`}
               >
@@ -131,11 +131,15 @@ const SuperAdminSidebar = () => {
           </p>
 
           <button
-            onClick={() => navigate("/settings")}
-            className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-gray-300 hover:bg-slate-800 hover:text-cyan-400 transition"
+            onClick={() => navigate("/super-admin/settings")}
+            className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition ${
+              location.pathname === "/super-admin/settings"
+                ? "bg-cyan-500 text-black font-semibold"
+                : "text-gray-300 hover:bg-slate-800 hover:text-cyan-400"
+            }`}
           >
 
-            <FaCog />
+            <FaCog className="text-lg" />
 
             <span className="font-medium">
               Settings

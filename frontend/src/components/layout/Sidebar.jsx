@@ -32,22 +32,22 @@ const Sidebar = () => {
     {
       icon: <FaClipboardList />,
       title: "Live Exam",
-      path: "/live-exam",
+      path: "/student/live-exam", // Updated path
     },
     {
       icon: <FaChartBar />,
       title: "Results",
-      path: "/results",
+      path: "/student/results", // Updated path
     },
     {
       icon: <FaUser />,
       title: "Profile",
-      path: "/profile",
+      path: "/student/profile", // Updated path
     },
     {
       icon: <FaCog />,
       title: "Settings",
-      path: "/settings",
+      path: "/student/settings", // Updated path
     },
   ];
 
