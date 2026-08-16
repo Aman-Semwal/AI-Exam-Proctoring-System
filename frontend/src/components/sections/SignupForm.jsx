@@ -6,12 +6,12 @@ import {
   FaGoogle,
 } from "react-icons/fa";
 
-const LoginForm = () => {
+const SignupForm = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const navigate = useNavigate();
 
-  const handleLogin = () => {
+  const handleSignup = () => {
     localStorage.setItem("isLoggedIn", "true");
     localStorage.setItem("userRole", "student");
 
@@ -22,14 +22,27 @@ const LoginForm = () => {
     <div>
 
       <h2 className="text-3xl font-bold text-slate-900">
-        Welcome back
+        Create your account
       </h2>
 
       <p className="text-gray-500 mt-2">
-        Login to continue to your account.
+        Join ProctorAI and start your journey.
       </p>
 
       <div className="mt-8 space-y-5">
+
+        {/* Name */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Full Name
+          </label>
+
+          <input
+            type="text"
+            placeholder="Enter your full name"
+            className="w-full px-4 py-3.5 rounded-xl border border-gray-200 bg-gray-50 text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 transition"
+          />
+        </div>
 
         {/* Email */}
         <div>
@@ -46,23 +59,15 @@ const LoginForm = () => {
 
         {/* Password */}
         <div>
-          <div className="flex justify-between mb-2">
-
-            <label className="text-sm font-medium text-slate-700">
-              Password
-            </label>
-
-            <button className="text-sm text-cyan-600 hover:underline">
-              Forgot password?
-            </button>
-
-          </div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Password
+          </label>
 
           <div className="relative">
 
             <input
               type={showPassword ? "text" : "password"}
-              placeholder="Enter your password"
+              placeholder="Create a password"
               className="w-full px-4 py-3.5 pr-12 rounded-xl border border-gray-200 bg-gray-50 text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 transition"
             />
 
@@ -77,24 +82,26 @@ const LoginForm = () => {
           </div>
         </div>
 
-        {/* Remember */}
-        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+        {/* Terms */}
+        <label className="flex items-start gap-2 text-sm text-gray-500">
 
           <input
             type="checkbox"
-            className="accent-cyan-500"
+            className="mt-1 accent-cyan-500"
           />
 
-          Remember me
+          <span>
+            I agree to the Terms & Conditions and Privacy Policy.
+          </span>
 
         </label>
 
-        {/* Login */}
+        {/* Signup */}
         <button
-          onClick={handleLogin}
+          onClick={handleSignup}
           className="w-full py-3.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold transition"
         >
-          Login
+          Create Account
         </button>
 
         {/* Divider */}
@@ -117,7 +124,7 @@ const LoginForm = () => {
         >
           <FaGoogle className="text-red-500" />
 
-          Continue with Google
+          Sign up with Google
         </button>
 
       </div>
@@ -126,4 +133,4 @@ const LoginForm = () => {
   );
 };
 
-export default LoginForm;
+export default SignupForm;

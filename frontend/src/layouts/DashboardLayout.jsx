@@ -1,0 +1,28 @@
+import Sidebar from "../components/layout/Sidebar";
+import Topbar from "../components/layout/Topbar";
+
+const DashboardLayout = ({ children }) => {
+  return (
+    <div className="min-h-screen bg-[#020617] flex">
+
+      {/* Sidebar */}
+      <Sidebar />
+
+      {/* Main Content */}
+      <div className="flex-1 min-w-0">
+
+        {/* Topbar */}
+        <Topbar />
+
+        {/* Dashboard Page */}
+        <main className="p-6 lg:p-8">
+          {children}
+        </main>
+
+      </div>
+
+    </div>
+  );
+};
+
+export default DashboardLayout;

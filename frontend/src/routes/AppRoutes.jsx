@@ -9,17 +9,31 @@ import Results from "../pages/Student/Results";
 import Profile from "../pages/Student/Profile";
 import Settings from "../pages/Student/Settings";
 
+import SuperAdminDashboard from "../pages/SuperAdmin/SuperAdminDashboard";
+
 import ProtectedRoute from "./ProtectedRoute";
 import NotFound from "../pages/NotFound/NotFound";
+
 
 function AppRoutes() {
   return (
     <Routes>
-      {/* Public Routes */}
-      <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<Login />} />
 
-      {/* Protected Routes */}
+      {/* ================= PUBLIC ROUTES ================= */}
+
+      <Route
+        path="/"
+        element={<Landing />}
+      />
+
+      <Route
+        path="/login"
+        element={<Login />}
+      />
+
+
+      {/* ================= STUDENT ROUTES ================= */}
+
       <Route
         path="/student/dashboard"
         element={
@@ -65,8 +79,26 @@ function AppRoutes() {
         }
       />
 
-      {/* 404 */}
-      <Route path="*" element={<NotFound />} />
+
+      {/* ================= SUPER ADMIN ================= */}
+
+      <Route
+        path="/super-admin/dashboard"
+        element={
+          <ProtectedRoute>
+            <SuperAdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+
+      {/* ================= 404 ================= */}
+
+      <Route
+        path="*"
+        element={<NotFound />}
+      />
+
     </Routes>
   );
 }
