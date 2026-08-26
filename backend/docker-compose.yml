@@ -20,8 +20,22 @@ services:
     build:
       context: ./ai-service
       dockerfile: Dockerfile
+      target: runtime
     ports:
-      - "8001:8001"
+      - "8001:8000"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+
+  # Same image as ai-service, plus pytest/httpx on top (Dockerfile
+  # 'test' stage) -- not something that runs standalone, just a way to
+  # get a container with the test tooling in it. Run with:
+  #   docker-compose run --rm ai-service-test pytest tests/ -v
+  ai-service-test:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+      target: test
     dns:
       - 8.8.8.8
       - 1.1.1.1
