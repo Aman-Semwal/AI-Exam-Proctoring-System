@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FaShieldAlt, FaSearch, FaSignOutAlt, } from "react-icons/fa";
+import { FaShieldAlt, FaSearch, FaSignOutAlt } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
 const initialIncidents = [
@@ -26,113 +26,120 @@ export default function ProctorDashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white flex">
-      
+    <div className="min-h-screen bg-[#090a0f] text-slate-100 flex">
       {/* Sidebar for Proctor Section */}
-      <aside className="w-72 min-h-screen bg-slate-900 border-r border-white/10 flex flex-col justify-between p-6">
+      <aside className="w-64 min-h-screen bg-[#0d0f17] border-r border-white/[0.07] flex flex-col justify-between p-4 shrink-0 sticky top-0 h-screen">
         <div>
-          <div className="mb-8 cursor-pointer" onClick={() => navigate("/proctor/dashboard")}>
-            <h1 className="text-2xl font-bold text-white">
-              Proctor<span className="text-cyan-400">Portal</span>
-            </h1>
-            <p className="text-gray-400 text-xs mt-1">Live Exam Surveillance & Security</p>
+          <div className="p-3 mb-4 cursor-pointer flex items-center gap-3 group" onClick={() => navigate("/proctor/dashboard")}>
+            <div className="h-9 w-9 rounded-xl bg-blue-500/10 border border-blue-500/25 flex items-center justify-center text-blue-400">
+              <FaShieldAlt size={16} />
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-white tracking-tight leading-tight">
+                Proctor<span className="text-blue-400">Portal</span>
+              </h1>
+              <p className="text-[11px] text-slate-400 font-medium">Invigilator Command</p>
+            </div>
           </div>
 
-          <nav className="space-y-2">
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-cyan-500 text-slate-950 font-semibold text-sm shadow-md">
-              <FaShieldAlt />
-              Control Center
+          <nav className="space-y-1">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-3 py-1.5">
+              Surveillance
+            </p>
+            <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-600/15 text-blue-400 border border-blue-500/20 font-semibold text-xs shadow-sm">
+              <FaShieldAlt size={14} />
+              <span>Control Center</span>
             </div>
           </nav>
         </div>
 
-        <div className="pt-4 border-t border-slate-800">
+        <div className="pt-3 border-t border-white/[0.07]">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white py-2.5 rounded-xl transition text-sm font-medium border border-rose-500/20"
+            className="w-full flex items-center justify-center gap-2 text-xs font-medium text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 py-2 rounded-lg transition"
           >
-            <FaSignOutAlt />
-            Logout
+            <FaSignOutAlt size={12} />
+            <span>Sign Out</span>
           </button>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 p-8 overflow-y-auto">
-        <div className="max-w-7xl mx-auto">
-          
-          {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-            <div>
-              <h1 className="text-2xl font-bold text-white">Proctor Control Center</h1>
-              <p className="text-sm text-slate-400">Live monitoring, anomaly alerts, and student behavior tracking.</p>
-            </div>
-            <div className="flex items-center gap-2 bg-emerald-500/10 text-emerald-400 px-4 py-2 rounded-xl border border-emerald-500/20 text-sm font-medium">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              Active Shift Monitoring
-            </div>
+      <main className="flex-1 p-6 lg:p-8 overflow-y-auto max-w-7xl mx-auto w-full">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/[0.06]">
+          <div>
+            <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">Surveillance Room</span>
+            <h1 className="text-2xl font-bold text-white tracking-tight mt-0.5">Proctor Control Center</h1>
+            <p className="text-slate-400 text-xs sm:text-sm mt-1">Live monitoring, anomaly alerts, and student behavior tracking.</p>
           </div>
-
-          {/* Quick Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-slate-900 p-6 rounded-2xl shadow-sm border border-white/10">
-              <p className="text-sm text-slate-400 font-medium">Live Exams Monitored</p>
-              <p className="text-3xl font-bold text-white mt-2">03</p>
-            </div>
-            <div className="bg-slate-900 p-6 rounded-2xl shadow-sm border border-white/10">
-              <p className="text-sm text-slate-400 font-medium">Active Students</p>
-              <p className="text-3xl font-bold text-cyan-400 mt-2">300</p>
-            </div>
-            <div className="bg-slate-900 p-6 rounded-2xl shadow-sm border border-white/10">
-              <p className="text-sm text-slate-400 font-medium">Pending Alerts</p>
-              <p className="text-3xl font-bold text-amber-400 mt-2">02</p>
-            </div>
-            <div className="bg-slate-900 p-6 rounded-2xl shadow-sm border border-white/10">
-              <p className="text-sm text-slate-400 font-medium">Critical Violations</p>
-              <p className="text-3xl font-bold text-rose-400 mt-2">03</p>
-            </div>
+          <div className="flex items-center gap-2 bg-emerald-500/10 text-emerald-400 px-3.5 py-1.5 rounded-lg border border-emerald-500/20 text-xs font-medium w-fit">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            Active Shift Monitoring
           </div>
+        </div>
 
-          {/* Search Bar */}
-          <div className="bg-slate-900 p-4 rounded-2xl shadow-sm border border-white/10 mb-6 flex items-center justify-between gap-4">
-            <div className="flex items-center bg-slate-800 border border-white/10 rounded-xl px-4 py-2.5 w-full md:w-96">
-              <FaSearch className="text-slate-400 mr-3" />
+        {/* Quick Stats Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-[#121520] p-5 rounded-xl border border-white/[0.07] shadow-sm">
+            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Live Exams</p>
+            <p className="text-2xl sm:text-3xl font-bold text-white mt-2 font-mono">03</p>
+          </div>
+          <div className="bg-[#121520] p-5 rounded-xl border border-white/[0.07] shadow-sm">
+            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Active Students</p>
+            <p className="text-2xl sm:text-3xl font-bold text-blue-400 mt-2 font-mono">300</p>
+          </div>
+          <div className="bg-[#121520] p-5 rounded-xl border border-white/[0.07] shadow-sm">
+            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Pending Alerts</p>
+            <p className="text-2xl sm:text-3xl font-bold text-amber-400 mt-2 font-mono">02</p>
+          </div>
+          <div className="bg-[#121520] p-5 rounded-xl border border-white/[0.07] shadow-sm">
+            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Violations Flagged</p>
+            <p className="text-2xl sm:text-3xl font-bold text-rose-400 mt-2 font-mono">03</p>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div className="flex items-center bg-[#090a0f] border border-white/[0.08] rounded-lg px-3 py-2 w-full sm:w-80">
+              <FaSearch className="text-slate-500 text-xs mr-2.5" />
               <input
                 type="text"
-                placeholder="Search incidents by student, exam, or issue..."
+                placeholder="Search incidents by candidate, exam, or issue..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-transparent text-sm text-white placeholder-slate-400 focus:outline-none"
+                className="w-full bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none"
               />
             </div>
-            <div className="text-sm text-slate-400 hidden md:block">
+            <div className="text-xs text-slate-400 font-mono">
               Recorded Alerts: <span className="font-semibold text-white">{filteredIncidents.length}</span>
             </div>
           </div>
 
           {/* Incidents / Violations Table */}
-          <div className="bg-slate-900 rounded-2xl shadow-sm border border-white/10 overflow-hidden">
-            <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[650px]">
               <thead>
-                <tr className="border-b border-white/10 bg-slate-800/50 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  <th className="py-3 px-6">Student Name</th>
-                  <th className="py-3 px-6">Exam Context</th>
-                  <th className="py-3 px-6">Violation / Issue</th>
-                  <th className="py-3 px-6">Timestamp</th>
-                  <th className="py-3 px-6">Severity</th>
+                <tr className="border-b border-white/[0.06] text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  <th className="pb-3 px-3">Student Name</th>
+                  <th className="pb-3 px-3">Exam Context</th>
+                  <th className="pb-3 px-3">Violation / Issue</th>
+                  <th className="pb-3 px-3">Timestamp</th>
+                  <th className="pb-3 px-3">Severity</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/10">
+              <tbody className="divide-y divide-white/[0.04] text-xs">
                 {filteredIncidents.length > 0 ? (
                   filteredIncidents.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-800/50 transition">
-                      <td className="py-4 px-6 font-medium text-white">{item.student}</td>
-                      <td className="py-4 px-6 text-sm text-slate-300">{item.exam}</td>
-                      <td className="py-4 px-6 text-sm text-slate-200 font-medium">{item.issue}</td>
-                      <td className="py-4 px-6 text-sm text-slate-400">{item.time}</td>
-                      <td className="py-4 px-6">
+                    <tr key={item.id} className="hover:bg-white/[0.02] transition">
+                      <td className="py-3.5 px-3 font-semibold text-white">{item.student}</td>
+                      <td className="py-3.5 px-3 text-slate-300">{item.exam}</td>
+                      <td className="py-3.5 px-3 text-slate-200 font-medium">{item.issue}</td>
+                      <td className="py-3.5 px-3 text-slate-400 font-mono">{item.time}</td>
+                      <td className="py-3.5 px-3">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-medium border ${
                             item.severity === "High"
                               ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
                               : "bg-amber-500/10 text-amber-400 border-amber-500/20"
@@ -145,7 +152,7 @@ export default function ProctorDashboard() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" className="py-8 text-center text-slate-500 text-sm">
+                    <td colSpan="5" className="py-8 text-center text-slate-500 text-xs">
                       No violations or alerts found matching your search.
                     </td>
                   </tr>
@@ -153,7 +160,6 @@ export default function ProctorDashboard() {
               </tbody>
             </table>
           </div>
-
         </div>
       </main>
     </div>

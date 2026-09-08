@@ -1,42 +1,36 @@
 const CalendarWidget = () => {
-  const days = [
-    "S","M","T","W","T","F","S",
-    1,2,3,4,5,6,7,
-    8,9,10,11,12,13,14,
-    15,16,17,18,19,20,21,
-    22,23,24,25,26,27,28,
-    29,30,31
-  ];
+  const headers = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+  const days = Array.from({ length: 31 }, (_, i) => i + 1);
+  const today = 12;
 
   return (
-    <div className="bg-slate-900 border border-white/10 rounded-3xl p-6">
-
-      <h2 className="text-white text-2xl font-bold mb-6">
-        August 2026
-      </h2>
-
-      <div className="grid grid-cols-7 gap-3 text-center">
-
-        {days.map((day, index) => (
-
-          <div
-            key={index}
-            className={`p-2 rounded-lg
-            ${
-              day === 12
-                ? "bg-cyan-500 text-black font-bold"
-                : typeof day === "string"
-                ? "text-cyan-400 font-semibold"
-                : "text-gray-300 hover:bg-slate-800"
-            }`}
-          >
-            {day}
-          </div>
-
-        ))}
-
+    <div className="card p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>August 2026</h2>
+        <span className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>Academic Cal</span>
       </div>
 
+      <div className="grid grid-cols-7 gap-1 text-center text-xs">
+        {headers.map((h) => (
+          <div key={h} className="h-7 flex items-center justify-center text-[10px] font-bold"
+            style={{ color: "var(--text-muted)" }}>
+            {h}
+          </div>
+        ))}
+        {days.map((d) => (
+          <div
+            key={d}
+            className="h-7 flex items-center justify-center rounded-lg text-xs transition"
+            style={
+              d === today
+                ? { background: "#2563eb", color: "#fff", fontWeight: 700 }
+                : { color: "var(--text-secondary)" }
+            }
+          >
+            {d}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

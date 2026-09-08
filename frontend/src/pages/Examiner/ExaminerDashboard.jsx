@@ -51,138 +51,146 @@ export default function ExaminerDashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white flex">
-      
+    <div className="min-h-screen bg-[#090a0f] text-slate-100 flex">
       {/* Sidebar for Examiner Section */}
-      <aside className="w-72 min-h-screen bg-slate-900 border-r border-white/10 flex flex-col justify-between p-6">
+      <aside className="w-64 min-h-screen bg-[#0d0f17] border-r border-white/[0.07] flex flex-col justify-between p-4 shrink-0 sticky top-0 h-screen">
         <div>
-          <div className="mb-8 cursor-pointer" onClick={() => navigate("/examiner/dashboard")}>
-            <h1 className="text-2xl font-bold text-white">
-              Examiner<span className="text-cyan-400">Portal</span>
-            </h1>
-            <p className="text-gray-400 text-xs mt-1">Exam Creation & Monitoring</p>
+          <div className="p-3 mb-4 cursor-pointer flex items-center gap-3 group" onClick={() => navigate("/examiner/dashboard")}>
+            <div className="h-9 w-9 rounded-xl bg-blue-500/10 border border-blue-500/25 flex items-center justify-center text-blue-400">
+              <FaClipboardList size={16} />
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-white tracking-tight leading-tight">
+                Examiner<span className="text-blue-400">Portal</span>
+              </h1>
+              <p className="text-[11px] text-slate-400 font-medium">Faculty Authoring</p>
+            </div>
           </div>
 
-          <nav className="space-y-2">
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-cyan-500 text-slate-950 font-semibold text-sm shadow-md">
-              <FaClipboardList />
-              My Exams
+          <nav className="space-y-1">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-3 py-1.5">
+              Workspace
+            </p>
+            <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-600/15 text-blue-400 border border-blue-500/20 font-semibold text-xs shadow-sm">
+              <FaClipboardList size={14} />
+              <span>My Exams</span>
             </div>
           </nav>
         </div>
 
-        <div className="pt-4 border-t border-slate-800">
+        <div className="pt-3 border-t border-white/[0.07]">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white py-2.5 rounded-xl transition text-sm font-medium border border-rose-500/20"
+            className="w-full flex items-center justify-center gap-2 text-xs font-medium text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 py-2 rounded-lg transition"
           >
-            <FaSignOutAlt />
-            Logout
+            <FaSignOutAlt size={12} />
+            <span>Sign Out</span>
           </button>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 p-8 overflow-y-auto">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-            <div>
-              <h1 className="text-2xl font-bold text-white">Examiner Dashboard</h1>
-              <p className="text-sm text-slate-400">Create, manage, and monitor your exam papers and student submissions.</p>
-            </div>
-            <button 
-              onClick={() => setIsModalOpen(true)}
-              className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-5 py-2.5 rounded-xl font-semibold transition shadow-md flex items-center gap-2"
-            >
-              <FaPlus /> Create New Exam
-            </button>
+      <main className="flex-1 p-6 lg:p-8 overflow-y-auto max-w-7xl mx-auto w-full">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/[0.06]">
+          <div>
+            <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">Faculty Portal</span>
+            <h1 className="text-2xl font-bold text-white tracking-tight mt-0.5">Examiner Dashboard</h1>
+            <p className="text-slate-400 text-xs sm:text-sm mt-1">Create, manage, and monitor your exam papers and student submissions.</p>
           </div>
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-lg font-semibold text-xs transition shadow-sm active:scale-[0.98] flex items-center gap-1.5 w-fit"
+          >
+            <FaPlus size={11} /> Create New Exam
+          </button>
+        </div>
 
-          {/* Quick Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-slate-900 p-6 rounded-2xl shadow-sm border border-white/10">
-              <p className="text-sm text-slate-400 font-medium flex items-center gap-2">
-                <FaClipboardList className="text-cyan-400" /> Total Exams Created
-              </p>
-              <p className="text-3xl font-bold text-white mt-2">{exams.length}</p>
-            </div>
-            <div className="bg-slate-900 p-6 rounded-2xl shadow-sm border border-white/10">
-              <p className="text-sm text-slate-400 font-medium flex items-center gap-2">
-                <FaCheckCircle className="text-emerald-400" /> Published / Active
-              </p>
-              <p className="text-3xl font-bold text-emerald-400 mt-2">
-                {exams.filter(e => e.status === "Published").length}
-              </p>
-            </div>
-            <div className="bg-slate-900 p-6 rounded-2xl shadow-sm border border-white/10">
-              <p className="text-sm text-slate-400 font-medium flex items-center gap-2">
-                <FaFileAlt className="text-amber-400" /> Drafts
-              </p>
-              <p className="text-3xl font-bold text-amber-400 mt-2">
-                {exams.filter(e => e.status === "Draft").length}
-              </p>
-            </div>
+        {/* Quick Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div className="bg-[#121520] p-5 rounded-xl border border-white/[0.07] shadow-sm">
+            <p className="text-xs text-slate-400 font-medium flex items-center gap-2 uppercase tracking-wider">
+              <FaClipboardList className="text-blue-400" /> Total Exams Created
+            </p>
+            <p className="text-2xl sm:text-3xl font-bold text-white mt-2 font-mono">{exams.length}</p>
           </div>
+          <div className="bg-[#121520] p-5 rounded-xl border border-white/[0.07] shadow-sm">
+            <p className="text-xs text-slate-400 font-medium flex items-center gap-2 uppercase tracking-wider">
+              <FaCheckCircle className="text-emerald-400" /> Published / Active
+            </p>
+            <p className="text-2xl sm:text-3xl font-bold text-emerald-400 mt-2 font-mono">
+              {exams.filter(e => e.status === "Published").length}
+            </p>
+          </div>
+          <div className="bg-[#121520] p-5 rounded-xl border border-white/[0.07] shadow-sm">
+            <p className="text-xs text-slate-400 font-medium flex items-center gap-2 uppercase tracking-wider">
+              <FaFileAlt className="text-amber-400" /> Drafts
+            </p>
+            <p className="text-2xl sm:text-3xl font-bold text-amber-400 mt-2 font-mono">
+              {exams.filter(e => e.status === "Draft").length}
+            </p>
+          </div>
+        </div>
 
-          {/* Search Bar */}
-          <div className="bg-slate-900 p-4 rounded-2xl shadow-sm border border-white/10 mb-6 flex items-center justify-between gap-4">
-            <div className="flex items-center bg-slate-800 border border-white/10 rounded-xl px-4 py-2.5 w-full md:w-96">
-              <FaSearch className="text-slate-400 mr-3" />
+        {/* Search Bar */}
+        <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div className="flex items-center bg-[#090a0f] border border-white/[0.08] rounded-lg px-3 py-2 w-full sm:w-80">
+              <FaSearch className="text-slate-500 text-xs mr-2.5" />
               <input
                 type="text"
                 placeholder="Search your exams by title or course..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-transparent text-sm text-white placeholder-slate-400 focus:outline-none"
+                className="w-full bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none"
               />
             </div>
-            <div className="text-sm text-slate-400 hidden md:block">
+            <div className="text-xs text-slate-400 font-mono">
               Showing: <span className="font-semibold text-white">{filteredExams.length} exams</span>
             </div>
           </div>
 
           {/* Exams Table */}
-          <div className="bg-slate-900 rounded-2xl shadow-sm border border-white/10 overflow-hidden">
-            <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[650px]">
               <thead>
-                <tr className="border-b border-white/10 bg-slate-800/50 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  <th className="py-3 px-6">Exam Title</th>
-                  <th className="py-3 px-6">Status</th>
-                  <th className="py-3 px-6">Registered Students</th>
-                  <th className="py-3 px-6">Scheduled Date</th>
+                <tr className="border-b border-white/[0.06] text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  <th className="pb-3 px-3">Exam Title</th>
+                  <th className="pb-3 px-3">Status</th>
+                  <th className="pb-3 px-3">Registered Candidates</th>
+                  <th className="pb-3 px-3">Scheduled Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/10">
+              <tbody className="divide-y divide-white/[0.04] text-xs">
                 {filteredExams.length > 0 ? (
                   filteredExams.map((exam) => (
-                    <tr key={exam.id} className="hover:bg-slate-800/50 transition">
-                      <td className="py-4 px-6">
-                        <p className="font-medium text-white">{exam.title}</p>
-                        <span className="inline-block bg-slate-800 text-cyan-400 border border-white/10 text-xs px-2 py-0.5 rounded font-mono mt-1">
+                    <tr key={exam.id} className="hover:bg-white/[0.02] transition">
+                      <td className="py-3.5 px-3">
+                        <p className="font-semibold text-white">{exam.title}</p>
+                        <span className="inline-block text-blue-400 font-mono text-[11px] mt-0.5">
                           {exam.course}
                         </span>
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-3.5 px-3">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-medium border ${
                             exam.status === "Published"
-                              ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                              : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                              : "bg-amber-500/10 text-amber-400 border-amber-500/20"
                           }`}
                         >
                           {exam.status}
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-sm font-semibold text-slate-200">
-                        {exam.registered} students
+                      <td className="py-3.5 px-3 text-slate-300 font-mono">
+                        {exam.registered} candidates
                       </td>
-                      <td className="py-4 px-6 text-sm text-slate-400">{exam.date}</td>
+                      <td className="py-3.5 px-3 text-slate-400 font-mono">{exam.date}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="4" className="py-8 text-center text-slate-500 text-sm">
+                    <td colSpan="4" className="py-8 text-center text-slate-500 text-xs">
                       No exams found matching your search.
                     </td>
                   </tr>
@@ -195,60 +203,60 @@ export default function ExaminerDashboard() {
 
       {/* Create New Exam Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-white">Create New Exam</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white">
-                <FaTimes />
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-[#121520] border border-white/[0.1] rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.06]">
+              <h3 className="text-base font-bold text-white tracking-tight">Create New Exam Paper</h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white p-1">
+                <FaTimes size={14} />
               </button>
             </div>
             
-            <form onSubmit={handleCreateExamSubmit} className="space-y-4">
+            <form onSubmit={handleCreateExamSubmit} className="space-y-3.5 text-xs">
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Exam Title</label>
+                <label className="block font-medium text-slate-300 mb-1">Exam Title</label>
                 <input
                   type="text"
                   placeholder="e.g., Computer Networks Mid-Term"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   required
-                  className="w-full px-4 py-2 bg-slate-800 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  className="w-full px-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Course Code</label>
+                <label className="block font-medium text-slate-300 mb-1">Course Code</label>
                 <input
                   type="text"
                   placeholder="e.g., CS302"
                   value={newCourse}
                   onChange={(e) => setNewCourse(e.target.value)}
                   required
-                  className="w-full px-4 py-2 bg-slate-800 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  className="w-full px-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Scheduled Date</label>
+                <label className="block font-medium text-slate-300 mb-1">Scheduled Date</label>
                 <input
                   type="text"
                   placeholder="e.g., 25 Aug 2026"
                   value={newDate}
                   onChange={(e) => setNewDate(e.target.value)}
-                  className="w-full px-4 py-2 bg-slate-800 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  className="w-full px-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 mt-6">
+              <div className="flex justify-end gap-2.5 pt-4 border-t border-white/[0.06]">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-medium transition"
+                  className="px-4 py-2 bg-[#090a0f] hover:bg-white/[0.04] text-slate-300 rounded-lg font-medium border border-white/[0.08] transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-xl text-sm font-semibold transition"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold transition active:scale-[0.98] shadow-sm"
                 >
                   Create Exam
                 </button>

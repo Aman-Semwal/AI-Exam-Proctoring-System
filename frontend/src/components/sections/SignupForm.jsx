@@ -27,20 +27,19 @@ const SignupForm = () => {
 
   return (
     <div>
-      <h2 className="text-3xl font-bold text-slate-900">Create your account</h2>
-      <p className="text-gray-500 mt-2">Join ProctorAI and start your journey.</p>
+      <h2 className="text-xl font-bold text-white tracking-tight">Create your account</h2>
+      <p className="text-xs text-slate-400 mt-1">Join ProctorAI and start your journey.</p>
 
-      <form onSubmit={handleSignup} className="mt-6 space-y-4">
-
+      <form onSubmit={handleSignup} className="mt-5 space-y-3.5">
         {/* Role Selector */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
-            <FaUserShield className="text-cyan-600" /> Register As
+          <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1.5">
+            <FaUserShield className="text-blue-400 text-xs" /> Register As
           </label>
           <select
             value={selectedRole}
             onChange={(e) => setSelectedRole(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 transition"
+            className="w-full px-3.5 py-2.5 rounded-lg border border-white/[0.08] bg-[#090a0f] text-slate-200 text-xs outline-none focus:border-blue-500 transition"
           >
             <option value="student">Student</option>
             <option value="examiner">Examiner</option>
@@ -51,40 +50,40 @@ const SignupForm = () => {
 
         {/* Name */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">Full Name</label>
+          <label className="block text-xs font-medium text-slate-300 mb-1">Full Name</label>
           <input
             type="text"
             placeholder="Enter your full name"
             required
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 transition"
+            className="w-full px-3.5 py-2.5 rounded-lg border border-white/[0.08] bg-[#090a0f] text-slate-200 text-xs placeholder-slate-500 outline-none focus:border-blue-500 transition"
           />
         </div>
 
         {/* Email */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">Email Address</label>
+          <label className="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
           <input
             type="email"
             placeholder="you@example.com"
             required
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 transition"
+            className="w-full px-3.5 py-2.5 rounded-lg border border-white/[0.08] bg-[#090a0f] text-slate-200 text-xs placeholder-slate-500 outline-none focus:border-blue-500 transition"
           />
         </div>
 
         {/* Password */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+          <label className="block text-xs font-medium text-slate-300 mb-1">Password</label>
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
               placeholder="Create a password"
               required
-              className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 bg-gray-50 text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 transition"
+              className="w-full px-3.5 py-2.5 pr-10 rounded-lg border border-white/[0.08] bg-[#090a0f] text-slate-200 text-xs placeholder-slate-500 outline-none focus:border-blue-500 transition"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-cyan-500"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs"
             >
               {showPassword ? <FaEyeSlash /> : <FaEye />}
             </button>
@@ -92,36 +91,35 @@ const SignupForm = () => {
         </div>
 
         {/* Terms */}
-        <label className="flex items-start gap-2 text-sm text-gray-500 pt-1">
-          <input type="checkbox" required className="mt-1 accent-cyan-500" />
+        <label className="flex items-start gap-2 text-xs text-slate-400 pt-0.5 cursor-pointer">
+          <input type="checkbox" required className="mt-0.5 accent-blue-600 rounded" />
           <span>I agree to the Terms & Conditions and Privacy Policy.</span>
         </label>
 
         {/* Signup */}
         <button
           type="submit"
-          className="w-full py-3.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold transition shadow-md"
+          className="w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition shadow-sm"
         >
           Create Account
         </button>
 
         {/* Divider */}
-        <div className="flex items-center gap-4 py-1">
-          <div className="flex-1 h-px bg-gray-200" />
-          <span className="text-gray-400 text-sm">OR</span>
-          <div className="flex-1 h-px bg-gray-200" />
+        <div className="flex items-center gap-3 py-1">
+          <div className="flex-1 h-px bg-white/[0.06]" />
+          <span className="text-slate-500 text-[10px] uppercase">OR</span>
+          <div className="flex-1 h-px bg-white/[0.06]" />
         </div>
 
         {/* Google */}
         <button
           type="button"
           onClick={handleGoogleSignup}
-          className="w-full py-3.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-slate-700 font-medium flex items-center justify-center gap-3 transition"
+          className="w-full py-2.5 rounded-lg border border-white/[0.08] bg-[#090a0f] hover:bg-white/[0.04] text-slate-200 text-xs font-medium flex items-center justify-center gap-2.5 transition"
         >
-          <FaGoogle className="text-red-500" />
+          <FaGoogle className="text-red-400 text-xs" />
           Sign up with Google
         </button>
-
       </form>
     </div>
   );

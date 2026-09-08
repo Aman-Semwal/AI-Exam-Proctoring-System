@@ -1,19 +1,17 @@
 const SubmitCard = () => {
   return (
-    <div className="bg-slate-900 border border-white/10 rounded-2xl p-6">
-
-      <h2 className="text-xl font-bold text-white mb-4">
-        Submit Exam
+    <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+      <h2 className="text-sm font-semibold text-white tracking-tight mb-2">
+        Finish Assessment
       </h2>
 
-      <p className="text-gray-400 mb-6">
-        Make sure all questions are answered before submitting your exam.
+      <p className="text-slate-400 text-xs mb-4 leading-relaxed">
+        Ensure all questions are reviewed before final submission. This action is irreversible.
       </p>
 
-      <button className="w-full bg-red-500 hover:bg-red-600 py-4 rounded-xl text-white font-bold transition">
-        Submit Exam
+      <button className="w-full bg-rose-600 hover:bg-rose-500 py-2.5 rounded-lg text-white font-semibold text-xs transition active:scale-[0.98] shadow-sm">
+        Submit Final Exam
       </button>
-
     </div>
   );
 };

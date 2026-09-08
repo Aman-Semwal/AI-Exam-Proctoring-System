@@ -1,50 +1,14 @@
 import { useState } from "react";
-import { FaSearch, FaPlus, FaEllipsisV,  } from "react-icons/fa";
+import { FaSearch, FaPlus, FaEllipsisV } from "react-icons/fa";
 import OrganizationSidebar from "../../components/layout/OrganizationSidebar";
 
 const studentsData = [
-  {
-    name: "Anchal Saini",
-    email: "anchal.saini@mmu.edu",
-    batch: "CS-3A",
-    exams: 8,
-    status: "Active",
-  },
-  {
-    name: "Rahul Verma",
-    email: "rahul.verma@mmu.edu",
-    batch: "CS-3A",
-    exams: 6,
-    status: "Active",
-  },
-  {
-    name: "Priya Singh",
-    email: "priya.singh@mmu.edu",
-    batch: "CS-2B",
-    exams: 5,
-    status: "Active",
-  },
-  {
-    name: "Amit Rana",
-    email: "amit.rana@mmu.edu",
-    batch: "CS-2B",
-    exams: 3,
-    status: "Inactive",
-  },
-  {
-    name: "Sneha Rao",
-    email: "sneha.rao@mmu.edu",
-    batch: "CS-3A",
-    exams: 7,
-    status: "Active",
-  },
-  {
-    name: "Karan Mehta",
-    email: "karan.mehta@mmu.edu",
-    batch: "CS-1A",
-    exams: 2,
-    status: "Active",
-  },
+  { name: "Anchal Saini", email: "anchal.saini@mmu.edu", batch: "CS-3A", exams: 8, status: "Active" },
+  { name: "Rahul Verma", email: "rahul.verma@mmu.edu", batch: "CS-3A", exams: 6, status: "Active" },
+  { name: "Priya Singh", email: "priya.singh@mmu.edu", batch: "CS-2B", exams: 5, status: "Active" },
+  { name: "Amit Rana", email: "amit.rana@mmu.edu", batch: "CS-2B", exams: 3, status: "Inactive" },
+  { name: "Sneha Rao", email: "sneha.rao@mmu.edu", batch: "CS-3A", exams: 7, status: "Active" },
+  { name: "Karan Mehta", email: "karan.mehta@mmu.edu", batch: "CS-1A", exams: 2, status: "Active" },
 ];
 
 const Students = () => {
@@ -57,93 +21,90 @@ const Students = () => {
   );
 
   return (
-    <div className="flex min-h-screen bg-[#020617] text-white">
-      
+    <div className="flex min-h-screen bg-[#090a0f] text-slate-100">
       {/* Organization Sidebar */}
       <OrganizationSidebar />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
-
         {/* Header */}
-        <header className="h-20 bg-slate-900 border-b border-white/10 flex items-center justify-between px-6 lg:px-10">
+        <header className="h-16 bg-[#090a0f]/80 backdrop-blur-xl border-b border-white/[0.07] flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30">
           <div>
-            <h1 className="text-2xl font-bold text-white">Students</h1>
-            <p className="text-sm text-slate-400 mt-1">
+            <h1 className="text-base font-semibold text-white tracking-tight">Students Management</h1>
+            <p className="text-[11px] text-slate-400">
               Manage students in your organization
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center font-bold text-xs">
               AS
             </div>
             <div className="hidden sm:block">
-              <p className="text-sm font-semibold text-white">Anchal Saini</p>
-              <p className="text-xs text-slate-400">Organization Admin</p>
+              <p className="text-xs font-semibold text-white leading-tight">Anchal Saini</p>
+              <p className="text-[10px] text-slate-400 leading-tight">Organization Admin</p>
             </div>
           </div>
         </header>
 
         {/* Main Body */}
-        <main className="p-6 lg:p-10 flex-1 overflow-y-auto">
-
+        <main className="p-6 lg:p-8 flex-1 overflow-y-auto max-w-7xl mx-auto w-full">
           {/* Page Heading */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/[0.06]">
             <div>
-              <p className="text-cyan-400 font-medium">Organization Admin</p>
-              <h2 className="text-3xl font-bold text-white mt-1">All Students</h2>
-              <p className="text-slate-400 mt-2">
+              <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">Administration</span>
+              <h2 className="text-2xl font-bold text-white tracking-tight mt-0.5">All Enrolled Students</h2>
+              <p className="text-slate-400 text-xs sm:text-sm mt-1">
                 View and manage students enrolled in your organization.
               </p>
             </div>
 
-            <button className="flex items-center justify-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold px-5 py-3 rounded-xl transition shadow-md">
-              <FaPlus />
+            <button className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2.5 rounded-lg transition-all text-xs shadow-sm active:scale-[0.98] w-fit">
+              <FaPlus size={11} />
               Add Student
             </button>
           </div>
 
           {/* Search Bar */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-            <div className="flex items-center bg-slate-900 border border-white/10 rounded-xl px-4 py-3 w-full md:w-96 shadow-sm">
-              <FaSearch className="text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search by name or email..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="ml-3 w-full bg-transparent outline-none text-white placeholder-slate-400 text-sm"
-              />
+          <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <div className="relative flex-1 max-w-sm">
+                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs" />
+                <input
+                  type="text"
+                  placeholder="Search by name or email..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
+                />
+              </div>
+
+              <p className="text-xs text-slate-400 font-mono">
+                Showing {filteredStudents.length} of {studentsData.length} students
+              </p>
             </div>
 
-            <p className="text-sm text-slate-400">
-              Showing {filteredStudents.length} of {studentsData.length} students
-            </p>
-          </div>
-
-          {/* Students Table */}
-          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 shadow-sm">
+            {/* Students Table */}
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[700px]">
+              <table className="w-full min-w-[650px] text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-white/10 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    <th className="pb-4">Student</th>
-                    <th className="pb-4">Batch</th>
-                    <th className="pb-4">Exams Given</th>
-                    <th className="pb-4">Status</th>
-                    <th className="pb-4 text-right">Actions</th>
+                  <tr className="border-b border-white/[0.06] text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    <th className="pb-3 px-3">Student</th>
+                    <th className="pb-3 px-3">Batch</th>
+                    <th className="pb-3 px-3">Exams Given</th>
+                    <th className="pb-3 px-3">Status</th>
+                    <th className="pb-3 px-3 text-right">Actions</th>
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-white/10">
+                <tbody className="divide-y divide-white/[0.04] text-xs">
                   {filteredStudents.map((student, index) => (
                     <StudentRow key={index} student={student} />
                   ))}
 
                   {filteredStudents.length === 0 && (
                     <tr>
-                      <td colSpan="5" className="py-10 text-center text-slate-500">
+                      <td colSpan="5" className="py-8 text-center text-slate-500">
                         No students found matching "{search}"
                       </td>
                     </tr>
@@ -152,16 +113,11 @@ const Students = () => {
               </table>
             </div>
           </div>
-
         </main>
       </div>
-
     </div>
   );
 };
-
-
-/* ================= STUDENT ROW ================= */
 
 const StudentRow = ({ student }) => {
   const initials = student.name
@@ -172,43 +128,37 @@ const StudentRow = ({ student }) => {
     .toUpperCase();
 
   return (
-    <tr className="border-b border-white/10 hover:bg-slate-800/50 transition">
-      {/* Student */}
-      <td className="py-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 font-semibold text-sm">
+    <tr className="hover:bg-white/[0.02] transition">
+      <td className="py-3 px-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold text-xs">
             {initials}
           </div>
           <div>
-            <p className="font-medium text-white">{student.name}</p>
-            <p className="text-xs text-slate-400">{student.email}</p>
+            <p className="font-semibold text-white">{student.name}</p>
+            <p className="text-[11px] text-slate-400">{student.email}</p>
           </div>
         </div>
       </td>
 
-      {/* Batch */}
-      <td className="py-4 text-sm text-slate-300">{student.batch}</td>
+      <td className="py-3 px-3 text-slate-300 font-mono text-[11px]">{student.batch}</td>
+      <td className="py-3 px-3 text-slate-300 font-mono">{student.exams}</td>
 
-      {/* Exams */}
-      <td className="py-4 text-sm text-slate-300">{student.exams}</td>
-
-      {/* Status */}
-      <td className="py-4">
+      <td className="py-3 px-3">
         <span
-          className={`px-3 py-1 rounded-full text-xs font-medium ${
+          className={`px-2.5 py-0.5 rounded-full text-[10px] font-medium border ${
             student.status === "Active"
-              ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-              : "bg-slate-800 text-slate-400 border border-slate-700"
+              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+              : "bg-slate-800 text-slate-400 border-slate-700"
           }`}
         >
           {student.status}
         </span>
       </td>
 
-      {/* Actions */}
-      <td className="py-4 text-right">
-        <button className="text-slate-400 hover:text-cyan-400 p-2 transition">
-          <FaEllipsisV />
+      <td className="py-3 px-3 text-right">
+        <button className="text-slate-400 hover:text-white p-1.5 transition">
+          <FaEllipsisV size={11} />
         </button>
       </td>
     </tr>

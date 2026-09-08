@@ -1,192 +1,94 @@
-import { useLocation, useNavigate } from "react-router-dom";
-
+import { NavLink, useNavigate } from "react-router-dom";
 import {
-  FaTachometerAlt,
-  FaBuilding,
-  FaUsers,
-  FaClipboardList,
-  FaVideo,
-  FaChartBar,
-  FaServer,
-  FaCog,
-  FaSignOutAlt,
+  FaLayerGroup, FaTachometerAlt, FaBuilding, FaUsers,
+  FaFileAlt, FaVideo, FaChartBar, FaServer, FaCog, FaSignOutAlt,
+  FaSun, FaMoon,
 } from "react-icons/fa";
+import { useTheme } from "../../context/ThemeContext";
+
+const navItems = [
+  { to: "/super-admin/dashboard",    icon: FaTachometerAlt, label: "Dashboard" },
+  { to: "/super-admin/organizations",icon: FaBuilding,      label: "Organizations" },
+  { to: "/super-admin/users",        icon: FaUsers,         label: "Users" },
+  { to: "/super-admin/exams",        icon: FaFileAlt,       label: "Exams" },
+  { to: "/super-admin/live-sessions",icon: FaVideo,         label: "Live Sessions" },
+  { to: "/super-admin/analytics",    icon: FaChartBar,      label: "Analytics" },
+  { to: "/super-admin/system-health",icon: FaServer,        label: "System Health" },
+  { to: "/super-admin/settings",     icon: FaCog,           label: "Settings" },
+];
 
 const SuperAdminSidebar = () => {
-
   const navigate = useNavigate();
-  const location = useLocation();
-
-  const menus = [
-    {
-      title: "Dashboard",
-      icon: <FaTachometerAlt />,
-      path: "/super-admin/dashboard",
-    },
-    {
-      title: "Organizations",
-      icon: <FaBuilding />,
-      path: "/super-admin/organizations",
-    },
-    {
-      title: "Users",
-      icon: <FaUsers />,
-      path: "/super-admin/users",
-    },
-    {
-      title: "Exams",
-      icon: <FaClipboardList />,
-      path: "/super-admin/exams",
-    },
-    {
-      title: "Live Sessions",
-      icon: <FaVideo />,
-      path: "/super-admin/live-sessions",
-    },
-    {
-      title: "Analytics",
-      icon: <FaChartBar />,
-      path: "/super-admin/analytics",
-    },
-    {
-      title: "System Health",
-      icon: <FaServer />,
-      path: "/super-admin/system-health",
-    },
-  ];
+  const { isDark, toggleTheme } = useTheme();
 
   const handleLogout = () => {
-
     localStorage.removeItem("isLoggedIn");
-
-    navigate("/login");
+    navigate("/");
   };
 
   return (
-    <aside className="hidden lg:flex w-72 min-h-screen bg-slate-900 border-r border-white/10 flex-col justify-between sticky top-0">
-
+    <aside className="w-60 shrink-0 min-h-screen flex flex-col justify-between py-5 px-3 sticky top-0 h-screen sidebar-bg">
       <div>
-
-        {/* Logo */}
-        <div className="p-7 border-b border-white/10">
-
-          <button
-            onClick={() => navigate("/super-admin/dashboard")}
-            className="text-left"
-          >
-
-            <h1 className="text-3xl font-bold text-white">
-              Proctor
-              <span className="text-cyan-400">
-                AI
-              </span>
-            </h1>
-
-            <p className="text-gray-400 text-sm mt-2">
-              Platform Administration
-            </p>
-
-          </button>
-
+        <div className="flex items-center gap-2.5 px-3 py-2 mb-6 cursor-pointer"
+          onClick={() => navigate("/super-admin/dashboard")}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-violet-500"
+            style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)" }}>
+            <FaLayerGroup size={15} />
+          </div>
+          <span className="font-bold text-sm" style={{ color: "var(--text-primary)" }}>
+            Super<span className="text-violet-500">Admin</span>
+          </span>
         </div>
 
-        {/* Menu */}
-        <nav className="p-5 space-y-2">
+        <p className="text-[10px] font-semibold uppercase tracking-widest px-3 mb-2"
+          style={{ color: "var(--text-muted)" }}>
+          Platform Control
+        </p>
 
-          <p className="text-xs uppercase tracking-widest text-gray-500 px-3 mb-4">
-            Management
-          </p>
-
-          {menus.map((item) => {
-
-            const active =
-              location.pathname === item.path;
-
-            return (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition ${
-                  active
-                    ? "bg-cyan-500 text-black font-semibold"
-                    : "text-gray-300 hover:bg-slate-800 hover:text-cyan-400"
+        <nav className="space-y-0.5">
+          {navItems.map(({ to, icon: Icon, label }) => (
+            <NavLink key={to} to={to}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition ${
+                  isActive ? "border border-violet-500/20" : ""
                 }`}
-              >
-
-                <span className="text-lg">
-                  {item.icon}
-                </span>
-
-                <span className="font-medium">
-                  {item.title}
-                </span>
-
-              </button>
-            );
-
-          })}
-
-          <p className="text-xs uppercase tracking-widest text-gray-500 px-3 pt-6 mb-3">
-            System
-          </p>
-
-          <button
-            onClick={() => navigate("/super-admin/settings")}
-            className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition ${
-              location.pathname === "/super-admin/settings"
-                ? "bg-cyan-500 text-black font-semibold"
-                : "text-gray-300 hover:bg-slate-800 hover:text-cyan-400"
-            }`}
-          >
-
-            <FaCog className="text-lg" />
-
-            <span className="font-medium">
-              Settings
-            </span>
-
-          </button>
-
+              style={({ isActive }) => ({
+                color: isActive ? "#8b5cf6" : "var(--text-secondary)",
+                background: isActive ? "rgba(139,92,246,0.12)" : "transparent",
+              })}>
+              <Icon size={14} />
+              {label}
+            </NavLink>
+          ))}
         </nav>
-
       </div>
 
-      {/* Admin */}
-      <div className="p-5 border-t border-white/10">
-
-        <div className="flex items-center gap-3 mb-5">
-
-          <div className="w-11 h-11 rounded-full bg-cyan-500 flex items-center justify-center text-black font-bold">
+      <div className="space-y-1">
+        <button onClick={toggleTheme} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition"
+          style={{ color: "var(--text-muted)" }}>
+          {isDark ? <FaSun size={13} className="text-amber-400" /> : <FaMoon size={13} className="text-indigo-400" />}
+          {isDark ? "Light Mode" : "Dark Mode"}
+        </button>
+        <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg"
+          style={{ border: "1px solid var(--border)", background: "var(--bg-card)" }}>
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs text-violet-500"
+            style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.25)" }}>
             SA
           </div>
-
-          <div>
-
-            <h3 className="text-white font-semibold">
-              Super Admin
-            </h3>
-
-            <p className="text-gray-500 text-sm">
-              Platform Owner
-            </p>
-
+          <div className="min-w-0">
+            <p className="text-xs font-semibold truncate" style={{ color: "var(--text-primary)" }}>Super Admin</p>
+            <p className="text-[10px] truncate" style={{ color: "var(--text-muted)" }}>System Root</p>
           </div>
-
         </div>
-
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-3 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white py-3 rounded-xl transition"
-        >
-
-          <FaSignOutAlt />
-
-          Logout
-
+        <button onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition"
+          style={{ color: "var(--text-muted)" }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = "#ef4444"; e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.background = "transparent"; }}>
+          <FaSignOutAlt size={13} />
+          Sign Out
         </button>
-
       </div>
-
     </aside>
   );
 };

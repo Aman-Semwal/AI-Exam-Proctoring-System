@@ -1,9 +1,8 @@
-const StatCard = ({ title, value, color }) => {
+const StatCard = ({ title, value, color = "text-blue-400" }) => {
   return (
-    <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 hover:border-cyan-400 hover:-translate-y-1 transition-all duration-300">
-      <h3 className="text-gray-400 text-sm">{title}</h3>
-
-      <p className={`text-4xl font-bold mt-3 ${color}`}>
+    <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 hover:border-white/[0.15] transition-all duration-200 shadow-sm">
+      <h3 className="text-slate-400 text-xs font-medium uppercase tracking-wider">{title}</h3>
+      <p className={`text-2xl sm:text-3xl font-bold mt-2 tracking-tight ${color}`}>
         {value}
       </p>
     </div>

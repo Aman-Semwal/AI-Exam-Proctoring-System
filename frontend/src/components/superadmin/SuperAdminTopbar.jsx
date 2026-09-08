@@ -1,75 +1,52 @@
-import {
-  FaBell,
-  FaSearch,
-  FaUserCircle,
-} from "react-icons/fa";
+import { FaBell, FaSearch, FaSun, FaMoon } from "react-icons/fa";
+import { useTheme } from "../../context/ThemeContext";
 
-const SuperAdminTopbar = () => {
+const SuperAdminTopbar = ({ title = "Dashboard", breadcrumb = "Super Admin" }) => {
+  const { isDark, toggleTheme } = useTheme();
 
   return (
-    <header className="h-20 bg-slate-900/95 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30">
-
-      {/* Left */}
+    <header
+      className="h-14 flex items-center justify-between px-6 sticky top-0 z-20"
+      style={{
+        background: "var(--nav-bg)",
+        borderBottom: "1px solid var(--border)",
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
+      }}
+    >
       <div>
-
-        <h2 className="text-xl lg:text-2xl font-bold text-white">
-          Good Morning, Admin 👋
-        </h2>
-
-        <p className="text-gray-500 text-sm">
-          Platform overview and management
-        </p>
-
+        <p className="text-[10px] font-mono" style={{ color: "var(--text-muted)" }}>{breadcrumb}</p>
+        <h1 className="text-sm font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>{title}</h1>
       </div>
 
-      {/* Right */}
-      <div className="flex items-center gap-3">
-
-        {/* Search */}
-        <div className="hidden md:flex items-center bg-slate-800 border border-white/10 rounded-xl px-4 py-2.5">
-
-          <FaSearch className="text-gray-500" />
-
-          <input
-            type="text"
-            placeholder="Search platform..."
-            className="ml-3 w-40 lg:w-56 bg-transparent outline-none text-white placeholder-gray-500"
-          />
-
+      <div className="flex items-center gap-2">
+        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
+          style={{ background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-muted)" }}>
+          <FaSearch size={11} />
+          <span>Search</span>
+          <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-mono"
+            style={{ background: "var(--bg-raised)", border: "1px solid var(--border)" }}>
+            ⌘K
+          </span>
         </div>
 
-        {/* Notification */}
-        <button
-          className="relative w-11 h-11 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-gray-300 transition"
-        >
-
-          <FaBell />
-
-          <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full" />
-
+        <button onClick={toggleTheme} aria-label="Toggle theme"
+          className="w-8 h-8 rounded-lg flex items-center justify-center transition"
+          style={{ background: "var(--bg-card)", border: "1px solid var(--border)", color: isDark ? "#fbbf24" : "#6366f1" }}>
+          {isDark ? <FaSun size={13} /> : <FaMoon size={13} />}
         </button>
 
-        {/* Profile */}
-        <button className="flex items-center gap-3 ml-2">
-
-          <FaUserCircle className="text-cyan-400 text-4xl" />
-
-          <div className="hidden lg:block text-left">
-
-            <p className="text-white font-semibold">
-              Super Admin
-            </p>
-
-            <p className="text-gray-500 text-xs">
-              Administrator
-            </p>
-
-          </div>
-
+        <button className="relative w-8 h-8 rounded-lg flex items-center justify-center transition"
+          style={{ background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-muted)" }}>
+          <FaBell size={13} />
+          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-violet-500" />
         </button>
 
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs text-violet-500"
+          style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.25)" }}>
+          SA
+        </div>
       </div>
-
     </header>
   );
 };

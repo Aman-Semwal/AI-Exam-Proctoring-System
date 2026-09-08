@@ -1,160 +1,109 @@
+import { NavLink, useNavigate } from "react-router-dom";
 import {
-  FaHome,
-  FaClipboardList,
-  FaChartBar,
-  FaUser,
-  FaCog,
-  FaSignOutAlt,
+  FaShieldAlt, FaTachometerAlt, FaClipboardList,
+  FaChartBar, FaUserCircle, FaCog, FaSignOutAlt, FaSun, FaMoon,
 } from "react-icons/fa";
+import { useTheme } from "../../context/ThemeContext";
 
-import { useNavigate, useLocation } from "react-router-dom";
+const navItems = [
+  { to: "/student/dashboard", icon: FaTachometerAlt, label: "Dashboard" },
+  { to: "/student/live-exam",  icon: FaClipboardList,  label: "Live Exam" },
+  { to: "/student/results",    icon: FaChartBar,       label: "Results" },
+  { to: "/student/profile",    icon: FaUserCircle,     label: "Profile" },
+  { to: "/student/settings",   icon: FaCog,            label: "Settings" },
+];
 
 const Sidebar = () => {
-
   const navigate = useNavigate();
-
-  const location = useLocation();
+  const { isDark, toggleTheme } = useTheme();
 
   const handleLogout = () => {
-
     localStorage.removeItem("isLoggedIn");
-
     navigate("/");
-
   };
 
-  const menus = [
-    {
-      icon: <FaHome />,
-      title: "Dashboard",
-      path: "/student/dashboard",
-    },
-    {
-      icon: <FaClipboardList />,
-      title: "Live Exam",
-      path: "/student/live-exam", // Updated path
-    },
-    {
-      icon: <FaChartBar />,
-      title: "Results",
-      path: "/student/results", // Updated path
-    },
-    {
-      icon: <FaUser />,
-      title: "Profile",
-      path: "/student/profile", // Updated path
-    },
-    {
-      icon: <FaCog />,
-      title: "Settings",
-      path: "/student/settings", // Updated path
-    },
-  ];
-
   return (
-    <aside className="w-72 min-h-screen bg-slate-900 border-r border-white/10 flex flex-col justify-between">
-
+    <aside
+      className="w-60 shrink-0 min-h-screen flex flex-col justify-between py-5 px-3 sticky top-0 h-screen sidebar-bg"
+    >
+      {/* Brand */}
       <div>
-
-        {/* Logo */}
-
         <div
+          className="flex items-center gap-2.5 px-3 py-2 mb-6 cursor-pointer"
           onClick={() => navigate("/student/dashboard")}
-          className="p-8 border-b border-white/10 cursor-pointer"
         >
-
-          <h1 className="text-3xl font-bold text-white">
-
-            Proctor
-
-            <span className="text-cyan-400">
-              AI
-            </span>
-
-          </h1>
-
-          <p className="text-gray-400 text-sm mt-2">
-
-            AI Exam Monitoring
-
-          </p>
-
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-blue-500"
+            style={{ background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.3)" }}>
+            <FaShieldAlt size={15} />
+          </div>
+          <span className="font-bold text-sm" style={{ color: "var(--text-primary)" }}>
+            Proctor<span className="text-blue-500">AI</span>
+          </span>
         </div>
 
-        {/* Menu */}
+        <p className="text-[10px] font-semibold uppercase tracking-widest px-3 mb-2"
+          style={{ color: "var(--text-muted)" }}>
+          Navigation
+        </p>
 
-        <div className="p-5 space-y-3">
-
-          {menus.map((item, index) => (
-
-            <div
-              key={index}
-              onClick={() => navigate(item.path)}
-              className={`flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-all duration-300
-              ${
-                location.pathname === item.path
-                  ? "bg-cyan-500 text-black"
-                  : "text-gray-300 hover:bg-slate-800 hover:text-cyan-400"
-              }`}
+        <nav className="space-y-0.5">
+          {navItems.map(({ to, icon: Icon, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition ${
+                  isActive
+                    ? "bg-blue-600/15 text-blue-500 border border-blue-500/20"
+                    : ""
+                }`
+              }
+              style={({ isActive }) => ({
+                color: isActive ? "#3b82f6" : "var(--text-secondary)",
+              })}
             >
-
-              {item.icon}
-
-              <span className="font-medium">
-                {item.title}
-              </span>
-
-            </div>
-
+              <Icon size={14} />
+              {label}
+            </NavLink>
           ))}
-
-        </div>
-
+        </nav>
       </div>
 
-      {/* Bottom */}
+      {/* Footer */}
+      <div className="space-y-1">
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition"
+          style={{ color: "var(--text-muted)" }}
+        >
+          {isDark ? <FaSun size={13} className="text-amber-400" /> : <FaMoon size={13} className="text-indigo-400" />}
+          {isDark ? "Light Mode" : "Dark Mode"}
+        </button>
 
-      <div className="p-6 border-t border-white/10">
-
-        <div className="flex items-center gap-4">
-
-          <div className="w-12 h-12 rounded-full bg-cyan-500 flex items-center justify-center font-bold text-black">
-
-            A
-
+        {/* User */}
+        <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg"
+          style={{ border: "1px solid var(--border)", background: "var(--bg-card)" }}>
+          <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-blue-500 font-bold text-xs">
+            AS
           </div>
-
-          <div>
-
-            <h3 className="text-white font-semibold">
-
-              Anchal Saini
-
-            </h3>
-
-            <p className="text-gray-400 text-sm">
-
-              Student
-
-            </p>
-
+          <div className="min-w-0">
+            <p className="text-xs font-semibold truncate" style={{ color: "var(--text-primary)" }}>Anchal Saini</p>
+            <p className="text-[10px] truncate" style={{ color: "var(--text-muted)" }}>Student</p>
           </div>
-
         </div>
 
         <button
           onClick={handleLogout}
-          className="mt-6 w-full flex items-center justify-center gap-3 bg-red-500 hover:bg-red-600 py-3 rounded-xl text-white transition"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition"
+          style={{ color: "var(--text-muted)" }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = "#ef4444"; e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.background = "transparent"; }}
         >
-
-          <FaSignOutAlt />
-
-          Logout
-
+          <FaSignOutAlt size={13} />
+          Sign Out
         </button>
-
       </div>
-
     </aside>
   );
 };
