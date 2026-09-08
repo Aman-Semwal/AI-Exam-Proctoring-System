@@ -1,5 +1,6 @@
 import { useState } from "react";
 import OrganizationSidebar from "../../components/layout/OrganizationSidebar";
+import { FaSearch, FaPlus } from "react-icons/fa";
 
 const initialUpcomingExams = [
   { id: 1, title: "B.Tech CSE - Artificial Intelligence Final", course: "CS601", date: "20 Aug 2026", time: "09:00 AM", assignedExaminer: "Dr. Alok Kumar", totalRegistered: 140 },
@@ -19,96 +20,92 @@ export default function UpcomingExams() {
   );
 
   return (
-    <div className="flex min-h-screen bg-[#020617] text-white">
-      
+    <div className="flex min-h-screen bg-[#090a0f] text-slate-100">
       {/* Organization Sidebar */}
       <OrganizationSidebar />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
-
         {/* Header */}
-        <header className="h-20 bg-slate-900 border-b border-white/10 flex items-center justify-between px-6 lg:px-10">
+        <header className="h-16 bg-[#090a0f]/80 backdrop-blur-xl border-b border-white/[0.07] flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30">
           <div>
-            <h1 className="text-2xl font-bold text-white">Upcoming Exams Schedule</h1>
-            <p className="text-sm text-slate-400 mt-1">
+            <h1 className="text-base font-semibold text-white tracking-tight">Upcoming Exams Schedule</h1>
+            <p className="text-[11px] text-slate-400">
               Plan, review, and organize upcoming academic assessments.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center font-bold text-xs">
               AS
             </div>
             <div className="hidden sm:block">
-              <p className="text-sm font-semibold text-white">Anchal Saini</p>
-              <p className="text-xs text-slate-400">Organization Admin</p>
+              <p className="text-xs font-semibold text-white leading-tight">Anchal Saini</p>
+              <p className="text-[10px] text-slate-400 leading-tight">Organization Admin</p>
             </div>
           </div>
         </header>
 
         {/* Main Body */}
-        <main className="p-6 lg:p-10 flex-1 overflow-y-auto">
-          <div className="max-w-7xl mx-auto">
-            
-            {/* Page Action Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-              <div>
-                <p className="text-cyan-400 font-medium">Organization Admin</p>
-                <h2 className="text-3xl font-bold text-white mt-1">Scheduled Exams</h2>
-                <p className="text-slate-400 mt-2">Manage examination timetables and registered candidates.</p>
-              </div>
-              <button className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-5 py-3 rounded-xl font-semibold transition shadow-md flex items-center justify-center gap-2">
-                + Schedule New Exam
-              </button>
+        <main className="p-6 lg:p-8 flex-1 overflow-y-auto max-w-7xl mx-auto w-full">
+          {/* Action Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/[0.06]">
+            <div>
+              <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">Timetable</span>
+              <h2 className="text-2xl font-bold text-white tracking-tight mt-0.5">Scheduled Assessments</h2>
+              <p className="text-slate-400 text-xs sm:text-sm mt-1">Manage examination timetables and registered candidates.</p>
             </div>
+            <button className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-lg font-semibold text-xs transition shadow-sm active:scale-[0.98] flex items-center gap-1.5 w-fit">
+              <FaPlus size={11} /> Schedule New Exam
+            </button>
+          </div>
 
-            {/* Search & Stats */}
-            <div className="bg-slate-900 p-4 rounded-2xl shadow-sm border border-white/10 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <input
-                type="text"
-                placeholder="Search upcoming exams by title, course, or examiner..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full md:w-96 px-4 py-2 bg-slate-800 border border-white/10 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-              />
-              <div className="text-sm text-slate-400">
+          {/* Search & Stats */}
+          <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <div className="relative flex-1 max-w-sm">
+                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs" />
+                <input
+                  type="text"
+                  placeholder="Search upcoming exams by title, course, or examiner..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
+                />
+              </div>
+              <div className="text-xs text-slate-400 font-mono">
                 Total Scheduled: <span className="font-semibold text-white">{filteredExams.length}</span>
               </div>
             </div>
 
             {/* Table */}
-            <div className="bg-slate-900 rounded-2xl shadow-sm border border-white/10 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[700px]">
-                  <thead>
-                    <tr className="border-b border-white/10 bg-slate-800/50 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                      <th className="py-3 px-6">Exam Details</th>
-                      <th className="py-3 px-6">Date & Time</th>
-                      <th className="py-3 px-6">Assigned Examiner</th>
-                      <th className="py-3 px-6">Registered Students</th>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[650px]">
+                <thead>
+                  <tr className="border-b border-white/[0.06] text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    <th className="pb-3 px-3">Exam Details</th>
+                    <th className="pb-3 px-3">Date & Time</th>
+                    <th className="pb-3 px-3">Assigned Examiner</th>
+                    <th className="pb-3 px-3">Registered Students</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04] text-xs">
+                  {filteredExams.length > 0 ? (
+                    filteredExams.map((exam) => (
+                      <UpcomingExamRow key={exam.id} exam={exam} />
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="4" className="py-8 text-center text-slate-500 text-xs">
+                        No upcoming exams found matching your search.
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/10">
-                    {filteredExams.length > 0 ? (
-                      filteredExams.map((exam) => (
-                        <UpcomingExamRow key={exam.id} exam={exam} />
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="4" className="py-8 text-center text-slate-500 text-sm">
-                          No upcoming exams found matching your search.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                  )}
+                </tbody>
+              </table>
             </div>
-
           </div>
         </main>
-
       </div>
     </div>
   );
@@ -116,22 +113,22 @@ export default function UpcomingExams() {
 
 const UpcomingExamRow = ({ exam }) => {
   return (
-    <tr className="hover:bg-slate-800/50 transition">
-      <td className="py-4 px-6">
+    <tr className="hover:bg-white/[0.02] transition">
+      <td className="py-3 px-3">
         <div>
-          <p className="font-medium text-white">{exam.title}</p>
-          <span className="inline-block bg-slate-800 text-cyan-400 border border-white/10 text-xs px-2 py-0.5 rounded font-mono mt-1">
+          <p className="font-semibold text-white">{exam.title}</p>
+          <span className="inline-block font-mono text-[11px] text-blue-400 mt-0.5">
             {exam.course}
           </span>
         </div>
       </td>
-      <td className="py-4 px-6">
-        <p className="text-sm font-medium text-white">{exam.date}</p>
-        <p className="text-xs text-slate-400">{exam.time}</p>
+      <td className="py-3 px-3">
+        <p className="font-medium text-white">{exam.date}</p>
+        <p className="text-[11px] text-slate-400 font-mono mt-0.5">{exam.time}</p>
       </td>
-      <td className="py-4 px-6 text-sm text-slate-300">{exam.assignedExaminer}</td>
-      <td className="py-4 px-6 text-sm font-semibold text-white">
-        {exam.totalRegistered} students
+      <td className="py-3 px-3 text-slate-300">{exam.assignedExaminer}</td>
+      <td className="py-3 px-3 text-slate-300 font-mono">
+        {exam.totalRegistered} candidates
       </td>
     </tr>
   );

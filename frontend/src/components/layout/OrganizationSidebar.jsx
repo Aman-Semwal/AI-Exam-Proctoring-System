@@ -1,64 +1,92 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FaUsers, FaUserTie, FaUserShield, FaClipboardCheck, FaCalendarAlt, FaSignOutAlt } from "react-icons/fa";
+import { NavLink, useNavigate } from "react-router-dom";
+import {
+  FaShieldAlt, FaTachometerAlt, FaUsers, FaUserTie,
+  FaUserShield, FaFileAlt, FaCalendarAlt, FaSignOutAlt,
+  FaSun, FaMoon,
+} from "react-icons/fa";
+import { useTheme } from "../../context/ThemeContext";
 
-export default function OrganizationSidebar() {
-  const location = useLocation();
+const navItems = [
+  { to: "/organization/dashboard",     icon: FaTachometerAlt, label: "Dashboard" },
+  { to: "/organization/students",      icon: FaUsers,         label: "Students" },
+  { to: "/organization/examiners",     icon: FaUserTie,       label: "Examiners" },
+  { to: "/organization/proctors",      icon: FaUserShield,    label: "Proctors" },
+  { to: "/organization/active-exams",  icon: FaFileAlt,       label: "Active Exams" },
+  { to: "/organization/upcoming-exams",icon: FaCalendarAlt,   label: "Upcoming Exams" },
+];
+
+const OrganizationSidebar = () => {
   const navigate = useNavigate();
+  const { isDark, toggleTheme } = useTheme();
 
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
     navigate("/");
   };
 
-  const navItems = [
-    { title: "Dashboard", path: "/organization/dashboard", icon: <FaUsers /> },
-    { title: "Manage Students", path: "/organization/students", icon: <FaUsers /> },
-    { title: "Manage Examiners", path: "/organization/examiners", icon: <FaUserTie /> },
-    { title: "Manage Proctors", path: "/organization/proctors", icon: <FaUserShield /> },
-    { title: "Active Exams", path: "/organization/active-exams", icon: <FaClipboardCheck /> },
-    { title: "Upcoming Exams", path: "/organization/upcoming-exams", icon: <FaCalendarAlt /> },
-  ];
-
   return (
-    <aside className="w-72 min-h-screen bg-slate-900 border-r border-white/10 flex flex-col justify-between p-6">
+    <aside className="w-60 shrink-0 min-h-screen flex flex-col justify-between py-5 px-3 sticky top-0 h-screen sidebar-bg">
       <div>
-        {/* Logo / Header */}
-        <div className="mb-8 cursor-pointer" onClick={() => navigate("/organization/dashboard")}>
-          <h1 className="text-2xl font-bold text-white">
-            Org<span className="text-cyan-400">Admin</span>
-          </h1>
-          <p className="text-gray-400 text-xs mt-1">Organization Control Center</p>
+        <div className="flex items-center gap-2.5 px-3 py-2 mb-6 cursor-pointer"
+          onClick={() => navigate("/organization/dashboard")}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-blue-500"
+            style={{ background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.3)" }}>
+            <FaShieldAlt size={15} />
+          </div>
+          <span className="font-bold text-sm" style={{ color: "var(--text-primary)" }}>
+            Org<span className="text-blue-500">Portal</span>
+          </span>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="space-y-2">
-          {navItems.map((item, index) => (
-            <Link
-              key={index}
-              to={item.path}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition font-medium text-sm ${
-                location.pathname === item.path
-                  ? "bg-cyan-500 text-slate-950 font-semibold shadow-md"
-                  : "text-gray-300 hover:bg-slate-800 hover:text-cyan-400"
-              }`}
-            >
-              {item.icon}
-              {item.title}
-            </Link>
+        <p className="text-[10px] font-semibold uppercase tracking-widest px-3 mb-2"
+          style={{ color: "var(--text-muted)" }}>
+          Management
+        </p>
+
+        <nav className="space-y-0.5">
+          {navItems.map(({ to, icon: Icon, label }) => (
+            <NavLink key={to} to={to}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition ${
+                  isActive ? "bg-blue-600/15 border border-blue-500/20" : ""
+                }`}
+              style={({ isActive }) => ({
+                color: isActive ? "#3b82f6" : "var(--text-secondary)",
+              })}>
+              <Icon size={14} />
+              {label}
+            </NavLink>
           ))}
         </nav>
       </div>
 
-      {/* Logout */}
-      <div className="pt-4 border-t border-slate-800">
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white py-2.5 rounded-xl transition text-sm font-medium border border-rose-500/20"
-        >
-          <FaSignOutAlt />
-          Logout
+      <div className="space-y-1">
+        <button onClick={toggleTheme} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition"
+          style={{ color: "var(--text-muted)" }}>
+          {isDark ? <FaSun size={13} className="text-amber-400" /> : <FaMoon size={13} className="text-indigo-400" />}
+          {isDark ? "Light Mode" : "Dark Mode"}
+        </button>
+        <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg"
+          style={{ border: "1px solid var(--border)", background: "var(--bg-card)" }}>
+          <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-blue-500 font-bold text-xs">
+            AS
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold truncate" style={{ color: "var(--text-primary)" }}>Anchal Saini</p>
+            <p className="text-[10px] truncate" style={{ color: "var(--text-muted)" }}>Org Admin</p>
+          </div>
+        </div>
+        <button onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition"
+          style={{ color: "var(--text-muted)" }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = "#ef4444"; e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.background = "transparent"; }}>
+          <FaSignOutAlt size={13} />
+          Sign Out
         </button>
       </div>
     </aside>
   );
-}
+};
+
+export default OrganizationSidebar;

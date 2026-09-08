@@ -1,142 +1,82 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { FaBell, FaSearch, FaSun, FaMoon } from "react-icons/fa";
+import { useTheme } from "../../context/ThemeContext";
 
-import {
-  FaBell,
-  FaSearch,
-  FaMoon,
-  FaSun,
-  FaUserCircle,
-} from "react-icons/fa";
-
-import NotificationDropdown from "../topbar/NotificationDropdown";
-import ProfileDropdown from "../topbar/ProfileDropdown";
-
-const Topbar = () => {
-  const navigate = useNavigate();
-
-  // Theme
-  const [darkMode, setDarkMode] = useState(
-    localStorage.getItem("theme") !== "light"
-  );
-
-  // Dropdowns
-  const [showNotification, setShowNotification] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
-
-  // Search
-  const [search, setSearch] = useState("");
-
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  }, [darkMode]);
+const Topbar = ({ title = "Dashboard", breadcrumb = "Student Portal" }) => {
+  const { isDark, toggleTheme } = useTheme();
 
   return (
-    <header className="sticky top-0 z-40 h-20 bg-slate-900/95 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-4 md:px-8">
-
-      {/* Left */}
-
+    <header
+      className="h-14 flex items-center justify-between px-6 sticky top-0 z-20"
+      style={{
+        background: "var(--nav-bg)",
+        borderBottom: "1px solid var(--border)",
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
+      }}
+    >
+      {/* Left — Breadcrumb */}
       <div>
-        <h2 className="text-2xl md:text-3xl font-bold text-white">
-          Welcome Back 👋
-        </h2>
-
-        <p className="text-gray-400 text-sm mt-1">
-          Student Dashboard
+        <p className="text-[10px] font-mono" style={{ color: "var(--text-muted)" }}>
+          {breadcrumb}
         </p>
+        <h1 className="text-sm font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>
+          {title}
+        </h1>
       </div>
 
-      {/* Right */}
-
-      <div className="flex items-center gap-3 md:gap-5 relative">
-
+      {/* Right — Controls */}
+      <div className="flex items-center gap-2">
         {/* Search */}
-
-        <div className="hidden lg:flex items-center bg-slate-800 rounded-xl px-4 py-3 border border-white/10">
-
-          <FaSearch className="text-gray-400" />
-
-          <input
-            type="text"
-            placeholder="Search..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="bg-transparent outline-none text-white ml-3 w-56"
-          />
-
+        <div
+          className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            color: "var(--text-muted)",
+          }}
+        >
+          <FaSearch size={11} />
+          <span>Search</span>
+          <span
+            className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-mono"
+            style={{ background: "var(--bg-raised)", border: "1px solid var(--border)" }}
+          >
+            ⌘K
+          </span>
         </div>
 
-        {/* Dark Mode */}
-
+        {/* Theme Toggle */}
         <button
-          onClick={() => setDarkMode(!darkMode)}
-          className="w-11 h-11 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition"
-        >
-          {darkMode ? (
-            <FaSun className="text-yellow-400 text-lg" />
-          ) : (
-            <FaMoon className="text-white text-lg" />
-          )}
-        </button>
-
-        {/* Notification */}
-
-        <button
-          onClick={() => {
-            setShowNotification(!showNotification);
-            setShowProfile(false);
+          onClick={toggleTheme}
+          aria-label="Toggle theme"
+          className="w-8 h-8 rounded-lg flex items-center justify-center transition"
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            color: isDark ? "#fbbf24" : "#6366f1",
           }}
-          className="relative w-11 h-11 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition"
         >
-          <FaBell className="text-white" />
-
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center">
-            3
-          </span>
+          {isDark ? <FaSun size={13} /> : <FaMoon size={13} />}
         </button>
 
-        {showNotification && (
-          <div className="absolute right-20 top-16">
-            <NotificationDropdown />
-          </div>
-        )}
-
-        {/* Profile */}
-
+        {/* Notifications */}
         <button
-          onClick={() => {
-            setShowProfile(!showProfile);
-            setShowNotification(false);
+          className="relative w-8 h-8 rounded-lg flex items-center justify-center transition"
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            color: "var(--text-muted)",
           }}
-          className="flex items-center gap-3"
         >
-          <FaUserCircle className="text-cyan-400 text-4xl" />
-
-          <div className="hidden lg:block text-left">
-            <h3 className="text-white font-semibold">
-              Anchal Saini
-            </h3>
-
-            <p className="text-gray-400 text-sm">
-              Student
-            </p>
-          </div>
+          <FaBell size={13} />
+          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-blue-500" />
         </button>
 
-        {showProfile && (
-          <div className="absolute right-0 top-16">
-            <ProfileDropdown />
-          </div>
-        )}
-
+        {/* Avatar */}
+        <div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-blue-500 font-bold text-xs">
+          AS
+        </div>
       </div>
-
     </header>
   );
 };
