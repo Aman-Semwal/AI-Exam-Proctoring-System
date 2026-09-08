@@ -3,3 +3,6 @@ __pycache__
 *.pyo
 .env
 .gitignore
+models/*.onnx
+models/*.pt
+.pytest_cache
