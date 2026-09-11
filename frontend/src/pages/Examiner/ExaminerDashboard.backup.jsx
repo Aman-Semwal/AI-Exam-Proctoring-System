@@ -9,7 +9,6 @@ import {
   FaTimes,
   FaEdit,
   FaTrash,
-  FaQuestionCircle,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
@@ -132,7 +131,6 @@ export default function ExaminerDashboard() {
 
     setNewTitle(exam.title || "");
     setNewDescription(exam.description || "");
-
     setNewDuration(
       exam.durationMinutes !== undefined &&
         exam.durationMinutes !== null
@@ -149,18 +147,6 @@ export default function ExaminerDashboard() {
     );
 
     setIsModalOpen(true);
-  };
-
-  // Open Question Bank
-  const openQuestionBank = (exam) => {
-    if (!exam?.id) {
-      setError("Exam ID is missing.");
-      return;
-    }
-
-    navigate(
-      `/examiner/question-bank?examId=${exam.id}`
-    );
   };
 
   // Create / Update exam
@@ -180,10 +166,7 @@ export default function ExaminerDashboard() {
     const start = new Date(newStartTime);
     const end = new Date(newEndTime);
 
-    if (
-      Number.isNaN(start.getTime()) ||
-      Number.isNaN(end.getTime())
-    ) {
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
       setError("Please enter valid start and end times.");
       return;
     }
@@ -209,6 +192,7 @@ export default function ExaminerDashboard() {
       let response;
 
       if (editingExam) {
+        // PUT /api/exams/{id}
         response = await api.put(
           `/exams/${editingExam.id}`,
           payload
@@ -237,6 +221,7 @@ export default function ExaminerDashboard() {
 
         setMessage("Exam updated successfully.");
       } else {
+        // POST /api/exams
         response = await api.post("/exams", payload);
 
         const createdExam = response.data?.data;
@@ -287,12 +272,11 @@ export default function ExaminerDashboard() {
       setError("");
       setMessage("");
 
+      // DELETE /api/exams/{id}
       await api.delete(`/exams/${deleteExam.id}`);
 
       setExams((prev) =>
-        prev.filter(
-          (exam) => exam.id !== deleteExam.id
-        )
+        prev.filter((exam) => exam.id !== deleteExam.id)
       );
 
       setDeleteExam(null);
@@ -391,9 +375,7 @@ export default function ExaminerDashboard() {
         <div>
           <div
             className="p-3 mb-4 cursor-pointer flex items-center gap-3 group"
-            onClick={() =>
-              navigate("/examiner/dashboard")
-            }
+            onClick={() => navigate("/examiner/dashboard")}
           >
             <div className="h-9 w-9 rounded-xl bg-blue-500/10 border border-blue-500/25 flex items-center justify-center text-blue-400">
               <FaClipboardList size={16} />
@@ -401,9 +383,7 @@ export default function ExaminerDashboard() {
 
             <div>
               <h1 className="text-base font-bold text-white tracking-tight leading-tight">
-                Examiner<span className="text-blue-400">
-                  Portal
-                </span>
+                Examiner<span className="text-blue-400">Portal</span>
               </h1>
 
               <p className="text-[11px] text-slate-400 font-medium">
@@ -449,8 +429,8 @@ export default function ExaminerDashboard() {
             </h1>
 
             <p className="text-slate-400 text-xs sm:text-sm mt-1">
-              Create, manage, and monitor your exam papers
-              and student submissions.
+              Create, manage, and monitor your exam papers and student
+              submissions.
             </p>
           </div>
 
@@ -466,17 +446,13 @@ export default function ExaminerDashboard() {
         {/* Messages */}
         {error && (
           <div className="mb-5 rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3">
-            <p className="text-xs text-red-300">
-              {error}
-            </p>
+            <p className="text-xs text-red-300">{error}</p>
           </div>
         )}
 
         {message && (
           <div className="mb-5 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
-            <p className="text-xs text-emerald-300">
-              {message}
-            </p>
+            <p className="text-xs text-emerald-300">{message}</p>
           </div>
         )}
 
@@ -526,9 +502,7 @@ export default function ExaminerDashboard() {
                 type="text"
                 placeholder="Search your exams..."
                 value={searchQuery}
-                onChange={(e) =>
-                  setSearchQuery(e.target.value)
-                }
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none"
               />
             </div>
@@ -551,25 +525,15 @@ export default function ExaminerDashboard() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[950px]">
+              <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead>
                   <tr className="border-b border-white/[0.06] text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                    <th className="pb-3 px-3">
-                      Exam Title
-                    </th>
-
-                    <th className="pb-3 px-3">
-                      Status
-                    </th>
-
+                    <th className="pb-3 px-3">Exam Title</th>
+                    <th className="pb-3 px-3">Status</th>
                     <th className="pb-3 px-3">
                       Registered Candidates
                     </th>
-
-                    <th className="pb-3 px-3">
-                      Start Time
-                    </th>
-
+                    <th className="pb-3 px-3">Start Time</th>
                     <th className="pb-3 px-3 text-right">
                       Actions
                     </th>
@@ -616,8 +580,7 @@ export default function ExaminerDashboard() {
                           </td>
 
                           <td className="py-3.5 px-3 text-slate-300 font-mono">
-                            {getRegisteredCount(exam)}{" "}
-                            candidates
+                            {getRegisteredCount(exam)} candidates
                           </td>
 
                           <td className="py-3.5 px-3 text-slate-400 font-mono">
@@ -626,24 +589,6 @@ export default function ExaminerDashboard() {
 
                           <td className="py-3.5 px-3">
                             <div className="flex items-center justify-end gap-2">
-                              {/* Question Bank */}
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  openQuestionBank(exam)
-                                }
-                                title="Manage Questions"
-                                className="h-8 px-3 rounded-lg flex items-center justify-center gap-1.5 text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition"
-                              >
-                                <FaQuestionCircle
-                                  size={12}
-                                />
-                                <span className="hidden xl:inline">
-                                  Questions
-                                </span>
-                              </button>
-
-                              {/* Edit */}
                               <button
                                 type="button"
                                 onClick={() =>
@@ -655,7 +600,6 @@ export default function ExaminerDashboard() {
                                 <FaEdit size={12} />
                               </button>
 
-                              {/* Delete */}
                               <button
                                 type="button"
                                 onClick={() => {
@@ -890,9 +834,7 @@ export default function ExaminerDashboard() {
                 disabled={deleting}
                 className="px-4 py-2 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition"
               >
-                {deleting
-                  ? "Deleting..."
-                  : "Delete Exam"}
+                {deleting ? "Deleting..." : "Delete Exam"}
               </button>
             </div>
           </div>
@@ -901,3 +843,4 @@ export default function ExaminerDashboard() {
     </div>
   );
 }
+

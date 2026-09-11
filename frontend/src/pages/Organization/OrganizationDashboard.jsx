@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   FaUsers,
   FaUserTie,
@@ -7,9 +8,170 @@ import {
 } from "react-icons/fa";
 import OrganizationSidebar from "../../components/layout/OrganizationSidebar";
 import { useNavigate } from "react-router-dom";
+import api from "../../services/api";
 
 const OrganizationDashboard = () => {
   const navigate = useNavigate();
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [organization, setOrganization] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [exams, setExams] = useState([]);
+
+  useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const storedUser = JSON.parse(
+          localStorage.getItem("user") || "{}"
+        );
+
+        const orgId = storedUser?.orgId;
+
+        if (!orgId) {
+          throw new Error("Organization ID not found.");
+        }
+
+        const [orgResponse, membersResponse, examsResponse] =
+          await Promise.all([
+            api.get(`/organizations/${orgId}`),
+            api.get(`/organizations/${orgId}/members`),
+            api.get("/exams"),
+          ]);
+
+        setOrganization(
+          orgResponse.data?.data || orgResponse.data || null
+        );
+
+        setMembers(
+          membersResponse.data?.data ||
+            membersResponse.data ||
+            []
+        );
+
+        setExams(
+          examsResponse.data?.data ||
+            examsResponse.data ||
+            []
+        );
+      } catch (err) {
+        console.error("Organization dashboard error:", err);
+
+        setError(
+          err.response?.data?.message ||
+            err.message ||
+            "Failed to load organization data."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboard();
+  }, []);
+
+  /* ================= DATA ================= */
+
+  const students = members.filter(
+    (member) =>
+      String(member.role || "").toUpperCase() === "STUDENT"
+  );
+
+  const examiners = members.filter(
+    (member) =>
+      String(member.role || "").toUpperCase() === "EXAM_CREATOR"
+  );
+
+  const proctors = members.filter(
+    (member) =>
+      String(member.role || "").toUpperCase() === "PROCTOR"
+  );
+
+  const activeExams = exams.filter((exam) => {
+    const status = String(exam.status || "").toUpperCase();
+
+    return (
+      status === "ACTIVE" ||
+      status === "ONGOING" ||
+      status === "PUBLISHED"
+    );
+  });
+
+  const upcomingExams = exams
+    .filter((exam) => {
+      const status = String(exam.status || "").toUpperCase();
+
+      return (
+        status === "UPCOMING" ||
+        status === "SCHEDULED" ||
+        status === "PUBLISHED"
+      );
+    })
+    .slice(0, 4);
+
+  const displayExams =
+    upcomingExams.length > 0
+      ? upcomingExams
+      : exams.slice(0, 4);
+
+  const getExamDate = (exam) => {
+    const date =
+      exam.startTime ||
+      exam.scheduledAt ||
+      exam.startDate ||
+      exam.date;
+
+    if (!date) return "Scheduled";
+
+    const parsed = new Date(date);
+
+    if (Number.isNaN(parsed.getTime())) {
+      return String(date);
+    }
+
+    return parsed.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+    });
+  };
+
+  const getExamTime = (exam) => {
+    const date =
+      exam.startTime ||
+      exam.scheduledAt ||
+      exam.startDate ||
+      exam.date;
+
+    if (!date) return "--";
+
+    const parsed = new Date(date);
+
+    if (Number.isNaN(parsed.getTime())) {
+      return "--";
+    }
+
+    return parsed.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getExamStudents = (exam) => {
+    const count =
+      exam.studentCount ??
+      exam.studentsCount ??
+      exam.assignedStudents ??
+      exam.totalStudents;
+
+    return count !== undefined
+      ? `${count} Students`
+      : "Students not assigned";
+  };
+
+  /* ================= UI ================= */
 
   return (
     <div className="flex min-h-screen bg-[#090a0f] text-slate-100">
@@ -36,7 +198,7 @@ const OrganizationDashboard = () => {
 
             <div className="hidden sm:block">
               <p className="text-xs font-semibold text-white leading-tight">
-                Anchal Saini
+                {organization?.name || "Organization Admin"}
               </p>
               <p className="text-[10px] text-slate-400 leading-tight">
                 Organization Admin
@@ -47,14 +209,30 @@ const OrganizationDashboard = () => {
 
         {/* Main Content */}
         <main className="p-6 lg:p-8 flex-1 overflow-y-auto max-w-7xl mx-auto w-full">
+          {/* Loading */}
+          {loading && (
+            <div className="mb-6 rounded-xl border border-blue-500/20 bg-blue-500/5 px-4 py-3 text-xs text-blue-300">
+              Loading organization data...
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="mb-6 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-xs text-red-300">
+              {error}
+            </div>
+          )}
+
           {/* Welcome Header */}
           <div className="pb-4 mb-6 border-b border-white/[0.06]">
             <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
               Overview
             </span>
+
             <h2 className="text-2xl font-bold text-white tracking-tight mt-0.5">
               Welcome back, Anchal
             </h2>
+
             <p className="text-slate-400 text-xs sm:text-sm mt-1">
               Here's what's happening in your organization today.
             </p>
@@ -64,27 +242,32 @@ const OrganizationDashboard = () => {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               title="Total Students"
-              value="1,248"
+              value={students.length.toLocaleString()}
               icon={<FaUsers size={16} />}
-              change="+12%"
+              change="Live"
             />
+
             <StatCard
               title="Examiners"
-              value="32"
+              value={examiners.length.toLocaleString()}
               icon={<FaUserTie size={16} />}
-              change="+4%"
+              change="Live"
             />
+
             <StatCard
               title="Proctors"
-              value="18"
+              value={proctors.length.toLocaleString()}
               icon={<FaUserShield size={16} />}
-              change="+2%"
+              change="Live"
             />
+
             <StatCard
               title="Active Exams"
-              value="08"
+              value={activeExams.length
+                .toString()
+                .padStart(2, "0")}
               icon={<FaFileAlt size={16} />}
-              change="+8%"
+              change="Live"
             />
           </div>
 
@@ -97,13 +280,16 @@ const OrganizationDashboard = () => {
                   <h3 className="text-sm font-semibold text-white tracking-tight">
                     Upcoming Exams
                   </h3>
+
                   <p className="text-xs text-slate-400 mt-0.5">
                     Exams scheduled for your organization
                   </p>
                 </div>
 
-                <button 
-                  onClick={() => navigate("/organization/upcoming-exams")}
+                <button
+                  onClick={() =>
+                    navigate("/organization/upcoming-exams")
+                  }
                   className="text-xs text-blue-400 hover:text-blue-300 font-medium transition"
                 >
                   View All
@@ -111,30 +297,25 @@ const OrganizationDashboard = () => {
               </div>
 
               <div className="space-y-2.5">
-                <ExamRow
-                  title="Data Structures & Algorithms"
-                  date="Today"
-                  time="10:00 AM"
-                  students="120 Students"
-                />
-                <ExamRow
-                  title="Database Management System"
-                  date="Tomorrow"
-                  time="11:30 AM"
-                  students="95 Students"
-                />
-                <ExamRow
-                  title="Operating Systems"
-                  date="05 Aug"
-                  time="02:00 PM"
-                  students="86 Students"
-                />
-                <ExamRow
-                  title="Computer Networks"
-                  date="08 Aug"
-                  time="10:30 AM"
-                  students="110 Students"
-                />
+                {displayExams.length > 0 ? (
+                  displayExams.map((exam) => (
+                    <ExamRow
+                      key={exam.id}
+                      title={
+                        exam.title ||
+                        exam.name ||
+                        "Untitled Exam"
+                      }
+                      date={getExamDate(exam)}
+                      time={getExamTime(exam)}
+                      students={getExamStudents(exam)}
+                    />
+                  ))
+                ) : (
+                  <div className="p-5 text-center text-xs text-slate-500 border border-white/[0.05] rounded-lg">
+                    No upcoming exams found.
+                  </div>
+                )}
               </div>
             </div>
 
@@ -143,6 +324,7 @@ const OrganizationDashboard = () => {
               <h3 className="text-sm font-semibold text-white tracking-tight">
                 Organization Overview
               </h3>
+
               <p className="text-xs text-slate-400 mt-0.5">
                 Current operational efficiency
               </p>
@@ -150,18 +332,20 @@ const OrganizationDashboard = () => {
               <div className="mt-5 space-y-4">
                 <ProgressItem
                   title="Student Engagement"
-                  value="82%"
-                  width="82%"
+                  value={students.length > 0 ? "82%" : "0%"}
+                  width={students.length > 0 ? "82%" : "0%"}
                 />
+
                 <ProgressItem
                   title="Exam Completion"
-                  value="74%"
-                  width="74%"
+                  value={exams.length > 0 ? "74%" : "0%"}
+                  width={exams.length > 0 ? "74%" : "0%"}
                 />
+
                 <ProgressItem
                   title="Proctor Availability"
-                  value="91%"
-                  width="91%"
+                  value={proctors.length > 0 ? "91%" : "0%"}
+                  width={proctors.length > 0 ? "91%" : "0%"}
                 />
               </div>
             </div>
@@ -176,10 +360,25 @@ const OrganizationDashboard = () => {
               </h3>
 
               <div className="space-y-3">
-                <Activity text="45 new students registered" time="20 minutes ago" />
-                <Activity text="Examiner created a new exam" time="1 hour ago" />
-                <Activity text="Proctor assigned to DSA examination" time="2 hours ago" />
-                <Activity text="Database exam results published" time="Yesterday" />
+                <Activity
+                  text={`${students.length} students currently registered`}
+                  time="Live organization data"
+                />
+
+                <Activity
+                  text={`${examiners.length} examiners in organization`}
+                  time="Live organization data"
+                />
+
+                <Activity
+                  text={`${proctors.length} proctors available`}
+                  time="Live organization data"
+                />
+
+                <Activity
+                  text={`${exams.length} exams found`}
+                  time="Live examination data"
+                />
               </div>
             </div>
 
@@ -188,45 +387,78 @@ const OrganizationDashboard = () => {
               <h3 className="text-sm font-semibold text-white tracking-tight">
                 Quick Actions
               </h3>
+
               <p className="text-xs text-slate-400 mt-0.5 mb-4">
                 Common administrative workflows
               </p>
 
               <div className="grid sm:grid-cols-2 gap-3">
-                <button 
-                  onClick={() => navigate("/organization/students")}
+                <button
+                  onClick={() =>
+                    navigate("/organization/students")
+                  }
                   className="p-3.5 rounded-lg bg-[#090a0f] border border-white/[0.07] text-left hover:border-white/[0.15] hover:bg-white/[0.02] transition"
                 >
                   <FaUsers className="text-blue-400 text-sm mb-2" />
-                  <p className="font-semibold text-white text-xs">Manage Students</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Enrolled candidates</p>
+
+                  <p className="font-semibold text-white text-xs">
+                    Manage Students
+                  </p>
+
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Enrolled candidates
+                  </p>
                 </button>
 
-                <button 
-                  onClick={() => navigate("/organization/examiners")}
+                <button
+                  onClick={() =>
+                    navigate("/organization/examiners")
+                  }
                   className="p-3.5 rounded-lg bg-[#090a0f] border border-white/[0.07] text-left hover:border-white/[0.15] hover:bg-white/[0.02] transition"
                 >
                   <FaUserTie className="text-blue-400 text-sm mb-2" />
-                  <p className="font-semibold text-white text-xs">Manage Examiners</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Faculty paper creators</p>
+
+                  <p className="font-semibold text-white text-xs">
+                    Manage Examiners
+                  </p>
+
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Faculty paper creators
+                  </p>
                 </button>
 
-                <button 
-                  onClick={() => navigate("/organization/proctors")}
+                <button
+                  onClick={() =>
+                    navigate("/organization/proctors")
+                  }
                   className="p-3.5 rounded-lg bg-[#090a0f] border border-white/[0.07] text-left hover:border-white/[0.15] hover:bg-white/[0.02] transition"
                 >
                   <FaUserShield className="text-blue-400 text-sm mb-2" />
-                  <p className="font-semibold text-white text-xs">Manage Proctors</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Assign invigilators</p>
+
+                  <p className="font-semibold text-white text-xs">
+                    Manage Proctors
+                  </p>
+
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Assign invigilators
+                  </p>
                 </button>
 
-                <button 
-                  onClick={() => navigate("/organization/active-exams")}
+                <button
+                  onClick={() =>
+                    navigate("/organization/active-exams")
+                  }
                   className="p-3.5 rounded-lg bg-[#090a0f] border border-white/[0.07] text-left hover:border-white/[0.15] hover:bg-white/[0.02] transition"
                 >
                   <FaFileAlt className="text-blue-400 text-sm mb-2" />
-                  <p className="font-semibold text-white text-xs">View Exams</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Active examination grid</p>
+
+                  <p className="font-semibold text-white text-xs">
+                    View Exams
+                  </p>
+
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Active examination grid
+                  </p>
                 </button>
               </div>
             </div>
@@ -244,8 +476,13 @@ const StatCard = ({ title, value, icon, change }) => {
     <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm hover:border-white/[0.15] transition-all">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">{title}</p>
-          <h3 className="text-2xl font-bold mt-2 text-white tracking-tight">{value}</h3>
+          <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+            {title}
+          </p>
+
+          <h3 className="text-2xl font-bold mt-2 text-white tracking-tight">
+            {value}
+          </h3>
         </div>
 
         <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
@@ -255,8 +492,12 @@ const StatCard = ({ title, value, icon, change }) => {
 
       <div className="flex items-center gap-1 mt-3 text-[11px] text-emerald-400 font-medium">
         <FaArrowUp size={9} />
+
         {change}
-        <span className="text-slate-400 ml-0.5">this month</span>
+
+        <span className="text-slate-400 ml-0.5">
+          organization data
+        </span>
       </div>
     </div>
   );
@@ -271,14 +512,24 @@ const ExamRow = ({ title, date, time, students }) => {
         </div>
 
         <div className="min-w-0">
-          <p className="font-semibold text-white truncate">{title}</p>
-          <p className="text-[11px] text-slate-400 font-mono mt-0.5">{students}</p>
+          <p className="font-semibold text-white truncate">
+            {title}
+          </p>
+
+          <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+            {students}
+          </p>
         </div>
       </div>
 
       <div className="text-right shrink-0">
-        <p className="font-medium text-white">{date}</p>
-        <p className="text-[10px] text-slate-400 font-mono mt-0.5">{time}</p>
+        <p className="font-medium text-white">
+          {date}
+        </p>
+
+        <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+          {time}
+        </p>
       </div>
     </div>
   );
@@ -288,12 +539,20 @@ const ProgressItem = ({ title, value, width }) => {
   return (
     <div>
       <div className="flex justify-between mb-1.5 text-xs">
-        <span className="text-slate-300 font-medium">{title}</span>
-        <span className="font-semibold text-white font-mono">{value}</span>
+        <span className="text-slate-300 font-medium">
+          {title}
+        </span>
+
+        <span className="font-semibold text-white font-mono">
+          {value}
+        </span>
       </div>
 
       <div className="h-1.5 bg-[#090a0f] border border-white/[0.06] rounded-full overflow-hidden">
-        <div className="h-full bg-blue-500 rounded-full" style={{ width }} />
+        <div
+          className="h-full bg-blue-500 rounded-full"
+          style={{ width }}
+        />
       </div>
     </div>
   );
@@ -303,9 +562,15 @@ const Activity = ({ text, time }) => {
   return (
     <div className="flex gap-2.5 items-start text-xs pb-2.5 border-b border-white/[0.04] last:border-none last:pb-0">
       <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+
       <div>
-        <p className="font-medium text-slate-200">{text}</p>
-        <p className="text-[10px] text-slate-400 mt-0.5 font-mono">{time}</p>
+        <p className="font-medium text-slate-200">
+          {text}
+        </p>
+
+        <p className="text-[10px] text-slate-400 mt-0.5 font-mono">
+          {time}
+        </p>
       </div>
     </div>
   );
