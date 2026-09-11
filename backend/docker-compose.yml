@@ -1,19 +1,5 @@
 services:
 
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: proctor
-    ports:
-      - "5432:5432"
-
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379:6379"
-
   spring-backend:
     build:
       context: ./proctorbackend
@@ -24,21 +10,14 @@ services:
       - .env
     environment:
       SPRING_DATA_REDIS_REPOSITORIES_ENABLED: "false"
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/proctor
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: password
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: "6379"
-      SPRING_DATA_REDIS_SSL: "false"
-      SPRING_DATA_REDIS_PASSWORD: ""
-    depends_on:
-      - db
-      - redis
+      AI_SERVICE_URL: http://ai-service:8000
     dns:
       - 8.8.8.8
       - 1.1.1.1
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=1
 
   ai-service:
     build:

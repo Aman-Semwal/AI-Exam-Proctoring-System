@@ -23,7 +23,7 @@ Usage:
 Output: models/w600k_r50.onnx (~167 MB)
 """
 
-import io
+import shutil
 import time
 import urllib.error
 import urllib.request
@@ -37,7 +37,7 @@ MAX_ATTEMPTS = 5
 INITIAL_BACKOFF_SECONDS = 5
 
 
-def _download_with_retries(url: str) -> bytes:
+def _download_to_file_with_retries(url: str, dest_path: Path):
     request = urllib.request.Request(
         url,
         headers={"User-Agent": "Mozilla/5.0 (compatible; ai-exam-proctoring-build-script/1.0)"},
@@ -46,10 +46,11 @@ def _download_with_retries(url: str) -> bytes:
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
             print(f"Downloading {url} (attempt {attempt}/{MAX_ATTEMPTS}) ...")
-            with urllib.request.urlopen(request, timeout=120) as response:
-                data = response.read()
-            print(f"Downloaded {len(data) / 1_000_000:.1f} MB")
-            return data
+            with urllib.request.urlopen(request, timeout=120) as response, open(dest_path, "wb") as out_file:
+                shutil.copyfileobj(response, out_file, length=64 * 1024)
+            size_mb = dest_path.stat().st_size / 1_000_000
+            print(f"Downloaded {size_mb:.1f} MB")
+            return
         except (urllib.error.URLError, ConnectionError, TimeoutError) as exc:
             last_error = exc
             if attempt == MAX_ATTEMPTS:
@@ -64,14 +65,16 @@ def _download_with_retries(url: str) -> bytes:
 
 def main():
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-
-    archive_bytes = _download_with_retries(MODEL_URL)
-
-    with zipfile.ZipFile(io.BytesIO(archive_bytes)) as archive:
-        with archive.open(MEMBER_NAME) as member, open(OUTPUT_PATH, "wb") as out_file:
-            out_file.write(member.read())
-
-    print(f"Extracted {MEMBER_NAME} to: {OUTPUT_PATH}")
+    temp_zip = OUTPUT_PATH.parent / "buffalo_l_temp.zip"
+    try:
+        _download_to_file_with_retries(MODEL_URL, temp_zip)
+        with zipfile.ZipFile(temp_zip) as archive:
+            with archive.open(MEMBER_NAME) as member, open(OUTPUT_PATH, "wb") as out_file:
+                shutil.copyfileobj(member, out_file, length=64 * 1024)
+        print(f"Extracted {MEMBER_NAME} to: {OUTPUT_PATH}")
+    finally:
+        if temp_zip.exists():
+            temp_zip.unlink()
 
 
 if __name__ == "__main__":

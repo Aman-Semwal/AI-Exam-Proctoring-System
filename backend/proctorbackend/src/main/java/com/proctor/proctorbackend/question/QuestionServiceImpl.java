@@ -59,8 +59,13 @@ public class QuestionServiceImpl implements QuestionService {
         return toResponse(findById(id), includeAnswer);
     }
 
-    @Override
-    public List<QuestionResponse> getQuestionsByExam(Long examId, boolean includeAnswer) {
+    /**
+     * Internal helper — returns all questions for an exam without org-scoping or
+     * track-filtering. Private so callers outside this class cannot bypass auth.
+     * Used by {@link #getQuestionsByExam(Long, boolean, String)} for non-student roles
+     * who have already been org-validated at the controller layer.
+     */
+    private List<QuestionResponse> getQuestionsByExamInternal(Long examId, boolean includeAnswer) {
         if (!examRepository.existsById(examId)) {
             throw new ResourceNotFoundException("Exam", examId);
         }
@@ -73,7 +78,7 @@ public class QuestionServiceImpl implements QuestionService {
     public List<QuestionResponse> getQuestionsByExam(Long examId, boolean includeAnswer, String requesterEmail) {
         User requester = getUserByEmail(requesterEmail);
         if (requester.getRole() != Role.STUDENT) {
-            return getQuestionsByExam(examId, includeAnswer);
+            return getQuestionsByExamInternal(examId, includeAnswer);
         }
 
         Exam exam = examRepository.findById(examId)

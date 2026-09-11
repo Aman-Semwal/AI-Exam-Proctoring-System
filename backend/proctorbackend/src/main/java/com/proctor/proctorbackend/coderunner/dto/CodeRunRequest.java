@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.Valid;
 import lombok.Data;
 
 import java.util.List;
@@ -21,5 +22,5 @@ public class CodeRunRequest {
     @NotNull(message = "testCases are required")
     @NotEmpty(message = "testCases cannot be empty")
     @Size(min = 1, max = 20, message = "testCases must contain between 1 and 20 items")
-    private List<CodeRunTestCaseRequest> testCases;
+    private List<@Valid CodeRunTestCaseRequest> testCases;
 }

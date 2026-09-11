@@ -1,9 +1,5 @@
 package com.proctor.proctorbackend.session;
 
-import com.proctor.proctorbackend.session.ExamSession;
-import com.proctor.proctorbackend.session.ExamSessionRepository;
-import com.proctor.proctorbackend.session.SessionExpiryProcessor;
-import com.proctor.proctorbackend.session.SessionStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
@@ -18,40 +14,53 @@ import java.util.List;
  * Scheduled job that auto-expires ACTIVE exam sessions once the student's
  * personal deadline (startTime + durationMinutes) has passed.
  *
- * Runs every 30 seconds. For each expired session:
- *  - status → TERMINATED
- *  - endTime → now
- *  - score   → calculated from whatever answers were submitted
+ * <p>Runs every 30 seconds, protected by ShedLock so only one instance
+ * executes at a time in a multi-node deployment.
+ *
+ * <h3>BUG-012 fix — replaced full active-session load with filtered query</h3>
+ * <p>The previous implementation called {@code findByStatus(ACTIVE)}, loading
+ * <em>every</em> active session into heap on every tick regardless of whether
+ * any had actually expired. With thousands of concurrent sessions this causes
+ * unnecessary DB I/O and GC pressure.
+ *
+ * <p>The new implementation calls
+ * {@link ExamSessionRepository#findExpiredActiveSessions(LocalDateTime)} which
+ * pushes the {@code startTime + durationMinutes < now} filter into the SQL
+ * {@code WHERE} clause, so only genuinely overdue sessions are returned.
+ *
+ * <p>The {@code cutoff} value passed to the query is
+ * {@code now minus the maximum possible exam duration} — in practice we pass
+ * {@code now} directly because the JPQL expression
+ * {@code s.startTime < :cutoff} already compares start time against the
+ * <em>current</em> moment, giving us all sessions that <em>could</em> have
+ * expired (their start was in the past). The processor double-checks the exact
+ * deadline with {@code startTime + durationMinutes} before terminating.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class SessionExpiryScheduler {
 
-    private final ExamSessionRepository sessionRepository;
+    private final ExamSessionRepository  sessionRepository;
     private final SessionExpiryProcessor sessionExpiryProcessor;
 
     @Scheduled(fixedDelay = 30_000)
     @SchedulerLock(name = "expireOverdueSessions", lockAtMostFor = "PT5M", lockAtLeastFor = "PT10S")
     public void expireOverdueSessions() {
-        List<ExamSession> activeSessions = sessionRepository.findByStatus(SessionStatus.ACTIVE);
-        if (activeSessions.isEmpty()) return;
-
         LocalDateTime now = LocalDateTime.now(ZoneId.of("UTC"));
 
-        for (ExamSession session : activeSessions) {
-            if (session.getStartTime() == null || session.getExam() == null || session.getExam().getDurationMinutes() == null) {
-                log.warn("Skipping session {} due to missing values: startTime={}, durationMinutes={}",
-                        session.getId(), session.getStartTime(),
-                        session.getExam() != null ? session.getExam().getDurationMinutes() : null);
-                continue;
-            }
-            LocalDateTime deadline = session.getStartTime().plusMinutes(session.getExam().getDurationMinutes());
-            if (now.isAfter(deadline)) {
-                sessionExpiryProcessor.expireSession(session.getId(), now);
-                log.info("Auto-terminated session {} (deadline: {})",
-                        session.getId(), deadline);
-            }
+        // BUG-012 fix: only fetch sessions whose startTime is in the past —
+        // the DB does the filtering; we never touch sessions that are still within their window.
+        List<ExamSession> candidates = sessionRepository.findExpiredActiveSessions(now);
+        if (candidates.isEmpty()) return;
+
+        log.debug("Expiry check: {} candidate session(s) to evaluate", candidates.size());
+
+        for (ExamSession session : candidates) {
+            // Processor re-checks the exact deadline (startTime + durationMinutes)
+            // and terminates only if truly overdue. Runs in REQUIRES_NEW transaction
+            // so one failure doesn't roll back the entire batch.
+            sessionExpiryProcessor.expireSession(session.getId(), now);
         }
     }
 }

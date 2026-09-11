@@ -3,6 +3,7 @@ package com.proctor.proctorbackend.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.MediaType;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
@@ -20,6 +21,9 @@ public class WebClientConfig {
 
     @Value("${judge0.api.key:}")
     private String judge0ApiKey;
+
+    @Value("${judge0.api.rapidapi-host:judge0-ce.p.rapidapi.com}")
+    private String judge0RapidApiHost;
 
     @Value("${ai.service.connect-timeout-ms:5000}")
     private int aiServiceConnectTimeoutMs;
@@ -54,9 +58,13 @@ public class WebClientConfig {
             .clone()
             .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .baseUrl(judge0Url)
-                .defaultHeader("Content-Type", "application/json")
-                .defaultHeader("X-RapidAPI-Key", judge0ApiKey)
-                .defaultHeader("X-RapidAPI-Host", "judge0-ce.p.rapidapi.com")
+                .defaultHeaders(headers -> {
+                    headers.setContentType(MediaType.APPLICATION_JSON);
+                    if (judge0ApiKey != null && !judge0ApiKey.isBlank()) {
+                        headers.set("X-RapidAPI-Key", judge0ApiKey);
+                        headers.set("X-RapidAPI-Host", judge0RapidApiHost);
+                    }
+                })
                 .build();
     }
 }

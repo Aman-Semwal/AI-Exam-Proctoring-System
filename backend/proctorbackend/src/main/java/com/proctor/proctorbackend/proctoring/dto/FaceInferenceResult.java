@@ -1,5 +1,6 @@
 package com.proctor.proctorbackend.proctoring.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
@@ -8,7 +9,8 @@ import java.util.List;
 @Data
 public class FaceInferenceResult {
 
-    @JsonProperty("faces_detected")
+    @JsonProperty("face_count")
+    @JsonAlias({"faces_detected", "faceCount", "face_count"})
     private int faceCount;
 
     @JsonProperty("faces")

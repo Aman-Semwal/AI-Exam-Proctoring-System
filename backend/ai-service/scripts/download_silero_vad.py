@@ -13,6 +13,9 @@ Usage:
 Output: models/silero_vad.onnx (~1.3 MB)
 """
 
+import shutil
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -21,17 +24,35 @@ MODEL_URL = (
     "src/silero_vad/data/silero_vad_16k_op15.onnx"
 )
 OUTPUT_PATH = Path(__file__).parent.parent / "models" / "silero_vad.onnx"
+MAX_ATTEMPTS = 5
+INITIAL_BACKOFF_SECONDS = 3
 
 
 def main():
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-
-    print(f"Downloading {MODEL_URL} ...")
-    with urllib.request.urlopen(MODEL_URL, timeout=60) as response:
-        model_bytes = response.read()
-
-    OUTPUT_PATH.write_bytes(model_bytes)
-    print(f"Saved {len(model_bytes) / 1_000_000:.2f} MB to: {OUTPUT_PATH}")
+    request = urllib.request.Request(
+        MODEL_URL,
+        headers={"User-Agent": "Mozilla/5.0 (compatible; ai-exam-proctoring-build-script/1.0)"},
+    )
+    last_error = None
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            print(f"Downloading {MODEL_URL} (attempt {attempt}/{MAX_ATTEMPTS}) ...")
+            with urllib.request.urlopen(request, timeout=60) as response, open(OUTPUT_PATH, "wb") as out_file:
+                shutil.copyfileobj(response, out_file, length=64 * 1024)
+            size_mb = OUTPUT_PATH.stat().st_size / 1_000_000
+            print(f"Saved {size_mb:.2f} MB to: {OUTPUT_PATH}")
+            return
+        except (urllib.error.URLError, ConnectionError, TimeoutError) as exc:
+            last_error = exc
+            if attempt == MAX_ATTEMPTS:
+                break
+            backoff = INITIAL_BACKOFF_SECONDS * (2 ** (attempt - 1))
+            print(f"Download failed ({exc!r}); retrying in {backoff}s ...")
+            time.sleep(backoff)
+    raise RuntimeError(
+        f"Failed to download {MODEL_URL} after {MAX_ATTEMPTS} attempts"
+    ) from last_error
 
 
 if __name__ == "__main__":

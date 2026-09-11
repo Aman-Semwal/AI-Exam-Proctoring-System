@@ -60,7 +60,7 @@ SPRING_DATA_REDIS_HOST=<redis-host>
 SPRING_DATA_REDIS_PORT=<redis-port>
 SPRING_DATA_REDIS_PASSWORD=<redis-password>
 JWT_SECRET=<strong-random-secret>
-JWT_EXPIRATION_MS=86400000
+JWT_EXPIRATION_MS=900000
 AI_SERVICE_URL=http://ai-service:8000
 ```
 
@@ -69,7 +69,6 @@ AI_SERVICE_URL=http://ai-service:8000
 ```bash
 # Build and start both services
 docker-compose up --build
-
 # Run in background
 docker-compose up -d
 
@@ -110,7 +109,7 @@ docker-compose down
 | `SPRING_DATA_REDIS_PORT` | Redis port |
 | `SPRING_DATA_REDIS_PASSWORD` | Redis password |
 | `JWT_SECRET` | Secret key for JWT signing |
-| `JWT_EXPIRATION_MS` | JWT expiry in milliseconds (default: 86400000 = 24h) |
+| `JWT_EXPIRATION_MS` | JWT expiry in milliseconds (default: 900000 = 15 min) |
 | `AI_SERVICE_URL` | Internal URL for AI service |
 
 # Sab stopped containers delete karo

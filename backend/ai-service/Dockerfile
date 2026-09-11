@@ -8,9 +8,9 @@
 FROM python:3.11-slim AS onnx-export
 WORKDIR /export
 RUN pip install --no-cache-dir --timeout=300 \
-    torch==2.13.0 \
-    torchvision==0.28.0 \
-    ultralytics==8.4.115
+    --extra-index-url https://download.pytorch.org/whl/cpu \
+    torch torchvision \
+    ultralytics onnx
 # ultralytics pulls in full opencv-python, which needs GUI-related system
 # libs (libGL, libxcb, etc.) that python:3.11-slim doesn't have. Rather
 # than apt-get installing them here (this hit Docker Desktop build-time
@@ -20,6 +20,7 @@ RUN pip install --no-cache-dir --timeout=300 \
 RUN pip uninstall -y opencv-python && \
     pip install --no-cache-dir opencv-python-headless
 COPY scripts/export_yolo_onnx.py scripts/export_yolo_onnx.py
+COPY yolov8n.pt* ./
 RUN python scripts/export_yolo_onnx.py
 
 # ---- Stage 2: the actual service ----
