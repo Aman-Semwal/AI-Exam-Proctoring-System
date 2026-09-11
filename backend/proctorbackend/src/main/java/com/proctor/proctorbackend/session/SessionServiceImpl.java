@@ -35,42 +35,44 @@ import java.util.LinkedHashMap;
 /**
  * Concrete implementation of {@link SessionService}.
  *
- * <p>Manages the full lifecycle of an {@link ExamSession}:
- * starting, ending, and querying sessions. All write operations are
- * wrapped in transactions to guarantee consistency.
+ * <h3>Fixes applied</h3>
+ * <ul>
+ *   <li><b>BUG-005</b> — {@code recalculateScore} now rejects calls on {@code ACTIVE}
+ *       sessions. Recalculating while a student is mid-exam makes no sense and could
+ *       overwrite a partial score with a lower mid-exam value.</li>
+ *   <li><b>BUG-006</b> — {@code endSession} now delegates score calculation to the shared
+ *       {@link ScoreCalculationService} (track-aware) instead of the inline private helper
+ *       that previously existed here. The private helper is removed.</li>
+ * </ul>
  */
 @Service
 @RequiredArgsConstructor
 public class SessionServiceImpl implements SessionService {
 
-    private final ExamSessionRepository sessionRepository;
-    private final ExamRepository examRepository;
-    private final UserRepository userRepository;
-    private final AnswerRepository answerRepository;
-    private final QuestionRepository questionRepository;
+    private final ExamSessionRepository    sessionRepository;
+    private final ExamRepository           examRepository;
+    private final UserRepository           userRepository;
+    private final AnswerRepository         answerRepository;
+    private final QuestionRepository       questionRepository;
     private final ExamAssignmentRepository assignmentRepository;
-    private final ExamProctorService examProctorService;
-    private final ViolationRepository violationRepository;
+    private final ExamProctorService       examProctorService;
+    private final ViolationRepository      violationRepository;
+    private final ScoreCalculationService  scoreCalculationService;
 
-    /**
-     * Starts a new exam session for a student.
-     *
-     * <p>Prevents duplicate active sessions: if the student already has an
-     * {@code ACTIVE} session for the same exam, a {@link BadRequestException} is thrown.
-     * The {@code attemptNumber} is derived by counting the student's prior sessions for this exam.
-     */
+    // -----------------------------------------------------------------------
+    // startSession
+    // -----------------------------------------------------------------------
+
     @Override
     @Transactional
     public SessionResponse startSession(SessionRequest request, String studentEmail) {
-        User student = getUserByEmail(studentEmail);
-        Exam exam = examRepository.findById(request.getExamId())
+        User  student = getUserByEmail(studentEmail);
+        Exam  exam    = examRepository.findById(request.getExamId())
                 .orElseThrow(() -> new ResourceNotFoundException("Exam", request.getExamId()));
         validateSameOrganization(student, exam);
 
-        // Verify the student is assigned to this exam
         if (!assignmentRepository.existsByExamIdAndStudentId(exam.getId(), student.getId())) {
-            throw new com.proctor.proctorbackend.common.exception.UnauthorizedException(
-                    "You are not assigned to this exam");
+            throw new UnauthorizedException("You are not assigned to this exam");
         }
 
         LocalDateTime now = LocalDateTime.now(ZoneId.of("UTC"));
@@ -101,40 +103,45 @@ public class SessionServiceImpl implements SessionService {
         return toResponse(sessionRepository.save(session));
     }
 
+    // -----------------------------------------------------------------------
+    // endSession
+    // -----------------------------------------------------------------------
+
     /**
-     * Ends an active exam session by marking it {@code COMPLETED}, recording the end time,
-     * and computing the score from submitted answers.
+     * Ends an active session, calculates the score via {@link ScoreCalculationService},
+     * and marks the session {@code COMPLETED}.
      */
     @Override
     @Transactional
     public SessionResponse endSession(Long sessionId, String studentEmail) {
-        User student = getUserByEmail(studentEmail);
+        User        student = getUserByEmail(studentEmail);
         ExamSession session = findSessionById(sessionId);
         validateSameOrganization(student, session);
 
         if (!session.getStudent().getId().equals(student.getId())) {
             throw new UnauthorizedException("You are not authorized to end this session");
         }
-
         if (session.getStatus() != SessionStatus.ACTIVE) {
             throw new BadRequestException("Session is not active");
         }
 
-        // Calculate score: sum marks of correctly answered questions filtered by student's track
-        int score = calculateScore(session);
-
+        session.setScore(scoreCalculationService.calculate(session));
         session.setStatus(SessionStatus.COMPLETED);
         session.setEndTime(LocalDateTime.now(ZoneId.of("UTC")));
-        session.setScore(score);
         return toResponse(sessionRepository.save(session));
     }
 
+    // -----------------------------------------------------------------------
+    // getSessionById / getMySessionsAsStudent / getSessionsByExam
+    // -----------------------------------------------------------------------
+
     @Override
     public SessionResponse getSessionById(Long sessionId, String requesterEmail) {
-        User requester = getUserByEmail(requesterEmail);
-        ExamSession session = findSessionById(sessionId);
+        User        requester = getUserByEmail(requesterEmail);
+        ExamSession session   = findSessionById(sessionId);
         validateSameOrganization(requester, session);
-        if (requester.getRole() == Role.STUDENT && !session.getStudent().getId().equals(requester.getId())) {
+        if (requester.getRole() == Role.STUDENT
+                && !session.getStudent().getId().equals(requester.getId())) {
             throw new UnauthorizedException("You are not authorized to access this session");
         }
         return toResponse(session);
@@ -155,7 +162,7 @@ public class SessionServiceImpl implements SessionService {
     @Override
     public List<SessionResponse> getSessionsByExam(Long examId, String examinerEmail) {
         User requester = getUserByEmail(examinerEmail);
-        Exam exam = examRepository.findById(examId)
+        Exam exam      = examRepository.findById(examId)
                 .orElseThrow(() -> new ResourceNotFoundException("Exam", examId));
         validateSameOrganization(requester, exam);
 
@@ -172,21 +179,44 @@ public class SessionServiceImpl implements SessionService {
                 .stream().map(this::toResponse).toList();
     }
 
+    // -----------------------------------------------------------------------
+    // recalculateScore — BUG-005 fix
+    // -----------------------------------------------------------------------
+
+    /**
+     * Recalculates and persists the session score using {@link ScoreCalculationService}.
+     *
+     * <p><b>BUG-005 fix:</b> calling this on an {@code ACTIVE} session is now rejected.
+     * It is only meaningful after the session has ended (COMPLETED or TERMINATED) and
+     * manual grading of CODING/DESCRIPTIVE answers has changed the {@code isCorrect} values.
+     */
     @Override
     @Transactional
     public SessionResponse recalculateScore(Long sessionId, String requesterEmail) {
-        User requester = getUserByEmail(requesterEmail);
-        ExamSession session = findSessionById(sessionId);
+        User        requester = getUserByEmail(requesterEmail);
+        ExamSession session   = findSessionById(sessionId);
         validateSameOrganization(requester, session);
-        session.setScore(calculateScore(session));
+
+        if (session.getStatus() == SessionStatus.ACTIVE) {
+            throw new BadRequestException(
+                    "Score cannot be recalculated while the session is still active. "
+                    + "End the session first.");
+        }
+
+        session.setScore(scoreCalculationService.calculate(session));
         return toResponse(sessionRepository.save(session));
     }
 
+    // -----------------------------------------------------------------------
+    // getExamResult
+    // -----------------------------------------------------------------------
+
     @Override
     public ExamResultResponse getExamResult(Long sessionId, String requesterEmail) {
-        User requester = getUserByEmail(requesterEmail);
-        ExamSession session = findSessionById(sessionId);
+        User        requester = getUserByEmail(requesterEmail);
+        ExamSession session   = findSessionById(sessionId);
         validateSameOrganization(requester, session);
+
         if (requester.getRole() != Role.SUPER_ADMIN
                 && requester.getRole() != Role.ORG_ADMIN
                 && requester.getRole() != Role.EXAM_CREATOR) {
@@ -199,31 +229,24 @@ public class SessionServiceImpl implements SessionService {
                         a -> a.getQuestion().getId(),
                         Function.identity(),
                         (existing, replacement) -> {
-                            if (existing.getAnsweredAt() == null) {
-                                return replacement;
-                            }
-                            if (replacement.getAnsweredAt() == null) {
-                                return existing;
-                            }
-                            return replacement.getAnsweredAt().isAfter(existing.getAnsweredAt()) ? replacement : existing;
+                            if (existing.getAnsweredAt() == null)   return replacement;
+                            if (replacement.getAnsweredAt() == null) return existing;
+                            return replacement.getAnsweredAt().isAfter(existing.getAnsweredAt())
+                                    ? replacement : existing;
                         },
                         LinkedHashMap::new));
 
         int totalMarks = questions.stream().mapToInt(Question::getMarks).sum();
-        int correct    = 0, incorrect = 0, pendingReview = 0, unattempted = 0;
+        int correct = 0, incorrect = 0, pendingReview = 0, unattempted = 0;
 
         List<ExamResultResponse.QuestionResultDetail> breakdown = new java.util.ArrayList<>();
         for (Question q : questions) {
             Answer a = answerMap.get(q.getId());
-            if (a == null) {
-                unattempted++;
-            } else if (a.getIsCorrect() == null) {
-                pendingReview++;
-            } else if (Boolean.TRUE.equals(a.getIsCorrect())) {
-                correct++;
-            } else if (Boolean.FALSE.equals(a.getIsCorrect())) {
-                incorrect++;
-            }
+            if      (a == null)                            unattempted++;
+            else if (a.getIsCorrect() == null)             pendingReview++;
+            else if (Boolean.TRUE.equals(a.getIsCorrect())) correct++;
+            else                                            incorrect++;
+
             breakdown.add(ExamResultResponse.QuestionResultDetail.builder()
                     .questionId(q.getId())
                     .questionText(q.getQuestionText())
@@ -235,15 +258,16 @@ public class SessionServiceImpl implements SessionService {
                     .build());
         }
 
-        int score = session.getScore() != null ? session.getScore() : 0;
-        double percentage = totalMarks > 0 ? (score * 100.0 / totalMarks) : 0.0;
+        int    score       = session.getScore() != null ? session.getScore() : 0;
+        double percentage  = totalMarks > 0 ? (score * 100.0 / totalMarks) : 0.0;
         boolean provisional = pendingReview > 0;
 
-        long totalViolations = violationRepository.countBySessionId(sessionId);
-        long criticalViolations = violationRepository.countBySessionIdAndSeverity(sessionId, ViolationSeverity.CRITICAL);
+        long totalViolations    = violationRepository.countBySessionId(sessionId);
+        long criticalViolations = violationRepository.countBySessionIdAndSeverity(
+                sessionId, ViolationSeverity.CRITICAL);
 
-        String appliedRole = assignmentRepository.findByExamIdAndStudentId(
-                session.getExam().getId(), session.getStudent().getId())
+        String appliedRole = assignmentRepository
+                .findByExamIdAndStudentId(session.getExam().getId(), session.getStudent().getId())
                 .map(a -> a.getTrack())
                 .orElse(null);
 
@@ -278,37 +302,17 @@ public class SessionServiceImpl implements SessionService {
                 .build();
     }
 
-    private String toGrade(double percentage) {
-        if (percentage >= 90) return "A+";
-        if (percentage >= 80) return "A";
-        if (percentage >= 70) return "B";
-        if (percentage >= 60) return "C";
-        if (percentage >= 50) return "D";
+    // -----------------------------------------------------------------------
+    // Private helpers
+    // -----------------------------------------------------------------------
+
+    private String toGrade(double pct) {
+        if (pct >= 90) return "A+";
+        if (pct >= 80) return "A";
+        if (pct >= 70) return "B";
+        if (pct >= 60) return "C";
+        if (pct >= 50) return "D";
         return "F";
-    }
-
-    // ---------------------------------------------------------------------------
-    // Helpers
-    // ---------------------------------------------------------------------------
-
-    private int calculateScore(ExamSession session) {
-        List<String> tracks = resolveTracksForSession(session);
-        return (session.getExam().getId() != null
-                ? questionRepository.findByExamIdAndTrackIn(session.getExam().getId(), tracks).stream()
-                        .filter(q -> {
-                            var answer = answerRepository
-                                    .findBySessionIdAndQuestionId(session.getId(), q.getId());
-                            return answer.map(a -> Boolean.TRUE.equals(a.getIsCorrect())).orElse(false);
-                        })
-                        .mapToInt(q -> q.getMarks())
-                        .sum()
-                : 0);
-    }
-
-    private List<String> resolveTracksForSession(ExamSession session) {
-        return assignmentRepository.findByExamIdAndStudentId(session.getExam().getId(), session.getStudent().getId())
-                .map(a -> a.getTrack() != null ? List.of(a.getTrack(), "COMMON") : List.of("COMMON"))
-                .orElse(List.of("COMMON"));
     }
 
     private ExamSession findSessionById(Long id) {
@@ -318,35 +322,36 @@ public class SessionServiceImpl implements SessionService {
 
     private User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", email));
     }
 
     private void validateSameOrganization(User user, Exam exam) {
-        Organization organization = exam.getOrganization();
-        if (organization == null || !Boolean.TRUE.equals(organization.getIsActive())) {
+        Organization org = exam.getOrganization();
+        if (org == null || !Boolean.TRUE.equals(org.getIsActive())) {
             throw new BadRequestException("Organization is inactive");
         }
-        if (user.getRole() == Role.SUPER_ADMIN) {
-            return;
-        }
-        if (user.getOrganization() == null || !Boolean.TRUE.equals(user.getOrganization().getIsActive())
-                || !user.getOrganization().getId().equals(organization.getId())) {
+        if (user.getRole() == Role.SUPER_ADMIN) return;
+        if (user.getOrganization() == null
+                || !Boolean.TRUE.equals(user.getOrganization().getIsActive())
+                || !user.getOrganization().getId().equals(org.getId())) {
             throw new UnauthorizedException("You are not authorized to access this exam");
         }
     }
 
     private void validateSameOrganization(User user, ExamSession session) {
-        Organization organization = session.getOrganization();
-        if (organization == null || !Boolean.TRUE.equals(organization.getIsActive())) {
+        Organization org = session.getOrganization();
+        if (org == null || !Boolean.TRUE.equals(org.getIsActive())) {
             throw new BadRequestException("Organization is inactive");
         }
         if (user.getRole() == Role.SUPER_ADMIN) return;
-        if (user.getOrganization() == null || !Boolean.TRUE.equals(user.getOrganization().getIsActive())
-                || !user.getOrganization().getId().equals(organization.getId())) {
+        if (user.getOrganization() == null
+                || !Boolean.TRUE.equals(user.getOrganization().getIsActive())
+                || !user.getOrganization().getId().equals(org.getId())) {
             throw new UnauthorizedException("You are not authorized to access this session");
         }
         if (user.getRole() == Role.PROCTOR
-                && !examProctorService.isProctorAssignedToExam(user.getId(), session.getExam().getId())) {
+                && !examProctorService.isProctorAssignedToExam(
+                        user.getId(), session.getExam().getId())) {
             throw new UnauthorizedException("You are not assigned to proctor this exam");
         }
     }
@@ -358,7 +363,7 @@ public class SessionServiceImpl implements SessionService {
                 .examTitle(session.getExam().getTitle())
                 .studentId(session.getStudent().getId())
                 .studentName(session.getStudent().getName())
-                .orgId(session.getOrganization() != null ? session.getOrganization().getId() : null)
+                .orgId(session.getOrganization()   != null ? session.getOrganization().getId()   : null)
                 .orgSlug(session.getOrganization() != null ? session.getOrganization().getSlug() : null)
                 .attemptNumber(session.getAttemptNumber())
                 .status(session.getStatus())

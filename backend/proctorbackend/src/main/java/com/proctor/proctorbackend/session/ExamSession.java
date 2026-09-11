@@ -66,7 +66,7 @@ public class ExamSession {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now(java.time.ZoneId.of("UTC"));
         if (attemptNumber == null) {
             attemptNumber = 1;
         }

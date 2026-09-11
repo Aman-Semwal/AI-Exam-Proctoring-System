@@ -35,11 +35,22 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
 
-    /** URL patterns that do not require a JWT (public access). */
+    /**
+     * URL patterns that do not require a JWT (public access).
+     *
+     * <p><b>BUG-018 fix:</b> {@code /ws/**} is included here so that the WebSocket
+     * upgrade handshake (and SockJS HTTP polling fallback) is not blocked by Spring
+     * Security before reaching the STOMP layer. Actual WebSocket authentication is
+     * enforced by {@link WebSocketAuthInterceptor} on the STOMP {@code CONNECT} frame,
+     * which validates the JWT passed as a STOMP header. Blocking at the HTTP filter
+     * level would prevent clients from ever reaching the STOMP layer to present their
+     * token, making connection impossible for all clients regardless of auth state.
+     */
     private static final String[] PUBLIC_URLS = {
             "/api/auth/**",
             "/api/organizations/invitations/**",
             "/api/health",
+            "/ws/**",                  // BUG-018: WebSocket upgrade + SockJS fallback
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/swagger-ui.html"

@@ -47,7 +47,7 @@ public class ProctoringEvent {
 
     @PrePersist
     protected void onCreate() {
-        detectedAt = LocalDateTime.now();
+        detectedAt = LocalDateTime.now(java.time.ZoneId.of("UTC"));
     }
 
     public enum EventType {

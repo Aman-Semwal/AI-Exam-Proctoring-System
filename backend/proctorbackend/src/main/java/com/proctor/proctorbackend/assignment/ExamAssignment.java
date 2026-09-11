@@ -55,6 +55,6 @@ public class ExamAssignment {
 
     @PrePersist
     protected void onCreate() {
-        assignedAt = LocalDateTime.now();
+        assignedAt = LocalDateTime.now(java.time.ZoneId.of("UTC"));
     }
 }
