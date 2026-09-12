@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import OrganizationSidebar from "../../components/layout/OrganizationSidebar";
 import { FaSearch, FaPlus, FaTimes, FaEllipsisV } from "react-icons/fa";
 import api from "../../services/api";
@@ -26,7 +26,7 @@ export default function Examiners() {
     }
   };
 
-  const fetchExaminers = async () => {
+  const fetchExaminers = useCallback(async () => {
     const orgId = getOrgId();
 
     if (!orgId) {
@@ -65,11 +65,11 @@ export default function Examiners() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchExaminers();
-  }, []);
+  }, [fetchExaminers]);
 
   const filteredExaminers = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
@@ -79,6 +79,7 @@ export default function Examiners() {
     return examiners.filter((examiner) => {
       const name = String(examiner?.name || "").toLowerCase();
       const email = String(examiner?.email || "").toLowerCase();
+
       const department = String(
         examiner?.department ||
           examiner?.dept ||
@@ -431,9 +432,7 @@ const ExaminerRow = ({ examiner, onRemove }) => {
         </div>
       </td>
 
-      <td className="py-3 px-3 text-slate-300">
-        {department}
-      </td>
+      <td className="py-3 px-3 text-slate-300">{department}</td>
 
       <td className="py-3 px-3 text-slate-300 font-mono">
         {activeExams}
@@ -466,4 +465,3 @@ const ExaminerRow = ({ examiner, onRemove }) => {
     </tr>
   );
 };
-

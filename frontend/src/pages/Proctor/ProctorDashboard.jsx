@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FaShieldAlt,
   FaSearch,
@@ -58,7 +58,7 @@ export default function ProctorDashboard() {
     return "Low";
   };
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -116,12 +116,12 @@ export default function ProctorDashboard() {
 
         const exam = exams.find(
           (item) =>
-            item.id ===
-            (violation.examId ?? session?.examId)
+            item.id === (violation.examId ?? session?.examId)
         );
 
         return {
           id: violation.id ?? `${violation.sessionId}-${index}`,
+
           student:
             violation.studentName ||
             session?.studentName ||
@@ -149,8 +149,7 @@ export default function ProctorDashboard() {
           ),
 
           severity: normalizeSeverity(
-            violation.severity ||
-              violation.riskLevel
+            violation.severity || violation.riskLevel
           ),
         };
       });
@@ -160,21 +159,23 @@ export default function ProctorDashboard() {
       console.error("Failed to load proctor dashboard:", err);
 
       setError(
-        err.response?.data?.message ||
+        err?.response?.data?.message ||
           "Unable to load proctor dashboard data."
       );
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchDashboardData();
 
-    const interval = setInterval(fetchDashboardData, 30000);
+    const interval = setInterval(() => {
+      fetchDashboardData();
+    }, 30000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchDashboardData]);
 
   const filteredIncidents = useMemo(() => {
     const query = searchQuery.toLowerCase();
@@ -229,6 +230,7 @@ export default function ProctorDashboard() {
 
         <div className="pt-3 border-t border-white/[0.07]">
           <button
+            type="button"
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 text-xs font-medium text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 py-2 rounded-lg transition"
           >
@@ -268,6 +270,7 @@ export default function ProctorDashboard() {
             <span>{error}</span>
 
             <button
+              type="button"
               onClick={fetchDashboardData}
               className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20"
             >

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import OrganizationSidebar from "../../components/layout/OrganizationSidebar";
-import { FaSearch, FaPlus, FaTimes } from "react-icons/fa";
+import { FaSearch, FaPlus } from "react-icons/fa";
 import api from "../../services/api";
 
 export default function UpcomingExams() {
@@ -48,12 +48,10 @@ export default function UpcomingExams() {
       .filter((exam) => {
         const status = String(exam.status || "").toUpperCase();
 
-        // Exclude completed/cancelled exams.
         if (["COMPLETED", "CANCELLED", "CANCELED"].includes(status)) {
           return false;
         }
 
-        // If startTime/date is available, keep future exams.
         const examDate = exam.startTime || exam.startDate || exam.date;
 
         if (examDate) {
@@ -322,4 +320,3 @@ const UpcomingExamRow = ({ exam }) => {
     </tr>
   );
 };
-

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import OrganizationSidebar from "../../components/layout/OrganizationSidebar";
 import { FaSearch } from "react-icons/fa";
 import api from "../../services/api";
@@ -10,7 +10,7 @@ export default function ActiveExams() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const loadActiveExams = async () => {
+  const loadActiveExams = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -35,7 +35,6 @@ export default function ActiveExams() {
 
       setExams(activeList);
 
-      // Load sessions for every active exam.
       const sessionResults = await Promise.all(
         activeList.map(async (exam) => {
           try {
@@ -94,16 +93,17 @@ export default function ActiveExams() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadActiveExams();
 
-    // Refresh live information periodically.
-    const interval = setInterval(loadActiveExams, 30000);
+    const interval = setInterval(() => {
+      loadActiveExams();
+    }, 30000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [loadActiveExams]);
 
   const examRows = useMemo(() => {
     return exams.map((exam) => {
@@ -374,4 +374,3 @@ const ActiveExamRow = ({ exam }) => {
     </tr>
   );
 };
-

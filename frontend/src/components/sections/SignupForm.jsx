@@ -122,7 +122,7 @@ const SignupForm = () => {
       <form onSubmit={handleSignup} className="mt-5 space-y-3.5">
         {/* Role Selector */}
         <div>
-          <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1.5">
+          <label className="flex items-center gap-1.5 text-xs font-medium text-slate-300 mb-1">
             <FaUserShield className="text-blue-400 text-xs" />
             Register As
           </label>
