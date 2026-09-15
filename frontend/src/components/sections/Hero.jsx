@@ -11,7 +11,7 @@ import {
   FaMicrochip,
   FaLock,
 } from "react-icons/fa";
-import { useTheme } from "../../context/ThemeContext";
+import { useTheme } from "../../context/useTheme";
 import heroCandidateImg from "../../assets/hero-proctor.jpg";
 
 const partnerLogos = [

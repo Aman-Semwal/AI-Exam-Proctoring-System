@@ -1,7 +1,6 @@
 package com.proctor.proctorbackend.proctoring;
 
 import com.proctor.proctorbackend.proctoring.dto.AnalyzeResponse;
-import com.proctor.proctorbackend.proctoring.dto.FaceInferenceResult;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;

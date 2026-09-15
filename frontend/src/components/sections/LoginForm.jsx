@@ -27,7 +27,12 @@ const LoginForm = () => {
         password,
       });
 
-      const data = response.data;
+      // ApiResponse wraps the payload under .data — shape is { success, message, data: AuthResponse }
+      const data = response.data?.data;
+
+      if (!data?.token) {
+        throw new Error("Invalid response from server. Please try again.");
+      }
 
       // Save JWT
       localStorage.setItem("token", data.token);
@@ -64,7 +69,9 @@ const LoginForm = () => {
     } catch (err) {
       console.error("Login error:", err);
 
-      if (err.response?.data?.message) {
+      if (err.message === "Invalid response from server. Please try again.") {
+        setError(err.message);
+      } else if (err.response?.data?.message) {
         setError(err.response.data.message);
       } else if (err.response?.status === 401) {
         setError("Invalid email or password.");

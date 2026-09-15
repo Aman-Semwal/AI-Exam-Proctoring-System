@@ -1,13 +1,9 @@
 package com.proctor.proctorbackend.bulkimport;
 
-import com.proctor.proctorbackend.mail.MailService;
-import com.proctor.proctorbackend.organization.OrganizationRepository;
-import com.proctor.proctorbackend.user.UserRepository;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Method;

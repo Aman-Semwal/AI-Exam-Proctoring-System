@@ -35,6 +35,8 @@ services:
   # get a container with the test tooling in it. Run with:
   #   docker-compose run --rm ai-service-test pytest tests/ -v
   ai-service-test:
+    profiles:
+      - test
     build:
       context: ./ai-service
       dockerfile: Dockerfile

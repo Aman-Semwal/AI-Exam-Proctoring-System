@@ -8,7 +8,7 @@ import {
   FaLock,
   FaCheckCircle,
 } from "react-icons/fa";
-import { useTheme } from "../../context/ThemeContext";
+import { useTheme } from "../../context/useTheme";
 import neuralChipImg from "../../assets/neural-chip.jpg";
 
 const ecosystemBadges = [

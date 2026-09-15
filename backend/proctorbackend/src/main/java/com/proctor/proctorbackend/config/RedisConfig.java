@@ -5,7 +5,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 /**
@@ -14,7 +14,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
  * <p>Defines a {@link RedisTemplate} bean with:
  * <ul>
  *   <li>String serialization for keys — keeps keys human-readable in Redis CLI.</li>
- *   <li>JSON serialization for values via {@link GenericJacksonJsonRedisSerializer} —
+ *   <li>JSON serialization for values via {@link GenericJackson2JsonRedisSerializer} —
  *       allows storing arbitrary Java objects as JSON.</li>
  * </ul>
  *
@@ -28,8 +28,8 @@ public class RedisConfig {
      * Creates a configured {@link RedisTemplate} for {@code String} keys and
      * {@code Object} values serialized as JSON.
      *
-     * <p>Uses {@link GenericJacksonJsonRedisSerializer#builder()} (Spring Data Redis 4.x)
-     * which internally configures a Jackson 3 {@code JsonMapper} with type information
+     * <p>Uses {@link GenericJackson2JsonRedisSerializer} (Spring Data Redis 3.x)
+     * which internally configures a Jackson {@code ObjectMapper} with type information
      * support for round-trip deserialization.
      *
      * @param connectionFactory the Redis connection factory provided by Spring Boot
@@ -44,11 +44,9 @@ public class RedisConfig {
         template.setKeySerializer(new StringRedisSerializer());
         template.setHashKeySerializer(new StringRedisSerializer());
 
-        // Values as JSON — use builder() to get a properly configured Jackson 3 ObjectMapper.
-        // GenericJacksonJsonRedisSerializer is the Spring Data Redis 4.x replacement for
-        // the removed GenericJackson2JsonRedisSerializer.
-        GenericJacksonJsonRedisSerializer jsonSerializer =
-                GenericJacksonJsonRedisSerializer.builder().build();
+        // Values as JSON — GenericJackson2JsonRedisSerializer is the correct class
+        // in Spring Data Redis 3.x (bundled with Spring Boot 3.x).
+        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer();
         template.setValueSerializer(jsonSerializer);
         template.setHashValueSerializer(jsonSerializer);
 

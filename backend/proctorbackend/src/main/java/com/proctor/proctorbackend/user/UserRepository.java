@@ -1,6 +1,8 @@
 package com.proctor.proctorbackend.user;
 
 import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -18,4 +20,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByOrganizationIdOrderByCreatedAtDesc(Long organizationId);
 
     List<User> findByOrganizationIdAndRole(Long organizationId, com.proctor.proctorbackend.common.enums.Role role);
+
+    @EntityGraph(attributePaths = "organization")
+    Page<User> findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+            String name, String email, Pageable pageable);
 }

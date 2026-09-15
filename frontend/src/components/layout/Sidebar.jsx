@@ -10,7 +10,7 @@ import {
   FaSun,
   FaMoon,
 } from "react-icons/fa";
-import { useTheme } from "../../context/ThemeContext";
+import { useTheme } from "../../context/useTheme";
 
 const navItems = [
   { to: "/student/dashboard", icon: FaTachometerAlt, label: "Dashboard" },

@@ -4,6 +4,8 @@ import com.proctor.proctorbackend.common.exception.ResourceNotFoundException;
 import com.proctor.proctorbackend.user.dto.UpdateProfileRequest;
 import com.proctor.proctorbackend.user.dto.UserDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -54,6 +56,16 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", email));
         user.setName(request.getName());
         return toDto(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<UserDto> getAllUsers(String search, Pageable pageable) {
+        String normalizedSearch = search == null ? "" : search.trim();
+        return userRepository
+                .findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                        normalizedSearch, normalizedSearch, pageable)
+                .map(this::toDto);
     }
 
     // -----------------------------------------------------------------------

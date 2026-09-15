@@ -1,5 +1,5 @@
 import { FaBell, FaSearch, FaSun, FaMoon } from "react-icons/fa";
-import { useTheme } from "../../context/ThemeContext";
+import { useTheme } from "../../context/useTheme";
 
 const SuperAdminTopbar = ({ title = "Dashboard", breadcrumb = "Super Admin" }) => {
   const { isDark, toggleTheme } = useTheme();

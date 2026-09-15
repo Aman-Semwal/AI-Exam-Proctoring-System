@@ -90,11 +90,11 @@ public class OrganizationController {
         return ResponseEntity.ok(ApiResponse.success("Member removed"));
     }
 
-        @PostMapping("/invitations/activate")
-        @Operation(summary = "Activate an invited member account")
-        public ResponseEntity<ApiResponse<Void>> activateInvitation(
-                        @Valid @RequestBody InvitationActivationRequest request) {
-                organizationService.activateInvitation(request);
-                return ResponseEntity.ok(ApiResponse.success("Invitation activated"));
-        }
+    @PostMapping("/invitations/activate")
+    @Operation(summary = "Activate an invited member account")
+    public ResponseEntity<ApiResponse<Void>> activateInvitation(
+            @Valid @RequestBody InvitationActivationRequest request) {
+        organizationService.activateInvitation(request);
+        return ResponseEntity.ok(ApiResponse.success("Invitation activated"));
+    }
 }

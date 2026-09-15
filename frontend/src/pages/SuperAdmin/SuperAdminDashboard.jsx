@@ -117,20 +117,31 @@ const SuperAdminDashboard = () => {
       setLiveSessions(totalLiveSessions);
 
       /* ---------------- Error State ---------------- */
-
+      // Only surface an error if BOTH core fetches fail. If orgs or exams
+      // loaded successfully, show partial data rather than an error banner.
+      // Session failures are already silently swallowed per-exam above.
       if (
         organizationsResponse.status === "rejected" &&
         examsResponse.status === "rejected"
       ) {
-        throw organizationsResponse.reason;
+        const reason = organizationsResponse.reason;
+        // Do NOT rethrow on 401 — the interceptor already handles session expiry.
+        // Only show the error banner for actual server/network errors.
+        if (reason?.response?.status !== 401) {
+          throw reason;
+        }
       }
     } catch (err) {
       console.error("Failed to load Super Admin dashboard:", err);
 
-      setError(
-        err.response?.data?.message ||
-          "Unable to load dashboard data. Please try again."
-      );
+      // Don't redirect on auth errors (api.js interceptor handles that).
+      // Only set the error state for real server/network failures.
+      if (err?.response?.status !== 401) {
+        setError(
+          err.response?.data?.message ||
+            "Unable to load dashboard data. Please try again."
+        );
+      }
     } finally {
       setLoading(false);
     }

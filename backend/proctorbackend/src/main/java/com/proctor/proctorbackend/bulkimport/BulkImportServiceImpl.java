@@ -25,7 +25,6 @@ public class BulkImportServiceImpl implements BulkImportService {
     private final BulkImportJobRepository jobRepository;
     private final OrganizationRepository organizationRepository;
     private final UserRepository userRepository;
-    private final BulkImportProcessor processor;
     private final ApplicationEventPublisher eventPublisher;
 
     @Override

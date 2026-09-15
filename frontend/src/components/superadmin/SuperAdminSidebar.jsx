@@ -13,7 +13,7 @@ import {
   FaSun,
   FaMoon,
 } from "react-icons/fa";
-import { useTheme } from "../../context/ThemeContext";
+import { useTheme } from "../../context/useTheme";
 
 const navItems = [
   { to: "/super-admin/dashboard", icon: FaTachometerAlt, label: "Dashboard" },

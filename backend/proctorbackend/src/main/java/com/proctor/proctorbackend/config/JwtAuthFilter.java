@@ -18,9 +18,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Servlet filter that intercepts every HTTP request and validates the JWT Bearer token.
@@ -51,12 +53,40 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final UserDetailsService userDetailsService;
 
     /**
+     * Public URL patterns that should never be intercepted by JWT validation.
+     * Even if the client sends a (stale/expired) Bearer token on these endpoints,
+     * we skip validation entirely so the request always reaches the handler.
+     */
+        private static final List<String> PUBLIC_PATHS = List.of(
+            "/api/auth/**",
+            "/api/organizations/invitations/**",
+            "/api/health",
+            "/ws/**",
+            "/swagger-ui/**",
+            "/v3/api-docs/**",
+            "/swagger-ui.html"
+    );
+
+        private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
+
+    /**
      * Strategy used to create and store the {@link SecurityContext}.
      * Defaults to the globally configured strategy
      * ({@link SecurityContextHolder#getContextHolderStrategy()}).
      */
     private final SecurityContextHolderStrategy securityContextHolderStrategy =
             SecurityContextHolder.getContextHolderStrategy();
+
+    /**
+     * Skip JWT validation entirely for public endpoints.
+     * This prevents stale/expired tokens sent by the frontend from causing
+     * a 401/403 on endpoints like /api/auth/login that don't require auth.
+     */
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String requestPath = request.getRequestURI().substring(request.getContextPath().length());
+        return PUBLIC_PATHS.stream().anyMatch(pattern -> PATH_MATCHER.match(pattern, requestPath));
+    }
 
     /**
      * Core filter logic executed once per request.

@@ -7,7 +7,6 @@ import com.proctor.proctorbackend.common.enums.Role;
 import com.proctor.proctorbackend.common.exception.BadRequestException;
 import com.proctor.proctorbackend.common.exception.ResourceNotFoundException;
 import com.proctor.proctorbackend.organization.Organization;
-import com.proctor.proctorbackend.organization.OrganizationRepository;
 import com.proctor.proctorbackend.user.User;
 import com.proctor.proctorbackend.user.InvitationStatus;
 import com.proctor.proctorbackend.user.UserRepository;
@@ -46,7 +45,6 @@ import java.util.Map;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository         userRepository;
-    private final OrganizationRepository organizationRepository;
     private final PasswordEncoder        passwordEncoder;
     private final JwtService             jwtService;
     private final AuthenticationManager  authenticationManager;

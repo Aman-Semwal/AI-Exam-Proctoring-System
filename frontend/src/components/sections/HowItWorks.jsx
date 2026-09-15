@@ -9,7 +9,7 @@ import {
   FaFileContract,
   FaShieldAlt,
 } from "react-icons/fa";
-import { useTheme } from "../../context/ThemeContext";
+import { useTheme } from "../../context/useTheme";
 import sensorDeviceImg from "../../assets/sensor-device.jpg";
 
 const HowItWorks = () => {

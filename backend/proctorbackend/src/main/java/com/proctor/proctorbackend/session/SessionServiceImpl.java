@@ -136,10 +136,14 @@ public class SessionServiceImpl implements SessionService {
     // -----------------------------------------------------------------------
 
     @Override
+    @Transactional(readOnly = true)
     public SessionResponse getSessionById(Long sessionId, String requesterEmail) {
         User        requester = getUserByEmail(requesterEmail);
         ExamSession session   = findSessionById(sessionId);
-        validateSameOrganization(requester, session);
+        // SUPER_ADMIN can see any session — skip org validation entirely
+        if (requester.getRole() != Role.SUPER_ADMIN) {
+            validateSameOrganization(requester, session);
+        }
         if (requester.getRole() == Role.STUDENT
                 && !session.getStudent().getId().equals(requester.getId())) {
             throw new UnauthorizedException("You are not authorized to access this session");
@@ -160,16 +164,20 @@ public class SessionServiceImpl implements SessionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<SessionResponse> getSessionsByExam(Long examId, String examinerEmail) {
         User requester = getUserByEmail(examinerEmail);
         Exam exam      = examRepository.findById(examId)
                 .orElseThrow(() -> new ResourceNotFoundException("Exam", examId));
-        validateSameOrganization(requester, exam);
 
+        // SUPER_ADMIN bypasses all org checks — validate org only for other roles
         if (requester.getRole() == Role.SUPER_ADMIN) {
             return sessionRepository.findByExamIdOrderByCreatedAtDesc(examId)
                     .stream().map(this::toResponse).toList();
         }
+
+        validateSameOrganization(requester, exam);
+
         if (requester.getRole() == Role.PROCTOR
                 && !examProctorService.isProctorAssignedToExam(requester.getId(), examId)) {
             throw new UnauthorizedException("You are not assigned to proctor this exam");
@@ -236,7 +244,7 @@ public class SessionServiceImpl implements SessionService {
                         },
                         LinkedHashMap::new));
 
-        int totalMarks = questions.stream().mapToInt(Question::getMarks).sum();
+        int totalMarks = questions.stream().mapToInt(q -> q.getMarks()).sum();
         int correct = 0, incorrect = 0, pendingReview = 0, unattempted = 0;
 
         List<ExamResultResponse.QuestionResultDetail> breakdown = new java.util.ArrayList<>();

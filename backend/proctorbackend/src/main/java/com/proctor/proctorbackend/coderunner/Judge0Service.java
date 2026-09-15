@@ -48,7 +48,7 @@ public class Judge0Service {
                 .map(tc -> runSingle(langId, request.getCode(), tc))
                 .toList();
 
-        long passedCount = results.stream().filter(TestCaseResult::isPassed).count();
+        long passedCount = results.stream().filter(r -> r.isPassed()).count();
 
         return CodeRunResponse.builder()
                 .totalTests(results.size())

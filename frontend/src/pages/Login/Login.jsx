@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   FaShieldAlt,
   FaEye,
@@ -8,11 +8,12 @@ import {
   FaSun,
   FaMoon,
 } from "react-icons/fa";
-import { useTheme } from "../../context/ThemeContext";
+import { useTheme } from "../../context/useTheme";
 import api from "../../services/api";
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isDark, toggleTheme } = useTheme();
 
   const [isLogin, setIsLogin] = useState(true);
@@ -26,6 +27,14 @@ const Login = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Show a message when redirected here because the session expired
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("reason") === "session_expired") {
+      setError("Your session has expired. Please log in again.");
+    }
+  }, [location.search]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
