@@ -4,16 +4,22 @@
 # Dockerfile's export stage), not to run the service. Serving happens
 # through onnxruntime alone, which keeps the final image free of the
 # torch/CUDA dependency chain.
+#
+# fullstack-guardian: versions are pinned exactly for reproducible builds.
+# A `pip freeze` run against the validated Docker image produced these values.
+# To update: bump versions here, rebuild the image, run the test suite, then
+# update the frozen list. Open ranges (`>=`) are intentionally avoided so
+# a breaking minor release never silently enters the build.
 
 # Core FastAPI web framework & server
-fastapi>=0.110.0,<1.0.0
-uvicorn[standard]>=0.28.0
-pydantic>=2.6.0
-python-multipart>=0.0.9
+fastapi==0.115.12
+uvicorn[standard]==0.34.0
+pydantic==2.10.6
+python-multipart==0.0.20
 
 # Computer Vision & Machine Learning runtime
 # Note: MediaPipe 0.10.14 requires numpy < 2.0.0
-numpy>=1.24.0,<2.0.0
-opencv-python-headless>=4.8.0
+numpy==1.26.4
+opencv-python-headless==4.10.0.84
 mediapipe==0.10.14
-onnxruntime>=1.16.0
+onnxruntime==1.20.1

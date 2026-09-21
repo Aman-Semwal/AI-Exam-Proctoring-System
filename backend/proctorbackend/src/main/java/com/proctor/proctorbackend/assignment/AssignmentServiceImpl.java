@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,15 +30,15 @@ public class AssignmentServiceImpl implements AssignmentService {
     @Transactional
     public AssignmentResponse assignStudent(AssignmentRequest request, String requesterEmail) {
         User requester = getUserByEmail(requesterEmail);
-        Exam exam = examRepository.findById(request.getExamId())
+        Exam exam = examRepository.findById(Objects.requireNonNull(request.getExamId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Exam", request.getExamId()));
         validateSameOrganization(requester, exam);
 
-        User student = userRepository.findById(request.getStudentId())
+        User student = userRepository.findById(Objects.requireNonNull(request.getStudentId()))
                 .orElseThrow(() -> new ResourceNotFoundException("User", request.getStudentId()));
         validateSameOrganization(student, exam);
 
-        if (assignmentRepository.existsByExamIdAndStudentId(request.getExamId(), request.getStudentId())) {
+        if (assignmentRepository.existsByExamIdAndStudentId(Objects.requireNonNull(request.getExamId()), Objects.requireNonNull(request.getStudentId()))) {
             throw new BadRequestException("Student is already assigned to this exam");
         }
 
@@ -48,14 +49,14 @@ public class AssignmentServiceImpl implements AssignmentService {
                 .track(student.getAppliedRole())
                 .build();
 
-        return toResponse(assignmentRepository.save(assignment));
+        return toResponse(assignmentRepository.save(Objects.requireNonNull(assignment)));
     }
 
     @Override
     @Transactional
     public List<AssignmentResponse> assignAllStudents(Long examId, String requesterEmail) {
         User requester = getUserByEmail(requesterEmail);
-        Exam exam = examRepository.findById(examId)
+        Exam exam = examRepository.findById(Objects.requireNonNull(examId))
                 .orElseThrow(() -> new ResourceNotFoundException("Exam", examId));
         validateSameOrganization(requester, exam);
 
@@ -63,7 +64,7 @@ public class AssignmentServiceImpl implements AssignmentService {
                 exam.getOrganization().getId(), Role.STUDENT);
 
         List<ExamAssignment> toSave = students.stream()
-                .filter(s -> !assignmentRepository.existsByExamIdAndStudentId(examId, s.getId()))
+                .filter(s -> !assignmentRepository.existsByExamIdAndStudentId(Objects.requireNonNull(examId), Objects.requireNonNull(s.getId())))
                 .map(s -> ExamAssignment.builder()
                         .exam(exam)
                         .student(s)
@@ -72,7 +73,7 @@ public class AssignmentServiceImpl implements AssignmentService {
                         .build())
                 .collect(Collectors.toList());
 
-        return assignmentRepository.saveAll(toSave).stream()
+        return assignmentRepository.saveAll(Objects.requireNonNull(toSave)).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -80,12 +81,12 @@ public class AssignmentServiceImpl implements AssignmentService {
     @Override
     public List<AssignmentResponse> getAssignmentsByExam(Long examId, String requesterEmail) {
         User requester = getUserByEmail(requesterEmail);
-        Exam exam = examRepository.findById(examId)
+        Exam exam = examRepository.findById(Objects.requireNonNull(examId))
                 .orElseThrow(() -> new ResourceNotFoundException("Exam", examId));
         validateSameOrganization(requester, exam);
 
         if (requester.getRole() == Role.SUPER_ADMIN) {
-            return assignmentRepository.findByExamId(examId).stream()
+            return assignmentRepository.findByExamId(Objects.requireNonNull(examId)).stream()
                     .map(this::toResponse)
                     .toList();
         }
@@ -100,7 +101,7 @@ public class AssignmentServiceImpl implements AssignmentService {
         if (requester.getRole() == Role.STUDENT && !requester.getId().equals(studentId)) {
             throw new UnauthorizedException("You are not authorized to access this user's assignments");
         }
-        User student = userRepository.findById(studentId)
+        User student = userRepository.findById(Objects.requireNonNull(studentId))
                 .orElseThrow(() -> new ResourceNotFoundException("User", studentId));
         validateSameOrganization(requester, student);
 
@@ -118,7 +119,7 @@ public class AssignmentServiceImpl implements AssignmentService {
     @Transactional
     public void removeAssignment(Long assignmentId, String requesterEmail) {
         User requester = getUserByEmail(requesterEmail);
-        ExamAssignment assignment = assignmentRepository.findById(assignmentId)
+        ExamAssignment assignment = assignmentRepository.findById(Objects.requireNonNull(assignmentId))
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment", assignmentId));
         validateSameOrganization(requester, assignment.getExam());
         assignmentRepository.delete(assignment);

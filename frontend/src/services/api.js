@@ -1,7 +1,14 @@
 import axios from "axios";
 
+// fullstack-guardian: never hardcode service URLs — use environment variables
+// so the same build works in development, staging, and production.
+// Set VITE_API_BASE_URL in your .env file:
+//   VITE_API_BASE_URL=http://localhost:8080/api        (dev)
+//   VITE_API_BASE_URL=https://api.yourapp.com/api     (prod)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
+
 const api = axios.create({
-  baseURL: "http://localhost:8080/api",
+  baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },

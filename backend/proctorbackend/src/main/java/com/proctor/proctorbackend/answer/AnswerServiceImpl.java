@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -35,7 +36,7 @@ public class AnswerServiceImpl implements AnswerService {
     @Override
     @Transactional
     public AnswerResponse submitAnswer(AnswerRequest request, String studentEmail) {
-        ExamSession session = sessionRepository.findById(request.getSessionId())
+        ExamSession session = sessionRepository.findById(Objects.requireNonNull(request.getSessionId()))
                 .orElseThrow(() -> new ResourceNotFoundException("ExamSession", request.getSessionId()));
 
         // Verify the authenticated student owns this session
@@ -47,16 +48,16 @@ public class AnswerServiceImpl implements AnswerService {
             throw new BadRequestException("Answers can only be submitted for active sessions");
         }
 
-        Question question = questionRepository.findById(request.getQuestionId())
+        Question question = questionRepository.findById(Objects.requireNonNull(request.getQuestionId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Question", request.getQuestionId()));
 
-        if (!question.getExam().getId().equals(session.getExam().getId())) {
+        if (!Objects.requireNonNull(question.getExam().getId()).equals(Objects.requireNonNull(session.getExam().getId()))) {
             throw new BadRequestException("Question does not belong to the exam in this session");
         }
 
         // Upsert: update existing answer if already submitted for this question
         Answer answer = answerRepository
-                .findBySessionIdAndQuestionId(request.getSessionId(), request.getQuestionId())
+                .findBySessionIdAndQuestionId(Objects.requireNonNull(request.getSessionId()), Objects.requireNonNull(request.getQuestionId()))
                 .orElse(Answer.builder()
                         .session(session)
                         .question(question)
@@ -88,23 +89,23 @@ public class AnswerServiceImpl implements AnswerService {
 
     @Override
     public List<AnswerResponse> getAnswersBySession(Long sessionId) {
-        if (!sessionRepository.existsById(sessionId)) {
+        if (!sessionRepository.existsById(Objects.requireNonNull(sessionId))) {
             throw new ResourceNotFoundException("ExamSession", sessionId);
         }
-        return answerRepository.findBySessionId(sessionId).stream()
+        return answerRepository.findBySessionId(Objects.requireNonNull(sessionId)).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     @Override
     public AnswerResponse getAnswerById(Long id) {
-        return toResponse(answerRepository.findById(id)
+        return toResponse(answerRepository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Answer", id)));
     }
 
     @Override
     public AnswerResponse gradeAnswer(Long answerId, Boolean isCorrect, String graderEmail) {
-        Answer answer = answerRepository.findById(answerId)
+        Answer answer = answerRepository.findById(Objects.requireNonNull(answerId))
                 .orElseThrow(() -> new ResourceNotFoundException("Answer", answerId));
         Question question = answer.getQuestion();
         if (question.getQuestionType() != QuestionType.CODING && question.getQuestionType() != QuestionType.DESCRIPTIVE) {
@@ -162,7 +163,7 @@ public class AnswerServiceImpl implements AnswerService {
             throw new UnauthorizedException("You are not authorized to grade this answer");
         }
         if (grader.getRole() == Role.PROCTOR
-                && !examProctorService.isProctorAssignedToExam(grader.getId(), session.getExam().getId())) {
+                && !examProctorService.isProctorAssignedToExam(Objects.requireNonNull(grader.getId()), Objects.requireNonNull(session.getExam().getId()))) {
             throw new UnauthorizedException("You are not assigned to proctor this exam");
         }
     }

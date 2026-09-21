@@ -16,6 +16,9 @@ public class WebClientConfig {
     @Value("${ai.service.url}")
     private String aiServiceUrl;
 
+    @Value("${ai.service.api-key:}")
+    private String aiServiceApiKey;
+
     @Value("${judge0.api.url}")
     private String judge0Url;
 
@@ -46,6 +49,14 @@ public class WebClientConfig {
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .baseUrl(aiServiceUrl)
                 .defaultHeader("Content-Type", "application/json")
+                // secure-code-guardian: send the shared API key on every inference request
+                // so the AI service can reject calls from any unauthorized source.
+                // Configured via AI_SERVICE_API_KEY in backend/.env.
+                .defaultHeaders(headers -> {
+                    if (aiServiceApiKey != null && !aiServiceApiKey.isBlank()) {
+                        headers.set("X-API-Key", aiServiceApiKey);
+                    }
+                })
                 .build();
     }
 

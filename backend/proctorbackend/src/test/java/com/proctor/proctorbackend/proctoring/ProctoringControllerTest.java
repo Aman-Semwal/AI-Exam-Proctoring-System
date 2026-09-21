@@ -77,9 +77,10 @@ class ProctoringControllerTest {
 
         assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
-        assertNotNull(response.getBody());
-        assertTrue(response.getBody().isSuccess());
-        assertEquals(expected, response.getBody().getData());
+        ApiResponse<ProctoringEventResponse> body = response.getBody();
+        assertNotNull(body);
+        assertTrue(body.isSuccess());
+        assertEquals(expected, body.getData());
 
         verify(proctoringService, times(1)).processFrame(req, "student@test.com");
     }
@@ -146,11 +147,12 @@ class ProctoringControllerTest {
 
         assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
-        assertNotNull(response.getBody());
-        assertTrue(response.getBody().isSuccess());
-        assertEquals(1, response.getBody().getData().size());
+        ApiResponse<List<ProctoringEventResponse>> body = response.getBody();
+        assertNotNull(body);
+        assertTrue(body.isSuccess());
+        assertEquals(1, body.getData().size());
         assertEquals(ProctoringEvent.EventType.NO_FACE_DETECTED,
-                response.getBody().getData().get(0).getEventType());
+                body.getData().get(0).getEventType());
     }
 
     @Test
@@ -167,8 +169,9 @@ class ProctoringControllerTest {
         ResponseEntity<ApiResponse<List<ProctoringEventResponse>>> response =
                 controller.getSessionEvents(55L, adminUser);
 
-        assertNotNull(response.getBody());
-        assertTrue(response.getBody().getData().isEmpty());
+        ApiResponse<List<ProctoringEventResponse>> body = response.getBody();
+        assertNotNull(body);
+        assertTrue(body.getData().isEmpty());
     }
 
     @Test

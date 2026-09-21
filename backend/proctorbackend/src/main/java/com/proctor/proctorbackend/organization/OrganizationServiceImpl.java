@@ -94,6 +94,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     // -----------------------------------------------------------------------
 
     @Override
+    @Transactional(readOnly = true)
     public List<UserDto> listMembers(Long organizationId, String requesterEmail) {
         User         requester    = getUserByEmail(requesterEmail);
         Organization organization = requireActiveOrganization(organizationId);

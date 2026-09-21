@@ -51,11 +51,10 @@ class QuestionServiceImplTest {
 
         when(examRepository.findById(10L)).thenReturn(Optional.of(exam));
         when(questionRepository.save(any())).thenAnswer(inv -> {
-            Question q = inv.getArgument(0);
-            q = Question.builder().id(1L).exam(q.getExam()).questionType(q.getQuestionType())
+            Question q = inv.getArgument(0, Question.class);
+            return Question.builder().id(1L).exam(q.getExam()).questionType(q.getQuestionType())
                     .questionText(q.getQuestionText()).options(q.getOptions())
                     .correctOption(q.getCorrectOption()).marks(q.getMarks()).track(q.getTrack()).build();
-            return q;
         });
 
         QuestionResponse resp = service.createQuestion(req);
@@ -70,11 +69,10 @@ class QuestionServiceImplTest {
 
         when(examRepository.findById(10L)).thenReturn(Optional.of(exam));
         when(questionRepository.save(any())).thenAnswer(inv -> {
-            Question q = inv.getArgument(0);
-            q = Question.builder().id(1L).exam(q.getExam()).questionType(q.getQuestionType())
+            Question q = inv.getArgument(0, Question.class);
+            return Question.builder().id(1L).exam(q.getExam()).questionType(q.getQuestionType())
                     .questionText(q.getQuestionText()).options(q.getOptions())
                     .correctOption(q.getCorrectOption()).marks(q.getMarks()).track(q.getTrack()).build();
-            return q;
         });
 
         QuestionResponse resp = service.createQuestion(req);
@@ -114,11 +112,10 @@ class QuestionServiceImplTest {
 
         when(examRepository.findById(10L)).thenReturn(Optional.of(exam));
         when(questionRepository.save(any())).thenAnswer(inv -> {
-            Question q = inv.getArgument(0);
-            q = Question.builder().id(2L).exam(q.getExam()).questionType(q.getQuestionType())
+            Question q = inv.getArgument(0, Question.class);
+            return Question.builder().id(2L).exam(q.getExam()).questionType(q.getQuestionType())
                     .questionText(q.getQuestionText()).options(q.getOptions())
                     .correctOption(q.getCorrectOption()).marks(q.getMarks()).track("COMMON").build();
-            return q;
         });
 
         QuestionResponse resp = service.createQuestion(req);

@@ -116,7 +116,7 @@ export default function QuestionBank() {
         setError("");
 
         const response = await api.get(
-          `/questions/exam/${selectedExamId}`
+          `/questions/exam/${selectedExamId}?includeAnswer=true`
         );
 
         const data = response.data?.data;
@@ -413,7 +413,7 @@ export default function QuestionBank() {
           ]);
         } else {
           const refreshResponse = await api.get(
-            `/questions/exam/${selectedExamId}`
+            `/questions/exam/${selectedExamId}?includeAnswer=true`
           );
 
           const data = refreshResponse.data?.data;

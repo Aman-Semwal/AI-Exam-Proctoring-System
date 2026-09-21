@@ -93,6 +93,15 @@ public class CorsConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", config);
 
+        // fullstack-guardian: WebSocket upgrade requests to /ws/** are also
+        // cross-origin in the browser. SockJS makes HTTP requests to /ws/**
+        // before upgrading to WS, and those preflight requests fail without
+        // a matching CORS registration. The actual STOMP authentication is
+        // enforced by WebSocketAuthInterceptor on the CONNECT frame — CORS
+        // here only controls which origins the browser allows to initiate
+        // the connection, not whether the connection is authenticated.
+        source.registerCorsConfiguration("/ws/**", config);
+
         return source;
     }
 }

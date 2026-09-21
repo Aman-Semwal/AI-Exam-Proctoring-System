@@ -192,7 +192,7 @@ const LiveExam = () => {
 
               <WebcamCard sessionId={sessionId} />
 
-              <AIStatus />
+              <AIStatus sessionId={sessionId} />
 
               <SubmitCard sessionId={sessionId} />
             </div>

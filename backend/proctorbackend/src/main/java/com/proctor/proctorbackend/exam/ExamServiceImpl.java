@@ -40,6 +40,7 @@ public class ExamServiceImpl implements ExamService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ExamResponse getExamById(Long id, String requesterEmail) {
         Exam exam = findExamById(id);
         validateSameOrganization(getUserByEmail(requesterEmail), exam);
@@ -47,6 +48,7 @@ public class ExamServiceImpl implements ExamService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ExamResponse> getAllExams(String requesterEmail) {
         User requester = getUserByEmail(requesterEmail);
         if (requester.getRole() != Role.SUPER_ADMIN) {
@@ -60,6 +62,7 @@ public class ExamServiceImpl implements ExamService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ExamResponse> getMyExams(String creatorEmail) {
         User creator = getUserByEmail(creatorEmail);
         if (creator.getRole() == Role.SUPER_ADMIN) {

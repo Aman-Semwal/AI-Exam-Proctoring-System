@@ -88,8 +88,8 @@ docker-compose down
 |---|---|
 | Spring Boot REST API | http://localhost:8080 |
 | Swagger UI | http://localhost:8080/swagger-ui/index.html |
-| Python AI Service | http://localhost:8000 |
-| AI Service Docs | http://localhost:8000/docs |
+| Python AI Service | http://localhost:8001 |
+| AI Service Docs | http://localhost:8001/docs |
 
 ## API Endpoints
 
@@ -102,7 +102,7 @@ docker-compose down
 
 | Variable | Description |
 |---|---|
-| `SPRING_DATASOURCE_URL` | PostgreSQL JDBC connection URL |
+| `SPRING_DATASOURCE_URL` | PostgreSQL JDBC connection URL (include `?prepareThreshold=0` for PgBouncer/Supabase) |
 | `SPRING_DATASOURCE_USERNAME` | PostgreSQL username |
 | `SPRING_DATASOURCE_PASSWORD` | PostgreSQL password |
 | `SPRING_DATA_REDIS_HOST` | Redis host |
@@ -110,7 +110,11 @@ docker-compose down
 | `SPRING_DATA_REDIS_PASSWORD` | Redis password |
 | `JWT_SECRET` | Secret key for JWT signing |
 | `JWT_EXPIRATION_MS` | JWT expiry in milliseconds (default: 900000 = 15 min) |
-| `AI_SERVICE_URL` | Internal URL for AI service |
+| `AI_SERVICE_URL` | Internal Docker URL for AI service (default: `http://ai-service:8000`) |
+| `AI_SERVICE_API_KEY` | Shared secret for Spring → AI service authentication (`X-API-Key` header) |
+| `AUTH_BOOTSTRAP_ENABLED` | Set to `false` after SUPER_ADMIN is created to disable `/api/auth/register` |
+
+> **Port note:** The AI service listens on port **8000 internally** (Docker network) but is mapped to **8001 on the host** (`docker-compose.yml` `ports: "8001:8000"`). Use `http://localhost:8001` from your machine and `http://ai-service:8000` from within Docker.
 
 # Sab stopped containers delete karo
 docker container prune -f

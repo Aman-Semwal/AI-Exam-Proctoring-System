@@ -193,12 +193,15 @@ const OrganizationDashboard = () => {
 
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center font-bold text-xs">
-              AS
+              {(() => {
+                const u = JSON.parse(localStorage.getItem("user") || "{}");
+                return (u.name || organization?.name || "OA").slice(0, 2).toUpperCase();
+              })()}
             </div>
 
             <div className="hidden sm:block">
               <p className="text-xs font-semibold text-white leading-tight">
-                {organization?.name || "Organization Admin"}
+                {JSON.parse(localStorage.getItem("user") || "{}")?.name || organization?.name || "Organization Admin"}
               </p>
               <p className="text-[10px] text-slate-400 leading-tight">
                 Organization Admin
@@ -230,7 +233,7 @@ const OrganizationDashboard = () => {
             </span>
 
             <h2 className="text-2xl font-bold text-white tracking-tight mt-0.5">
-              Welcome back, Anchal
+              Welcome back, {JSON.parse(localStorage.getItem("user") || "{}")?.name?.split(" ")[0] || "Admin"}
             </h2>
 
             <p className="text-slate-400 text-xs sm:text-sm mt-1">

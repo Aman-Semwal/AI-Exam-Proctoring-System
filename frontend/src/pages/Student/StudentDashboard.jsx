@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/layout/Sidebar";
 import Topbar from "../../components/layout/Topbar";
 import PerformanceChart from "../../components/charts/PerformanceChart";
@@ -6,12 +7,15 @@ import CircularProgress from "../../components/dashboard/CircularProgress";
 import AIStatusCard from "../../components/dashboard/AIStatusCard";
 import CalendarWidget from "../../components/dashboard/CalendarWidget";
 import RecentActivity from "../../components/dashboard/RecentActivity";
+import Toast from "../../components/common/Toast";
 import {
   FaBook,
   FaCheckCircle,
   FaClock,
   FaStar,
   FaSearch,
+  FaTimes,
+  FaPlay,
 } from "react-icons/fa";
 import api from "../../services/api";
 
@@ -34,12 +38,15 @@ const StatCard = ({ title, value, accent }) => (
 );
 
 export default function StudentDashboard() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [user, setUser] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showActiveExamsModal, setShowActiveExamsModal] = useState(false);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -294,8 +301,22 @@ export default function StudentDashboard() {
             <button
               className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-xs font-semibold shadow-sm shadow-blue-500/20 active:scale-[0.97] w-fit"
               onClick={() => {
-                window.location.href =
-                  "/student/live-exam";
+                if (upcomingAssignments.length === 0) {
+                  setToast({
+                    type: "error",
+                    message: "No active or scheduled exams currently assigned to you.",
+                  });
+                  return;
+                }
+                if (upcomingAssignments.length === 1) {
+                  const examId =
+                    upcomingAssignments[0].examId ||
+                    upcomingAssignments[0].exam?.id ||
+                    upcomingAssignments[0].id;
+                  navigate(`/student/live-exam?examId=${examId}`);
+                  return;
+                }
+                setShowActiveExamsModal(true);
               }}
             >
               Take Active Exam
@@ -897,6 +918,60 @@ export default function StudentDashboard() {
           <RecentActivity />
         </main>
       </div>
+
+      {/* Available Active Exams Modal */}
+      {showActiveExamsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-[#121520] border border-white/[0.1] rounded-xl shadow-2xl p-6">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.07]">
+              <div>
+                <h3 className="text-base font-bold text-white">Select Active Assessment</h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Choose an assigned exam to launch your proctored session.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowActiveExamsModal(false)}
+                className="text-slate-400 hover:text-white p-1"
+              >
+                <FaTimes size={13} />
+              </button>
+            </div>
+
+            <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1 text-xs">
+              {upcomingAssignments.map((assignment, idx) => {
+                const examId = assignment.examId || assignment.exam?.id || assignment.id;
+                const examName = assignment.exam?.title || assignment.examTitle || assignment.exam?.name || `Assigned Exam #${idx + 1}`;
+                return (
+                  <div key={assignment.id || idx} className="bg-[#090a0f] p-3.5 rounded-xl border border-white/[0.06] flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-white truncate">{examName}</p>
+                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">Exam #{examId}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/student/live-exam?examId=${examId}`)}
+                      className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center gap-1.5 transition shrink-0"
+                    >
+                      <FaPlay size={9} /> Start
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

@@ -18,8 +18,23 @@ const Profile = () => {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(() => localStorage.getItem("userAvatar") || "");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      setAvatarUrl(dataUrl);
+      localStorage.setItem("userAvatar", dataUrl);
+      setMessage("Profile photo updated successfully.");
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -152,13 +167,31 @@ const Profile = () => {
               {/* Avatar Section */}
               <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-white/[0.06]">
                 <div className="relative group">
-                  <div className="w-20 h-20 rounded-2xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-2xl font-bold text-blue-400 shadow-md">
-                    {initials}
-                  </div>
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt="Avatar"
+                      className="w-20 h-20 rounded-2xl object-cover border border-blue-500/30 shadow-md"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-2xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-2xl font-bold text-blue-400 shadow-md">
+                      {initials}
+                    </div>
+                  )}
+
+                  <input
+                    type="file"
+                    id="profile-avatar-input"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="hidden"
+                  />
 
                   <button
                     type="button"
-                    className="absolute -bottom-1 -right-1 w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center transition shadow"
+                    title="Change Profile Photo"
+                    onClick={() => document.getElementById("profile-avatar-input")?.click()}
+                    className="absolute -bottom-1 -right-1 w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center transition shadow cursor-pointer"
                   >
                     <FaCamera size={12} />
                   </button>

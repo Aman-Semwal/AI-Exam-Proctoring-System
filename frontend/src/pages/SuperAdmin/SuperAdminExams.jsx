@@ -1,14 +1,37 @@
 import { useEffect, useMemo, useState } from "react";
 import SuperAdminSidebar from "../../components/superadmin/SuperAdminSidebar";
 import SuperAdminTopbar from "../../components/superadmin/SuperAdminTopbar";
-import { FaFileAlt, FaSearch, FaEllipsisV, FaRedo } from "react-icons/fa";
+import {
+  FaFileAlt,
+  FaSearch,
+  FaRedo,
+  FaEye,
+  FaTrashAlt,
+  FaTimes,
+} from "react-icons/fa";
 import api from "../../services/api";
+import ActionDropdown from "../../components/common/ActionDropdown";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
+import Toast from "../../components/common/Toast";
 
 const SuperAdminExams = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Detail modal
+  const [detailExam, setDetailExam] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  // Delete confirm
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Toast
+  const [toast, setToast] = useState(null);
+
+  /* ===================== Helpers ===================== */
 
   const getList = (response) => {
     const data = response?.data?.data ?? response?.data;
@@ -64,6 +87,8 @@ const SuperAdminExams = () => {
     return "Scheduled";
   };
 
+  /* ===================== Fetch exams ===================== */
+
   const fetchExams = async () => {
     try {
       setLoading(true);
@@ -88,6 +113,8 @@ const SuperAdminExams = () => {
   useEffect(() => {
     fetchExams();
   }, []);
+
+  /* ===================== Normalize exams ===================== */
 
   const normalizedExams = useMemo(() => {
     return exams.map((exam) => ({
@@ -118,9 +145,21 @@ const SuperAdminExams = () => {
           exam.durationInMinutes
       ),
 
+      description: exam.description || "No description available.",
+
+      scheduledAt: exam.scheduledAt || exam.scheduled_at || null,
+
+      createdByName:
+        exam.createdByName ||
+        exam.creatorName ||
+        exam.createdBy?.name ||
+        "—",
+
       status: getStatus(exam),
     }));
   }, [exams]);
+
+  /* ===================== Filter ===================== */
 
   const filtered = normalizedExams.filter(
     (exam) =>
@@ -134,6 +173,59 @@ const SuperAdminExams = () => {
         .toLowerCase()
         .includes(searchTerm.toLowerCase())
   );
+
+  /* ===================== View Details ===================== */
+
+  const handleViewDetails = async (exam) => {
+    try {
+      setDetailLoading(true);
+      setDetailExam(exam);
+
+      const response = await api.get(`/exams/${exam.id}`);
+      const data = response.data?.data ?? response.data;
+
+      setDetailExam({
+        ...exam,
+        description: data.description || exam.description,
+        scheduledAt: data.scheduledAt || exam.scheduledAt,
+        createdByName: data.createdByName || exam.createdByName,
+        durationMinutes:
+          data.durationMinutes ?? data.duration ?? exam.duration,
+      });
+    } catch {
+      // Keep existing data
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  /* ===================== Delete Exam ===================== */
+
+  const handleDeleteExam = async () => {
+    if (!deleteTarget) return;
+
+    try {
+      setDeleteLoading(true);
+
+      await api.delete(`/exams/${deleteTarget.id}`);
+
+      setDeleteTarget(null);
+      setToast({ message: "Exam deleted successfully.", type: "success" });
+      fetchExams();
+    } catch (err) {
+      console.error("Failed to delete exam:", err);
+      setToast({
+        message:
+          err.response?.data?.message || "Failed to delete exam.",
+        type: "error",
+      });
+      setDeleteTarget(null);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  /* ===================== Render ===================== */
 
   return (
     <div className="min-h-screen bg-[#090a0f] text-slate-100 flex">
@@ -302,12 +394,21 @@ const SuperAdminExams = () => {
                         </td>
 
                         <td className="py-3 px-3 text-right">
-                          <button
-                            className="p-1.5 hover:bg-white/[0.05] rounded text-slate-400 hover:text-white transition"
-                            title="More actions"
-                          >
-                            <FaEllipsisV size={11} />
-                          </button>
+                          <ActionDropdown
+                            actions={[
+                              {
+                                label: "View Details",
+                                icon: FaEye,
+                                onClick: () => handleViewDetails(exam),
+                              },
+                              {
+                                label: "Delete Exam",
+                                icon: FaTrashAlt,
+                                danger: true,
+                                onClick: () => setDeleteTarget(exam),
+                              },
+                            ]}
+                          />
                         </td>
                       </tr>
                     ))}
@@ -318,8 +419,140 @@ const SuperAdminExams = () => {
           </div>
         </main>
       </div>
+
+      {/* =============== Exam Detail Modal =============== */}
+      {detailExam && (
+        <div
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setDetailExam(null);
+          }}
+        >
+          <div className="w-full max-w-md bg-[#121520] border border-white/[0.08] rounded-xl shadow-2xl animate-scale-in">
+            <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-400 flex items-center justify-center">
+                  <FaFileAlt size={14} />
+                </div>
+
+                <div>
+                  <h2 className="text-sm font-bold text-white">
+                    {detailExam.title}
+                  </h2>
+                  <p className="text-[10px] text-purple-400 font-mono">
+                    {detailExam.code}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setDetailExam(null)}
+                className="p-2 rounded-lg hover:bg-white/[0.05] text-slate-400 hover:text-white"
+              >
+                <FaTimes size={13} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              {detailLoading && (
+                <div className="flex items-center gap-2 text-xs text-slate-400 mb-2">
+                  <span className="w-3 h-3 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+                  Fetching latest details...
+                </div>
+              )}
+
+              <DetailRow label="ID" value={detailExam.id} />
+              <DetailRow label="Title" value={detailExam.title} />
+              <DetailRow label="Code" value={detailExam.code} mono />
+              <DetailRow label="Organization" value={detailExam.org} />
+              <DetailRow label="Duration" value={detailExam.duration} />
+              <DetailRow label="Status" value={detailExam.status} status />
+              <DetailRow label="Created By" value={detailExam.createdByName} />
+
+              {detailExam.scheduledAt && (
+                <DetailRow
+                  label="Scheduled At"
+                  value={new Date(detailExam.scheduledAt).toLocaleString()}
+                />
+              )}
+
+              {detailExam.description && detailExam.description !== "—" && (
+                <div className="pt-2">
+                  <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wider mb-1.5">
+                    Description
+                  </p>
+                  <p className="text-xs text-slate-300 leading-relaxed bg-[#090a0f] border border-white/[0.06] rounded-lg p-3">
+                    {detailExam.description}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="px-5 pb-5">
+              <button
+                onClick={() => setDetailExam(null)}
+                className="w-full py-2.5 rounded-lg border border-white/[0.08] bg-[#090a0f] text-xs text-slate-300 font-semibold hover:text-white hover:bg-white/[0.05] transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =============== Delete Confirm =============== */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete Examination"
+        message={`Are you sure you want to delete "${deleteTarget?.title}"? This will permanently remove the exam and all associated data. This action cannot be undone.`}
+        confirmLabel="Delete Exam"
+        loading={deleteLoading}
+        onConfirm={handleDeleteExam}
+        onCancel={() => setDeleteTarget(null)}
+      />
+
+      {/* Toast */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };
+
+/* ===================== Detail Row Subcomponent ===================== */
+
+const DetailRow = ({ label, value, mono, status }) => (
+  <div className="flex items-center justify-between gap-4 py-2 border-b border-white/[0.04] last:border-none">
+    <span className="text-[11px] text-slate-400 font-medium uppercase tracking-wider">
+      {label}
+    </span>
+
+    {status ? (
+      <span
+        className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+          value === "Live"
+            ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
+            : value === "Scheduled"
+            ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+            : value === "Cancelled"
+            ? "bg-slate-500/10 text-slate-400 border-slate-500/20"
+            : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+        }`}
+      >
+        {value}
+      </span>
+    ) : (
+      <span
+        className={`text-xs text-white ${mono ? "font-mono text-purple-400" : ""}`}
+      >
+        {value ?? "—"}
+      </span>
+    )}
+  </div>
+);
 
 export default SuperAdminExams;

@@ -12,6 +12,7 @@ import com.proctor.proctorbackend.user.InvitationStatus;
 import com.proctor.proctorbackend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,6 +36,12 @@ import java.util.Map;
  *       They never go through {@code /api/auth/register}.</li>
  * </ul>
  *
+ * <h3>Bootstrap flag (secure-code-guardian)</h3>
+ * <p>Set {@code AUTH_BOOTSTRAP_ENABLED=false} in {@code .env} after the SUPER_ADMIN
+ * has been created. This permanently disables {@code /api/auth/register} so it cannot
+ * be used for reconnaissance (hitting the endpoint reveals whether any user exists),
+ * even though the database guard already prevents a second registration.
+ *
  * <p>Multi-tenant claims ({@code userId}, {@code role}, {@code orgId}, {@code orgSlug})
  * are embedded in every issued JWT so downstream services can perform tenant scoping
  * without an extra database round-trip.
@@ -49,6 +56,21 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService             jwtService;
     private final AuthenticationManager  authenticationManager;
     private final JwtBlacklistService    jwtBlacklistService;
+
+    /**
+     * Controls whether {@code POST /api/auth/register} is active.
+     *
+     * <p>Defaults to {@code true} so the platform can be bootstrapped on first deploy.
+     * Set {@code AUTH_BOOTSTRAP_ENABLED=false} in {@code .env} once the SUPER_ADMIN
+     * account has been created. Restart the service for the change to take effect.
+     *
+     * <p>This is a defence-in-depth measure — the one-time guard in
+     * {@link #register(RegisterRequest)} already blocks a second registration
+     * via {@code userRepository.count() != 0}, but disabling the endpoint entirely
+     * reduces the attack surface and stops information leakage.
+     */
+    @Value("${auth.bootstrap.enabled:true}")
+    private boolean bootstrapEnabled;
 
     // -----------------------------------------------------------------------
     // Register — SUPER_ADMIN bootstrap only
@@ -73,6 +95,16 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        // secure-code-guardian: check the bootstrap flag first.
+        // Set AUTH_BOOTSTRAP_ENABLED=false in .env after initial SUPER_ADMIN creation
+        // to permanently close this endpoint and reduce attack surface.
+        if (!bootstrapEnabled) {
+            throw new BadRequestException(
+                    "Registration is disabled. "
+                    + "The platform has already been bootstrapped. "
+                    + "Contact your administrator for account access.");
+        }
+
         // Only SUPER_ADMIN may self-register — all other roles use the invitation flow
         if (request.getRole() != Role.SUPER_ADMIN) {
             throw new BadRequestException(
@@ -106,11 +138,11 @@ public class AuthServiceImpl implements AuthService {
                 .invitationStatus(InvitationStatus.ACTIVE)
                 .build();
 
-        userRepository.save(user);
-        log.info("SUPER_ADMIN bootstrapped: email={}", user.getEmail());
+        User saved = userRepository.save(user);
+        log.info("SUPER_ADMIN bootstrapped: email={}", saved.getEmail());
 
-        String token = jwtService.generateToken(buildClaims(user), user);
-        return buildAuthResponse(token, user);
+        String token = jwtService.generateToken(buildClaims(saved), saved);
+        return buildAuthResponse(token, saved);
     }
 
     // -----------------------------------------------------------------------

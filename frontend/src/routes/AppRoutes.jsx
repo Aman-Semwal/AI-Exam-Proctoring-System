@@ -1,9 +1,10 @@
-import { Routes, Route, Link } from "react-router-dom";
+import { Routes, Route, useNavigate } from "react-router-dom";
 
 // Public
 import Landing from "../pages/Landing/Landing";
 import Login from "../pages/Login/Login";
 import Docs from "../pages/Docs";
+import InviteActivation from "../pages/InviteActivation/InviteActivation";
 
 // Student
 import StudentDashboard from "../pages/Student/StudentDashboard";
@@ -43,6 +44,31 @@ import ProtectedRoute from "./ProtectedRoute";
 // 404
 import NotFound from "../pages/NotFound/NotFound";
 
+// Inline component for 403 page (needs useNavigate)
+const UnauthorizedPage = () => {
+  const nav = useNavigate();
+  return (
+    <div className="min-h-screen bg-[#090a0f] text-slate-100 flex items-center justify-center px-6">
+      <div className="text-center max-w-md">
+        <div className="text-6xl font-bold text-purple-500 mb-4">403</div>
+
+        <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
+
+        <p className="text-slate-400 text-sm mb-6">
+          You do not have permission to access this page.
+        </p>
+
+        <button
+          onClick={() => nav("/login")}
+          className="inline-block px-5 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold transition"
+        >
+          Go to Login
+        </button>
+      </div>
+    </div>
+  );
+};
+
 function AppRoutes() {
   return (
     <Routes>
@@ -51,6 +77,7 @@ function AppRoutes() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/docs" element={<Docs />} />
+      <Route path="/activate" element={<InviteActivation />} />
 
       {/* ================= STUDENT ROUTES ================= */}
 
@@ -262,33 +289,7 @@ function AppRoutes() {
 
       {/* ================= UNAUTHORIZED ================= */}
 
-      <Route
-        path="/unauthorized"
-        element={
-          <div className="min-h-screen bg-[#090a0f] text-slate-100 flex items-center justify-center px-6">
-            <div className="text-center max-w-md">
-              <div className="text-6xl font-bold text-purple-500 mb-4">
-                403
-              </div>
-
-              <h1 className="text-2xl font-bold text-white mb-2">
-                Access Denied
-              </h1>
-
-              <p className="text-slate-400 text-sm mb-6">
-                You do not have permission to access this page.
-              </p>
-
-              <Link
-                to="/login"
-                className="inline-block px-5 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold transition"
-              >
-                Go to Login
-              </Link>
-            </div>
-          </div>
-        }
-      />
+      <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
       {/* ================= 404 ================= */}
 
@@ -298,4 +299,3 @@ function AppRoutes() {
 }
 
 export default AppRoutes;
-

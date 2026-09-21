@@ -2,10 +2,20 @@ import { useEffect, useMemo, useState } from "react";
 import {
   FaSearch,
   FaPlus,
-  FaEllipsisV,
+  FaFileUpload,
+  FaEye,
+  FaTrash,
   FaTimes,
+  FaFileDownload,
+  FaCheckCircle,
+  FaHistory,
+  FaSpinner,
+  FaExclamationTriangle,
 } from "react-icons/fa";
 import OrganizationSidebar from "../../components/layout/OrganizationSidebar";
+import ActionDropdown from "../../components/common/ActionDropdown";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
+import Toast from "../../components/common/Toast";
 import api from "../../services/api";
 
 const Students = () => {
@@ -14,12 +24,35 @@ const Students = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  // Modals
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkFile, setBulkFile] = useState(null);
+  const [uploadingBulk, setUploadingBulk] = useState(false);
+  const [bulkActiveJob, setBulkActiveJob] = useState(null);
+  const [bulkTab, setBulkTab] = useState("upload"); // "upload" | "history"
+  const [bulkHistory, setBulkHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [detailStudent, setDetailStudent] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Toast
+  const [toast, setToast] = useState(null);
 
   const [form, setForm] = useState({
     name: "",
     email: "",
   });
+
+  const currentUser = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "{}");
+    } catch {
+      return {};
+    }
+  }, []);
 
   /* ================= FETCH STUDENTS ================= */
 
@@ -28,11 +61,7 @@ const Students = () => {
       setLoading(true);
       setError("");
 
-      const storedUser = JSON.parse(
-        localStorage.getItem("user") || "{}"
-      );
-
-      const orgId = storedUser?.orgId;
+      const orgId = currentUser?.orgId;
 
       if (!orgId) {
         throw new Error("Organization ID not found.");
@@ -92,19 +121,13 @@ const Students = () => {
     e.preventDefault();
 
     if (!form.name.trim() || !form.email.trim()) {
-      setError("Name and email are required.");
+      setToast({ type: "error", message: "Name and email are required." });
       return;
     }
 
     try {
       setSaving(true);
-      setError("");
-
-      const storedUser = JSON.parse(
-        localStorage.getItem("user") || "{}"
-      );
-
-      const orgId = storedUser?.orgId;
+      const orgId = currentUser?.orgId;
 
       if (!orgId) {
         throw new Error("Organization ID not found.");
@@ -116,62 +139,170 @@ const Students = () => {
         role: "STUDENT",
       });
 
-      setForm({
-        name: "",
-        email: "",
-      });
-
+      setToast({ type: "success", message: `Student "${form.name}" added successfully.` });
+      setForm({ name: "", email: "" });
       setShowAddModal(false);
-
       await loadStudents();
     } catch (err) {
       console.error("Add student error:", err);
-
-      setError(
-        err.response?.data?.message ||
-          err.message ||
-          "Failed to add student."
-      );
+      setToast({
+        type: "error",
+        message: err.response?.data?.message || "Failed to add student.",
+      });
     } finally {
       setSaving(false);
     }
   };
 
-  /* ================= REMOVE STUDENT ================= */
+  /* ================= BULK IMPORT HELPERS ================= */
 
-  const handleRemoveStudent = async (student) => {
-    const confirmed = window.confirm(
-      `Remove ${student.name || "this student"} from the organization?`
-    );
+  const handleDownloadTemplate = () => {
+    const headers = "name,email,role,rollno,semester,batch,course,stream,appliedrole";
+    const sampleRows = [
+      "Aarav Sharma,aarav.sharma@example.com,STUDENT,CS2026-001,6,2026,B.Tech,CSE,Frontend Developer",
+      "Priya Patel,priya.patel@example.com,STUDENT,CS2026-002,6,2026,B.Tech,CSE,Backend Developer",
+    ].join("\n");
+    const blob = new Blob([`${headers}\n${sampleRows}\n`], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "students_bulk_import_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
-    if (!confirmed) return;
+  const fetchBulkHistory = async () => {
+    const orgId = currentUser?.orgId;
+    if (!orgId) return;
+    try {
+      setLoadingHistory(true);
+      const res = await api.get(`/orgs/${orgId}/bulk-import`);
+      const data = res.data?.data ?? res.data ?? [];
+      setBulkHistory(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.warn("Could not load bulk import history:", err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const pollJobStatus = async (jobId, orgId) => {
+    let attempts = 0;
+    const maxAttempts = 30;
+
+    const interval = setInterval(async () => {
+      attempts += 1;
+      try {
+        const res = await api.get(`/orgs/${orgId}/bulk-import/${jobId}`);
+        const job = res.data?.data ?? res.data;
+        if (job) {
+          setBulkActiveJob(job);
+          if (job.status === "COMPLETED" || job.status === "FAILED" || attempts >= maxAttempts) {
+            clearInterval(interval);
+            setUploadingBulk(false);
+            if (job.status === "COMPLETED") {
+              setToast({
+                type: "success",
+                message: `Import completed: ${job.successCount || 0} students added (${job.failedCount || 0} failed).`,
+              });
+              await loadStudents();
+            } else if (job.status === "FAILED") {
+              setToast({
+                type: "error",
+                message: "Bulk import job failed. Inspect row errors below.",
+              });
+            }
+          }
+        }
+      } catch (pollErr) {
+        console.warn("Poll status check failed:", pollErr);
+        if (attempts >= maxAttempts) {
+          clearInterval(interval);
+          setUploadingBulk(false);
+        }
+      }
+    }, 1200);
+  };
+
+  const handleBulkImport = async (e) => {
+    e.preventDefault();
+
+    if (!bulkFile) {
+      setToast({ type: "error", message: "Please select a CSV or Excel file." });
+      return;
+    }
 
     try {
-      setError("");
+      setUploadingBulk(true);
+      setBulkActiveJob({ status: "PENDING", totalRows: 0, successCount: 0, failedCount: 0, errors: [] });
+      const orgId = currentUser?.orgId;
 
-      const storedUser = JSON.parse(
-        localStorage.getItem("user") || "{}"
-      );
+      if (!orgId) throw new Error("Organization ID not found.");
 
-      const orgId = storedUser?.orgId;
+      const formData = new FormData();
+      formData.append("file", bulkFile);
 
-      if (!orgId || !student.id) {
+      const res = await api.post(`/orgs/${orgId}/bulk-import`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const jobId = res.data?.data?.jobId;
+      if (jobId) {
+        setBulkActiveJob((prev) => ({ ...prev, jobId, status: "PROCESSING" }));
+        pollJobStatus(jobId, orgId);
+      } else {
+        setToast({
+          type: "success",
+          message: "Bulk import job accepted and queued.",
+        });
+        setUploadingBulk(false);
+        setTimeout(loadStudents, 2000);
+      }
+    } catch (err) {
+      console.error("Bulk import error:", err);
+      setToast({
+        type: "error",
+        message: err.response?.data?.message || "Bulk import failed.",
+      });
+      setUploadingBulk(false);
+      setBulkActiveJob(null);
+    }
+  };
+
+  /* ================= REMOVE STUDENT ================= */
+
+  const handleRemoveStudent = async () => {
+    if (!deleteTarget) return;
+
+    try {
+      setDeleting(true);
+      const orgId = currentUser?.orgId;
+
+      if (!orgId || !deleteTarget.id) {
         throw new Error("Organization or student ID is missing.");
       }
 
       await api.delete(
-        `/organizations/${orgId}/members/${student.id}`
+        `/organizations/${orgId}/members/${deleteTarget.id}`
       );
 
+      setToast({
+        type: "success",
+        message: `Student "${deleteTarget.name || "Student"}" removed successfully.`,
+      });
+
+      setDeleteTarget(null);
       await loadStudents();
     } catch (err) {
       console.error("Remove student error:", err);
-
-      setError(
-        err.response?.data?.message ||
-          err.message ||
-          "Failed to remove student."
-      );
+      setToast({
+        type: "error",
+        message: err.response?.data?.message || "Failed to remove student.",
+      });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -196,12 +327,12 @@ const Students = () => {
 
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center font-bold text-xs">
-              AS
+              {(currentUser?.name || "OA").slice(0, 2).toUpperCase()}
             </div>
 
             <div className="hidden sm:block">
               <p className="text-xs font-semibold text-white leading-tight">
-                Anchal Saini
+                {currentUser?.name || "Organization Admin"}
               </p>
 
               <p className="text-[10px] text-slate-400 leading-tight">
@@ -240,21 +371,29 @@ const Students = () => {
               </h2>
 
               <p className="text-slate-400 text-xs sm:text-sm mt-1">
-                View and manage students enrolled in your organization.
+                View, register, and manage students enrolled in your organization.
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                setError("");
-                setShowAddModal(true);
-              }}
-              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2.5 rounded-lg transition-all text-xs shadow-sm active:scale-[0.98] w-fit"
-            >
-              <FaPlus size={11} />
-              Add Student
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowBulkModal(true)}
+                className="flex items-center justify-center gap-2 bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-slate-200 font-semibold px-3.5 py-2.5 rounded-lg transition-all text-xs active:scale-[0.98]"
+              >
+                <FaFileUpload size={11} className="text-blue-400" />
+                Bulk Import
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2.5 rounded-lg transition-all text-xs shadow-sm active:scale-[0.98]"
+              >
+                <FaPlus size={11} />
+                Add Student
+              </button>
+            </div>
           </div>
 
           {/* Search Bar */}
@@ -273,8 +412,7 @@ const Students = () => {
               </div>
 
               <p className="text-xs text-slate-400 font-mono">
-                Showing {filteredStudents.length} of{" "}
-                {students.length} students
+                Showing {filteredStudents.length} of {students.length} students
               </p>
             </div>
 
@@ -289,25 +427,11 @@ const Students = () => {
                 <table className="w-full min-w-[650px] text-left border-collapse">
                   <thead>
                     <tr className="border-b border-white/[0.06] text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                      <th className="pb-3 px-3">
-                        Student
-                      </th>
-
-                      <th className="pb-3 px-3">
-                        Batch
-                      </th>
-
-                      <th className="pb-3 px-3">
-                        Exams Given
-                      </th>
-
-                      <th className="pb-3 px-3">
-                        Status
-                      </th>
-
-                      <th className="pb-3 px-3 text-right">
-                        Actions
-                      </th>
+                      <th className="pb-3 px-3">Student</th>
+                      <th className="pb-3 px-3">Batch / Course</th>
+                      <th className="pb-3 px-3">Exams Given</th>
+                      <th className="pb-3 px-3">Status</th>
+                      <th className="pb-3 px-3 text-right">Actions</th>
                     </tr>
                   </thead>
 
@@ -316,7 +440,8 @@ const Students = () => {
                       <StudentRow
                         key={student.id || student.email}
                         student={student}
-                        onRemove={handleRemoveStudent}
+                        onView={() => setDetailStudent(student)}
+                        onRemove={() => setDeleteTarget(student)}
                       />
                     ))}
 
@@ -340,20 +465,17 @@ const Students = () => {
         </main>
       </div>
 
-      {/* ================= ADD STUDENT MODAL ================= */}
-
+      {/* Add Student Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
           <div className="w-full max-w-md bg-[#121520] border border-white/[0.08] rounded-xl shadow-2xl">
-            {/* Modal Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
               <div>
                 <h3 className="text-sm font-semibold text-white">
-                  Add Student
+                  Add Single Student
                 </h3>
-
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Add a new student to your organization
+                  Send invite or register student to organization
                 </p>
               </div>
 
@@ -366,47 +488,31 @@ const Students = () => {
               </button>
             </div>
 
-            {/* Form */}
-            <form
-              onSubmit={handleAddStudent}
-              className="p-5 space-y-4"
-            >
+            <form onSubmit={handleAddStudent} className="p-5 space-y-4 text-xs">
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                  Full Name
+                <label className="block font-medium text-slate-300 mb-1.5">
+                  Full Name *
                 </label>
-
                 <input
                   type="text"
                   value={form.name}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      name: e.target.value,
-                    })
-                  }
-                  placeholder="Enter student name"
-                  className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="e.g. Jane Doe"
+                  className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                  Email
+                <label className="block font-medium text-slate-300 mb-1.5">
+                  Email Address *
                 </label>
-
                 <input
                   type="email"
                   value={form.email}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      email: e.target.value,
-                    })
-                  }
-                  placeholder="student@example.com"
-                  className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder="student@university.edu"
+                  className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                   required
                 />
               </div>
@@ -415,15 +521,14 @@ const Students = () => {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2.5 rounded-lg border border-white/[0.08] text-xs font-medium text-slate-300 hover:text-white hover:bg-white/[0.03] transition"
+                  className="px-4 py-2 rounded-lg border border-white/[0.08] text-slate-300 hover:text-white"
                 >
                   Cancel
                 </button>
-
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold transition"
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold"
                 >
                   {saving ? "Adding..." : "Add Student"}
                 </button>
@@ -432,13 +537,359 @@ const Students = () => {
           </div>
         </div>
       )}
+
+      {/* Bulk Import Modal */}
+      {showBulkModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm px-4 overflow-y-auto">
+          <div className="w-full max-w-xl bg-[#121520] border border-white/[0.08] rounded-xl shadow-2xl p-6 my-8">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.06]">
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <FaFileUpload className="text-blue-400" size={14} />
+                  Bulk Import Students
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Import candidates from CSV/XLSX or view previous processing jobs.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBulkModal(false);
+                  setBulkActiveJob(null);
+                  setBulkFile(null);
+                }}
+                className="text-slate-400 hover:text-white p-1"
+              >
+                <FaTimes size={13} />
+              </button>
+            </div>
+
+            {/* Modal Tabs */}
+            <div className="flex border-b border-white/[0.06] mb-4 gap-4 text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setBulkTab("upload")}
+                className={`pb-2.5 border-b-2 transition ${
+                  bulkTab === "upload"
+                    ? "border-blue-500 text-white"
+                    : "border-transparent text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                Upload File
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setBulkTab("history");
+                  fetchBulkHistory();
+                }}
+                className={`pb-2.5 border-b-2 transition flex items-center gap-1.5 ${
+                  bulkTab === "history"
+                    ? "border-blue-500 text-white"
+                    : "border-transparent text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <FaHistory size={11} />
+                Recent Imports
+              </button>
+            </div>
+
+            {bulkTab === "upload" ? (
+              <form onSubmit={handleBulkImport} className="space-y-4 text-xs">
+                {/* Download Template Banner */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+                  <div className="text-[11px]">
+                    <span className="text-slate-300 font-medium block">Need the exact CSV format?</span>
+                    <span className="text-slate-500">Columns: name, email, role, rollno, semester, batch, course</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDownloadTemplate}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 font-semibold text-[11px] border border-blue-500/30 transition shrink-0"
+                  >
+                    <FaFileDownload size={11} />
+                    Download CSV
+                  </button>
+                </div>
+
+                {/* Upload Box */}
+                <div className="p-4 rounded-xl border border-dashed border-white/[0.15] bg-[#090a0f] text-center">
+                  <FaFileUpload size={24} className="mx-auto text-blue-400 mb-2" />
+                  <p className="text-slate-200 font-medium">
+                    {bulkFile ? bulkFile.name : "Choose CSV or XLSX file to upload"}
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Accepts .csv and .xlsx spreadsheets
+                  </p>
+
+                  <input
+                    type="file"
+                    id="bulk-file-input"
+                    accept=".csv, .xlsx, .xls"
+                    onChange={(e) => {
+                      setBulkFile(e.target.files[0] || null);
+                      setBulkActiveJob(null);
+                    }}
+                    className="hidden"
+                  />
+
+                  <label
+                    htmlFor="bulk-file-input"
+                    className="mt-3 inline-block px-4 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-blue-400 font-semibold cursor-pointer transition"
+                  >
+                    {bulkFile ? "Change File" : "Browse Computer"}
+                  </label>
+                </div>
+
+                {/* Live Processing Card & Row Error Report */}
+                {bulkActiveJob && (
+                  <div className="p-4 rounded-xl border border-white/[0.08] bg-[#090a0f] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-slate-300">
+                        Job Status:
+                      </span>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                          bulkActiveJob.status === "COMPLETED"
+                            ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                            : bulkActiveJob.status === "FAILED"
+                            ? "bg-rose-500/15 text-rose-400 border border-rose-500/30"
+                            : "bg-blue-500/15 text-blue-400 border border-blue-500/30"
+                        }`}
+                      >
+                        {uploadingBulk && (
+                          <FaSpinner size={10} className="animate-spin" />
+                        )}
+                        {bulkActiveJob.status || "PROCESSING"}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="bg-white/[0.02] p-2 rounded-lg border border-white/[0.04]">
+                        <span className="text-[10px] text-slate-500 block">Total Rows</span>
+                        <span className="text-sm font-bold font-mono text-white">
+                          {bulkActiveJob.totalRows ?? "—"}
+                        </span>
+                      </div>
+                      <div className="bg-white/[0.02] p-2 rounded-lg border border-white/[0.04]">
+                        <span className="text-[10px] text-emerald-500 block">Imported</span>
+                        <span className="text-sm font-bold font-mono text-emerald-400">
+                          {bulkActiveJob.successCount ?? 0}
+                        </span>
+                      </div>
+                      <div className="bg-white/[0.02] p-2 rounded-lg border border-white/[0.04]">
+                        <span className="text-[10px] text-rose-500 block">Failed</span>
+                        <span className="text-sm font-bold font-mono text-rose-400">
+                          {bulkActiveJob.failedCount ?? 0}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Row Errors */}
+                    {Array.isArray(bulkActiveJob.errors) && bulkActiveJob.errors.length > 0 && (
+                      <div className="space-y-1.5 pt-2 border-t border-white/[0.05]">
+                        <p className="text-[11px] font-semibold text-rose-300 flex items-center gap-1.5">
+                          <FaExclamationTriangle size={11} />
+                          Row Parsing Errors ({bulkActiveJob.errors.length}):
+                        </p>
+                        <div className="max-h-32 overflow-y-auto space-y-1 pr-1">
+                          {bulkActiveJob.errors.map((err, idx) => (
+                            <div
+                              key={idx}
+                              className="text-[11px] p-2 rounded bg-rose-500/5 border border-rose-500/20 text-rose-300 flex justify-between gap-2"
+                            >
+                              <span>
+                                Row {err.rowNumber || idx + 2}: {err.email || "Unknown"}
+                              </span>
+                              <span className="text-slate-400 italic font-mono text-[10px]">
+                                {err.reason}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.06]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowBulkModal(false);
+                      setBulkActiveJob(null);
+                      setBulkFile(null);
+                    }}
+                    className="px-4 py-2 rounded-lg border border-white/[0.08] text-slate-300 hover:text-white"
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={uploadingBulk || !bulkFile}
+                    className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold flex items-center gap-1.5"
+                  >
+                    {uploadingBulk ? (
+                      <>
+                        <FaSpinner size={11} className="animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Start Import"
+                    )}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* Recent Jobs History Tab */
+              <div className="space-y-3 text-xs">
+                {loadingHistory ? (
+                  <div className="py-10 text-center text-slate-400">
+                    <FaSpinner className="animate-spin mx-auto mb-2" size={16} />
+                    Loading import history...
+                  </div>
+                ) : bulkHistory.length === 0 ? (
+                  <div className="py-10 text-center text-slate-500 border border-white/[0.04] rounded-lg">
+                    No past bulk import jobs recorded for this organization.
+                  </div>
+                ) : (
+                  <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
+                    {bulkHistory.map((job) => (
+                      <div
+                        key={job.jobId}
+                        className="p-3 rounded-lg border border-white/[0.06] bg-[#090a0f] flex items-center justify-between"
+                      >
+                        <div>
+                          <p className="font-semibold text-white">
+                            {job.fileName || `Job #${job.jobId}`}
+                          </p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">
+                            {job.createdAt ? new Date(job.createdAt).toLocaleString() : "Recent"}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              job.status === "COMPLETED"
+                                ? "bg-emerald-500/15 text-emerald-400"
+                                : job.status === "FAILED"
+                                ? "bg-rose-500/15 text-rose-400"
+                                : "bg-blue-500/15 text-blue-400"
+                            }`}
+                          >
+                            {job.status}
+                          </span>
+                          <p className="text-[10px] font-mono text-slate-400 mt-1">
+                            {job.successCount || 0} / {job.totalRows || 0} ok
+                            {(job.failedCount || 0) > 0 && ` (${job.failedCount} err)`}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex justify-end pt-2 border-t border-white/[0.06]">
+                  <button
+                    type="button"
+                    onClick={() => setBulkTab("upload")}
+                    className="px-4 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-white"
+                  >
+                    Back to Upload
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Student Details Modal */}
+      {detailStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-[#121520] border border-white/[0.1] rounded-xl shadow-2xl p-6">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.07]">
+              <h3 className="text-base font-bold text-white">Student Details</h3>
+              <button
+                type="button"
+                onClick={() => setDetailStudent(null)}
+                className="text-slate-400 hover:text-white p-1"
+              >
+                <FaTimes size={13} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="flex items-center gap-3 pb-3 border-b border-white/[0.05]">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-400 font-bold flex items-center justify-center text-sm">
+                  {(detailStudent.name || "ST").slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-bold text-white text-sm">{detailStudent.name || "Unknown Student"}</p>
+                  <p className="text-slate-400 text-[11px]">{detailStudent.email}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div className="bg-[#090a0f] p-3 rounded-lg border border-white/[0.05]">
+                  <span className="text-slate-500 block">Role</span>
+                  <p className="font-semibold text-blue-400 mt-1">{detailStudent.role || "STUDENT"}</p>
+                </div>
+                <div className="bg-[#090a0f] p-3 rounded-lg border border-white/[0.05]">
+                  <span className="text-slate-500 block">Status</span>
+                  <p className="font-semibold text-emerald-400 mt-1">{detailStudent.status || "ACTIVE"}</p>
+                </div>
+              </div>
+
+              <div className="bg-[#090a0f] p-3 rounded-lg border border-white/[0.05]">
+                <span className="text-slate-500 block">Course / Batch</span>
+                <p className="text-slate-200 mt-1">
+                  {detailStudent.batch || detailStudent.course || detailStudent.semester || "Not Assigned"}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setDetailStudent(null)}
+                className="px-4 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-xs text-white"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remove Student Confirmation Dialog */}
+      {deleteTarget && (
+        <ConfirmDialog
+          isOpen={Boolean(deleteTarget)}
+          title="Remove Student"
+          message={`Are you sure you want to remove student "${deleteTarget.name || "this student"}" from your organization? They will lose access to scheduled exams.`}
+          confirmText={deleting ? "Removing..." : "Remove Student"}
+          isDestructive={true}
+          onConfirm={handleRemoveStudent}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };
 
 /* ================= STUDENT ROW ================= */
 
-const StudentRow = ({ student, onRemove }) => {
+const StudentRow = ({ student, onView, onRemove }) => {
   const studentName = student.name || "Unknown Student";
   const studentEmail = student.email || "No email";
 
@@ -468,6 +919,20 @@ const StudentRow = ({ student, onRemove }) => {
     student.examsGiven ??
     student.examCount ??
     0;
+
+  const menuItems = [
+    {
+      label: "View Details",
+      icon: FaEye,
+      onClick: onView,
+    },
+    {
+      label: "Remove Student",
+      icon: FaTrash,
+      onClick: onRemove,
+      danger: true,
+    },
+  ];
 
   return (
     <tr className="hover:bg-white/[0.02] transition">
@@ -510,24 +975,7 @@ const StudentRow = ({ student, onRemove }) => {
       </td>
 
       <td className="py-3 px-3 text-right">
-        <div className="relative inline-block group">
-          <button
-            type="button"
-            className="text-slate-400 hover:text-white p-1.5 transition"
-          >
-            <FaEllipsisV size={11} />
-          </button>
-
-          <div className="hidden group-hover:block absolute right-0 top-full mt-1 w-32 bg-[#121520] border border-white/[0.08] rounded-lg shadow-xl z-20 overflow-hidden">
-            <button
-              type="button"
-              onClick={() => onRemove(student)}
-              className="w-full px-3 py-2 text-left text-[11px] text-red-400 hover:bg-red-500/10 transition"
-            >
-              Remove Student
-            </button>
-          </div>
-        </div>
+        <ActionDropdown items={menuItems} />
       </td>
     </tr>
   );
