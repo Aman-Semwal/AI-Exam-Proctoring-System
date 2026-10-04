@@ -24,7 +24,7 @@ const InviteActivation = () => {
   if (!token) {
     return (
       <div className="min-h-screen bg-[#090a0f] flex items-center justify-center px-6">
-        <div className="bg-[#121520] border border-white/[0.07] rounded-2xl p-8 max-w-md w-full text-center">
+        <div className="bg-[#121520] border border-white/7 rounded-2xl p-8 max-w-md w-full text-center">
           {/* Logo */}
           <div className="flex items-center justify-center gap-2.5 mb-6">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center text-blue-500 bg-blue-500/10 border border-blue-500/30">
@@ -105,7 +105,7 @@ const InviteActivation = () => {
 
   return (
     <div className="min-h-screen bg-[#090a0f] flex items-center justify-center px-6 py-12">
-      <div className="bg-[#121520] border border-white/[0.07] rounded-2xl p-8 max-w-md w-full">
+      <div className="bg-[#121520] border border-white/7 rounded-2xl p-8 max-w-md w-full">
         {/* Logo */}
         <div className="flex items-center gap-2.5 mb-8">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center text-blue-500 bg-blue-500/10 border border-blue-500/30">
@@ -164,7 +164,7 @@ const InviteActivation = () => {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 required
-                className="bg-[#0d0f17] border border-white/[0.08] rounded-xl px-4 py-3 text-white text-sm w-full focus:outline-none focus:border-blue-500 transition placeholder:text-slate-600"
+                className="bg-[#0d0f17] border border-white/8 rounded-xl px-4 py-3 text-white text-sm w-full focus:outline-none focus:border-blue-500 transition placeholder:text-slate-600"
               />
             </div>
 
@@ -183,7 +183,7 @@ const InviteActivation = () => {
                   }
                   required
                   minLength={8}
-                  className="bg-[#0d0f17] border border-white/[0.08] rounded-xl px-4 py-3 text-white text-sm w-full focus:outline-none focus:border-blue-500 transition placeholder:text-slate-600 pr-10"
+                  className="bg-[#0d0f17] border border-white/8 rounded-xl px-4 py-3 text-white text-sm w-full focus:outline-none focus:border-blue-500 transition placeholder:text-slate-600 pr-10"
                 />
                 <button
                   type="button"
@@ -209,7 +209,7 @@ const InviteActivation = () => {
                     setForm({ ...form, confirmPassword: e.target.value })
                   }
                   required
-                  className="bg-[#0d0f17] border border-white/[0.08] rounded-xl px-4 py-3 text-white text-sm w-full focus:outline-none focus:border-blue-500 transition placeholder:text-slate-600 pr-10"
+                  className="bg-[#0d0f17] border border-white/8 rounded-xl px-4 py-3 text-white text-sm w-full focus:outline-none focus:border-blue-500 transition placeholder:text-slate-600 pr-10"
                 />
                 <button
                   type="button"
@@ -227,7 +227,7 @@ const InviteActivation = () => {
 
             {/* Error */}
             {error && (
-              <div className="text-xs px-3 py-2.5 rounded-xl text-red-400 bg-red-500/[0.08] border border-red-500/20">
+              <div className="text-xs px-3 py-2.5 rounded-xl text-red-400 bg-red-500/8 border border-red-500/20">
                 {error}
               </div>
             )}

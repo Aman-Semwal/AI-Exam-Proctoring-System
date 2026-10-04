@@ -90,6 +90,17 @@ public class OrganizationController {
         return ResponseEntity.ok(ApiResponse.success("Member removed"));
     }
 
+    @DeleteMapping("/{id}/members")
+    @Operation(summary = "Remove multiple organization members in bulk")
+    @PreAuthorize("hasAnyRole('ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> removeMembersBulk(
+            @PathVariable Long id,
+            @RequestParam List<Long> userIds,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        organizationService.removeMembers(id, userIds, userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success("Members removed successfully"));
+    }
+
     @PostMapping("/invitations/activate")
     @Operation(summary = "Activate an invited member account")
     public ResponseEntity<ApiResponse<Void>> activateInvitation(

@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Concrete implementation of {@link AuthService}.
@@ -138,7 +139,7 @@ public class AuthServiceImpl implements AuthService {
                 .invitationStatus(InvitationStatus.ACTIVE)
                 .build();
 
-        User saved = userRepository.save(user);
+        User saved = Objects.requireNonNull(userRepository.save(user), "save() returned null");
         log.info("SUPER_ADMIN bootstrapped: email={}", saved.getEmail());
 
         String token = jwtService.generateToken(buildClaims(saved), saved);

@@ -20,7 +20,7 @@ const data = [
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-[#121520] border border-white/[0.1] rounded-lg p-2.5 shadow-xl text-xs">
+      <div className="bg-[#121520] border border-white/10 rounded-lg p-2.5 shadow-xl text-xs">
         <p className="text-slate-400 font-medium">{label}</p>
         <p className="text-blue-400 font-bold mt-0.5">
           Score: {payload[0].value}%
@@ -33,7 +33,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 const PerformanceChart = () => {
   return (
-    <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-6 shadow-sm">
+    <div className="bg-[#121520] border border-white/7 rounded-xl p-6 shadow-sm">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-base font-semibold text-white tracking-tight">

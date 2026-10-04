@@ -71,7 +71,7 @@ const SuperAdminSystemHealth = () => {
         <SuperAdminTopbar />
 
         <main className="p-6 lg:p-8 flex-1 overflow-y-auto max-w-7xl mx-auto w-full">
-          <div className="pb-4 mb-6 border-b border-white/[0.06]">
+          <div className="pb-4 mb-6 border-b border-white/6">
             <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">
               Infrastructure
             </span>
@@ -90,7 +90,7 @@ const SuperAdminSystemHealth = () => {
               <button
                 onClick={fetchHealth}
                 disabled={loading}
-                className="self-start sm:self-auto flex items-center gap-2 px-3 py-2 rounded-lg border border-white/[0.08] bg-[#121520] text-xs text-slate-300 hover:text-white hover:bg-white/[0.05] transition disabled:opacity-50"
+                className="self-start sm:self-auto flex items-center gap-2 px-3 py-2 rounded-lg border border-white/8 bg-[#121520] text-xs text-slate-300 hover:text-white hover:bg-white/5 transition disabled:opacity-50"
               >
                 <FaRedo
                   size={10}
@@ -102,7 +102,7 @@ const SuperAdminSystemHealth = () => {
           </div>
 
           {loading ? (
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-8 text-center">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-8 text-center">
               <div className="w-8 h-8 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-3" />
 
               <p className="text-sm text-slate-400">
@@ -166,7 +166,7 @@ const SuperAdminSystemHealth = () => {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
               <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-4">
                 <FaServer size={16} />
               </div>
@@ -192,7 +192,7 @@ const SuperAdminSystemHealth = () => {
               </span>
             </div>
 
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
               <div className="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-4">
                 <FaDatabase size={16} />
               </div>
@@ -210,7 +210,7 @@ const SuperAdminSystemHealth = () => {
               </span>
             </div>
 
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
               <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-4">
                 <FaMicrochip size={16} />
               </div>
@@ -230,12 +230,12 @@ const SuperAdminSystemHealth = () => {
           </div>
 
           {!loading && !error && (
-            <div className="mt-5 bg-[#121520] border border-white/[0.07] rounded-xl p-5">
+            <div className="mt-5 bg-[#121520] border border-white/7 rounded-xl p-5">
               <h3 className="text-sm font-semibold text-white mb-2">
                 Health Response
               </h3>
 
-              <pre className="text-xs text-slate-400 bg-[#090a0f] border border-white/[0.06] rounded-lg p-4 overflow-x-auto">
+              <pre className="text-xs text-slate-400 bg-[#090a0f] border border-white/6 rounded-lg p-4 overflow-x-auto">
                 {typeof health === "string"
                   ? health
                   : JSON.stringify(health, null, 2)}

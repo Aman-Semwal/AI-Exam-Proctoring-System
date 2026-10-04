@@ -22,7 +22,7 @@ const Toast = ({ message, type = "success", duration = 4000, onClose }) => {
   const isSuccess = type === "success";
 
   return (
-    <div className="fixed bottom-6 right-6 z-[70] animate-fade-in">
+    <div className="fixed bottom-6 right-6 z-70 animate-fade-in">
       <div
         className={`flex items-center gap-3 px-4 py-3 rounded-xl border shadow-2xl text-xs font-medium max-w-sm ${
           isSuccess
@@ -41,7 +41,7 @@ const Toast = ({ message, type = "success", duration = 4000, onClose }) => {
         <button
           type="button"
           onClick={onClose}
-          className="p-1 hover:bg-white/[0.05] rounded text-slate-400 hover:text-white transition shrink-0"
+          className="p-1 hover:bg-white/5 rounded text-slate-400 hover:text-white transition shrink-0"
         >
           <FaTimes size={10} />
         </button>

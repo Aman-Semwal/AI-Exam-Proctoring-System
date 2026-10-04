@@ -17,5 +17,7 @@ public interface ExamService {
 
     ExamResponse updateExam(Long id, ExamRequest request, String creatorEmail);
 
+    ExamResponse publishExam(Long id, String creatorEmail);
+
     void deleteExam(Long id, String creatorEmail);
 }

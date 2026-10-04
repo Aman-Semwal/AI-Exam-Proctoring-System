@@ -19,7 +19,7 @@ const activities = [
 
 const RecentActivity = () => {
   return (
-    <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-6 shadow-sm">
+    <div className="bg-[#121520] border border-white/7 rounded-xl p-6 shadow-sm">
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-base font-semibold text-white tracking-tight">
           Recent Activity
@@ -31,7 +31,7 @@ const RecentActivity = () => {
         {activities.map((item, index) => (
           <div
             key={index}
-            className="flex items-start gap-3 pb-3.5 border-b border-white/[0.04] last:border-none last:pb-0"
+            className="flex items-start gap-3 pb-3.5 border-b border-white/4 last:border-none last:pb-0"
           >
             <div className="w-2 h-2 rounded-full bg-blue-400 mt-1.5 shrink-0 shadow-sm shadow-blue-400/50" />
             <div className="min-w-0 flex-1">

@@ -43,6 +43,11 @@ public class WebSocketSubscriptionInterceptor implements ChannelInterceptor {
 
         if (accessor != null && StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
             String destination = accessor.getDestination();
+            // Per-user queues must be reached via /user/queue/..., which Spring resolves to the
+            // caller's own session; a raw /queue/... subscription could target someone else's
+            if (destination != null && destination.startsWith("/queue/")) {
+                throw new IllegalArgumentException("Subscribe to /user/queue/... instead of " + destination);
+            }
             if (destination != null && destination.startsWith("/topic/alerts/")) {
                 String examIdStr = destination.substring("/topic/alerts/".length());
                 try {

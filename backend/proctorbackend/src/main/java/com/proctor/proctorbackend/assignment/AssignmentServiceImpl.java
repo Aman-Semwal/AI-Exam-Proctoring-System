@@ -79,6 +79,7 @@ public class AssignmentServiceImpl implements AssignmentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<AssignmentResponse> getAssignmentsByExam(Long examId, String requesterEmail) {
         User requester = getUserByEmail(requesterEmail);
         Exam exam = examRepository.findById(Objects.requireNonNull(examId))
@@ -96,6 +97,7 @@ public class AssignmentServiceImpl implements AssignmentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<AssignmentResponse> getAssignmentsByStudent(Long studentId, String requesterEmail) {
         User requester = getUserByEmail(requesterEmail);
         if (requester.getRole() == Role.STUDENT && !requester.getId().equals(studentId)) {

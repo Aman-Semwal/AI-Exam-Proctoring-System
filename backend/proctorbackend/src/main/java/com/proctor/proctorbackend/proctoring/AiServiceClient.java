@@ -1,6 +1,7 @@
 package com.proctor.proctorbackend.proctoring;
 
 import com.proctor.proctorbackend.proctoring.dto.AnalyzeResponse;
+import com.proctor.proctorbackend.proctoring.dto.EmbedResult;
 import com.proctor.proctorbackend.proctoring.dto.FaceInferenceResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -93,6 +94,37 @@ public class AiServiceClient {
      */
     public AnalyzeResponse analyze(String frameBase64) {
         return analyze(frameBase64, null, null);
+    }
+
+    /**
+     * Extracts a face embedding from a reference photo via {@code POST /infer/identity/embed}.
+     *
+     * <p>Unlike {@link #analyze}, there is no fallback: an enrollment that silently
+     * succeeded without an embedding would disable identity checks for the whole session.
+     *
+     * @param imageBase64 base64-encoded JPEG/PNG photo
+     * @return the 512-dim embedding, or {@code null} if no face was detected
+     * @throws AiServiceUnavailableException if the AI service fails or is unreachable
+     */
+    public List<Double> embed(String imageBase64) {
+        EmbedResult result;
+        try {
+            result = aiServiceWebClient
+                    .post()
+                    .uri("/infer/identity/embed")
+                    .bodyValue(java.util.Map.of("image", imageBase64))
+                    .retrieve()
+                    .bodyToMono(EmbedResult.class)
+                    .timeout(Duration.ofSeconds(10))
+                    .block();
+        } catch (RuntimeException ex) {
+            log.error("AI service /infer/identity/embed failed: {}", ex.getMessage());
+            throw new AiServiceUnavailableException("AI service unavailable for face enrollment", ex);
+        }
+        if (result == null || !result.isFaceDetected()) {
+            return null;
+        }
+        return result.getEmbedding();
     }
 
     // -----------------------------------------------------------------------

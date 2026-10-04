@@ -4,7 +4,7 @@ import ConfirmDialog from "../common/ConfirmDialog";
 import Toast from "../common/Toast";
 import api from "../../services/api";
 
-const SubmitCard = ({ sessionId }) => {
+const SubmitCard = ({ sessionId, beforeSubmit }) => {
   const navigate = useNavigate();
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -22,6 +22,8 @@ const SubmitCard = ({ sessionId }) => {
 
     try {
       setSubmitting(true);
+      // Make sure every pending answer is saved before the session is closed
+      if (beforeSubmit) await beforeSubmit();
       await api.put(`/sessions/${sessionId}/end`);
 
       setToast({
@@ -47,7 +49,7 @@ const SubmitCard = ({ sessionId }) => {
   };
 
   return (
-    <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+    <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
       <h2 className="text-sm font-semibold text-white tracking-tight mb-2">
         Finish Assessment
       </h2>

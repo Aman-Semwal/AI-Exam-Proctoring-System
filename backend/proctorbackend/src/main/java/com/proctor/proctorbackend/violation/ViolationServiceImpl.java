@@ -24,6 +24,7 @@ public class ViolationServiceImpl implements ViolationService {
     private final ExamSessionRepository sessionRepository;
     private final UserRepository userRepository;
     private final ExamProctorService examProctorService;
+    private final ViolationEvidenceRepository evidenceRepository;
 
     @Override
     @Transactional
@@ -46,6 +47,7 @@ public class ViolationServiceImpl implements ViolationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ViolationResponse getViolationById(Long id, String requesterEmail) {
         User requester = getUserByEmail(requesterEmail);
         Violation violation = findById(id);
@@ -54,46 +56,50 @@ public class ViolationServiceImpl implements ViolationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ViolationResponse> getViolationsBySession(Long sessionId, String requesterEmail) {
         User requester = getUserByEmail(requesterEmail);
         ExamSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("ExamSession", sessionId));
         validateSameOrganization(requester, session);
         if (requester.getRole() == Role.SUPER_ADMIN) {
-            return violationRepository.findBySessionId(sessionId).stream()
-                    .map(this::toResponse)
-                    .toList();
+            return toResponses(violationRepository.findBySessionId(sessionId));
         }
-        return violationRepository.findBySessionIdAndOrganizationId(sessionId, requester.getOrganization().getId()).stream()
-                .map(this::toResponse)
-                .toList();
+        return toResponses(violationRepository.findBySessionIdAndOrganizationId(sessionId, requester.getOrganization().getId()));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ViolationResponse> getUnreviewedBySession(Long sessionId, String requesterEmail) {
         User requester = getUserByEmail(requesterEmail);
         ExamSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("ExamSession", sessionId));
         validateSameOrganization(requester, session);
         if (requester.getRole() == Role.SUPER_ADMIN) {
-            return violationRepository.findBySessionIdAndReviewed(sessionId, false).stream()
-                    .map(this::toResponse)
-                    .toList();
+            return toResponses(violationRepository.findBySessionIdAndReviewed(sessionId, false));
         }
-        return violationRepository.findBySessionIdAndOrganizationIdAndReviewed(
-                        sessionId, requester.getOrganization().getId(), false).stream()
-                .map(this::toResponse)
-                .toList();
+        return toResponses(violationRepository.findBySessionIdAndOrganizationIdAndReviewed(
+                        sessionId, requester.getOrganization().getId(), false));
     }
 
     @Override
     @Transactional
-    public ViolationResponse markReviewed(Long id, String requesterEmail) {
+    public ViolationResponse markReviewed(Long id, ReviewOutcome outcome, String requesterEmail) {
         User requester = getUserByEmail(requesterEmail);
         Violation violation = findById(id);
         validateSameOrganization(requester, violation);
         violation.setReviewed(true);
+        violation.setReviewOutcome(outcome != null ? outcome : ReviewOutcome.CONFIRMED);
         return toResponse(violationRepository.save(violation));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ViolationEvidence getEvidence(Long violationId, String requesterEmail) {
+        Violation violation = findById(violationId);
+        validateSameOrganization(getUserByEmail(requesterEmail), violation);
+        return evidenceRepository.findFirstByViolationId(violationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evidence for violation", violationId));
     }
 
     private Violation findById(Long id) {
@@ -130,14 +136,29 @@ public class ViolationServiceImpl implements ViolationService {
         }
     }
 
+    private List<ViolationResponse> toResponses(List<Violation> violations) {
+        if (violations.isEmpty()) return List.of();
+        java.util.Set<Long> withEvidence = new java.util.HashSet<>(
+                evidenceRepository.findViolationIdsWithEvidence(violations.stream().map(Violation::getId).toList()));
+        return violations.stream().map(v -> toResponse(v, withEvidence.contains(v.getId()))).toList();
+    }
+
     private ViolationResponse toResponse(Violation v) {
+        boolean hasEvidence = v.getId() != null
+                && !evidenceRepository.findViolationIdsWithEvidence(List.of(v.getId())).isEmpty();
+        return toResponse(v, hasEvidence);
+    }
+
+    private ViolationResponse toResponse(Violation v, boolean hasEvidence) {
         return ViolationResponse.builder()
+                .hasEvidence(hasEvidence)
                 .id(v.getId())
                 .sessionId(v.getSession().getId())
                 .orgId(v.getOrganization() != null ? v.getOrganization().getId() : null)
                 .orgSlug(v.getOrganization() != null ? v.getOrganization().getSlug() : null)
                 .type(v.getType())
                 .severity(v.getSeverity())
+                .reviewOutcome(v.getReviewOutcome())
                 .details(v.getDetails())
                 .reviewed(v.getReviewed())
                 .createdAt(v.getCreatedAt())

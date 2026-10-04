@@ -19,5 +19,5 @@ public class AlertMessage {
     private String details;
 
     @Builder.Default
-    private LocalDateTime timestamp = LocalDateTime.now();
+    private LocalDateTime timestamp = LocalDateTime.now(java.time.ZoneOffset.UTC);
 }

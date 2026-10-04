@@ -111,7 +111,7 @@ const LoginForm = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full px-3.5 py-2.5 rounded-lg border border-white/[0.08] bg-[#090a0f] text-slate-200 text-xs placeholder-slate-500 outline-none focus:border-blue-500 transition"
+            className="w-full px-3.5 py-2.5 rounded-lg border border-white/8 bg-[#090a0f] text-slate-200 text-xs placeholder-slate-500 outline-none focus:border-blue-500 transition"
           />
         </div>
 
@@ -137,7 +137,7 @@ const LoginForm = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-3.5 py-2.5 pr-10 rounded-lg border border-white/[0.08] bg-[#090a0f] text-slate-200 text-xs placeholder-slate-500 outline-none focus:border-blue-500 transition"
+              className="w-full px-3.5 py-2.5 pr-10 rounded-lg border border-white/8 bg-[#090a0f] text-slate-200 text-xs placeholder-slate-500 outline-none focus:border-blue-500 transition"
             />
 
             <button
@@ -177,20 +177,20 @@ const LoginForm = () => {
 
         {/* Divider */}
         <div className="flex items-center gap-3 py-1">
-          <div className="flex-1 h-px bg-white/[0.06]" />
+          <div className="flex-1 h-px bg-white/6" />
 
           <span className="text-slate-500 text-[10px] uppercase">
             OR
           </span>
 
-          <div className="flex-1 h-px bg-white/[0.06]" />
+          <div className="flex-1 h-px bg-white/6" />
         </div>
 
         {/* Google */}
         <button
           type="button"
           onClick={handleGoogleLogin}
-          className="w-full py-2.5 rounded-lg border border-white/[0.08] bg-[#090a0f] hover:bg-white/[0.04] text-slate-200 text-xs font-medium flex items-center justify-center gap-2.5 transition"
+          className="w-full py-2.5 rounded-lg border border-white/8 bg-[#090a0f] hover:bg-white/4 text-slate-200 text-xs font-medium flex items-center justify-center gap-2.5 transition"
         >
           <FaGoogle className="text-red-400 text-xs" />
           Continue with Google

@@ -49,6 +49,11 @@ public class Violation {
     @Column(nullable = false)
     private Boolean reviewed;
 
+    /** Reviewer's decision; null until reviewed. DISMISSED = false positive. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "review_outcome", length = 20)
+    private ReviewOutcome reviewOutcome;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

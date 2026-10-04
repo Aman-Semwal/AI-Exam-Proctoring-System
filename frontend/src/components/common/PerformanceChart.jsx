@@ -8,7 +8,7 @@ const data = [
 
 const PerformanceChart = () => {
   return (
-    <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-6 shadow-sm">
+    <div className="bg-[#121520] border border-white/7 rounded-xl p-6 shadow-sm">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-base font-semibold text-white tracking-tight">
           Performance
@@ -22,7 +22,7 @@ const PerformanceChart = () => {
             <span className="text-[11px] font-mono text-slate-400 group-hover:text-blue-400 transition-colors">
               {item.value}
             </span>
-            <div className={`w-full max-w-[40px] bg-blue-600/30 border border-blue-500/40 rounded-t-lg ${item.height} group-hover:bg-blue-600/50 transition-all`} />
+            <div className={`w-full max-w-10 bg-blue-600/30 border border-blue-500/40 rounded-t-lg ${item.height} group-hover:bg-blue-600/50 transition-all`} />
             <span className="text-xs font-medium text-slate-400 mt-1">
               {item.label}
             </span>

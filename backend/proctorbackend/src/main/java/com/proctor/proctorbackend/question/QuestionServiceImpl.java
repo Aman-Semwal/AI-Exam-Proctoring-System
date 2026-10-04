@@ -34,9 +34,10 @@ public class QuestionServiceImpl implements QuestionService {
 
     @Override
     @Transactional
-    public QuestionResponse createQuestion(QuestionRequest request) {
+    public QuestionResponse createQuestion(QuestionRequest request, String requesterEmail) {
         Exam exam = examRepository.findById(request.getExamId())
                 .orElseThrow(() -> new ResourceNotFoundException("Exam", request.getExamId()));
+        validateStaffExamAccess(getUserByEmail(requesterEmail), exam);
 
         validateByType(request);
 
@@ -55,8 +56,17 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     @Override
-    public QuestionResponse getQuestionById(Long id, boolean includeAnswer) {
-        return toResponse(findById(id), includeAnswer);
+    @Transactional(readOnly = true)
+    public QuestionResponse getQuestionById(Long id, boolean includeAnswer, String requesterEmail) {
+        User requester = getUserByEmail(requesterEmail);
+        Question question = findById(id);
+        if (requester.getRole() == Role.STUDENT) {
+            // Students never see answers, whatever includeAnswer says
+            validateStudentExamAccess(requester, question.getExam());
+            return toResponse(question, false);
+        }
+        validateStaffExamAccess(requester, question.getExam());
+        return toResponse(question, includeAnswer);
     }
 
     /**
@@ -75,14 +85,16 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<QuestionResponse> getQuestionsByExam(Long examId, boolean includeAnswer, String requesterEmail) {
         User requester = getUserByEmail(requesterEmail);
+        Exam exam = examRepository.findById(examId)
+                .orElseThrow(() -> new ResourceNotFoundException("Exam", examId));
         if (requester.getRole() != Role.STUDENT) {
+            validateStaffExamAccess(requester, exam);
             return getQuestionsByExamInternal(examId, includeAnswer);
         }
 
-        Exam exam = examRepository.findById(examId)
-                .orElseThrow(() -> new ResourceNotFoundException("Exam", examId));
         validateStudentExamAccess(requester, exam);
 
         List<String> tracks = resolveTracks(examId, requester.getId());
@@ -92,6 +104,7 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<QuestionResponse> getQuestionsForSession(Long sessionId, String studentEmail) {
         User student = getUserByEmail(studentEmail);
         ExamSession session = sessionRepository.findById(sessionId)
@@ -111,13 +124,16 @@ public class QuestionServiceImpl implements QuestionService {
 
     @Override
     @Transactional
-    public QuestionResponse updateQuestion(Long id, QuestionRequest request) {
+    public QuestionResponse updateQuestion(Long id, QuestionRequest request, String requesterEmail) {
         Question question = findById(id);
+        User requester = getUserByEmail(requesterEmail);
+        validateStaffExamAccess(requester, question.getExam());
 
         // Update exam if examId has changed
         if (!question.getExam().getId().equals(request.getExamId())) {
             Exam newExam = examRepository.findById(request.getExamId())
                     .orElseThrow(() -> new ResourceNotFoundException("Exam", request.getExamId()));
+            validateStaffExamAccess(requester, newExam);
             question.setExam(newExam);
         }
 
@@ -136,8 +152,10 @@ public class QuestionServiceImpl implements QuestionService {
 
     @Override
     @Transactional
-    public void deleteQuestion(Long id) {
-        questionRepository.delete(findById(id));
+    public void deleteQuestion(Long id, String requesterEmail) {
+        Question question = findById(id);
+        validateStaffExamAccess(getUserByEmail(requesterEmail), question.getExam());
+        questionRepository.delete(question);
     }
 
     // -----------------------------------------------------------------------
@@ -226,6 +244,16 @@ public class QuestionServiceImpl implements QuestionService {
     private User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    }
+
+    /** Staff may only read questions of exams in their own organization (SUPER_ADMIN: any). */
+    private void validateStaffExamAccess(User staff, Exam exam) {
+        if (staff.getRole() == Role.SUPER_ADMIN) return;
+        if (staff.getOrganization() == null
+                || exam.getOrganization() == null
+                || !staff.getOrganization().getId().equals(exam.getOrganization().getId())) {
+            throw new UnauthorizedException("You are not authorized to access this exam");
+        }
     }
 
     private void validateStudentExamAccess(User student, Exam exam) {

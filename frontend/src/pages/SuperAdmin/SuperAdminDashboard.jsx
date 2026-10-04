@@ -261,7 +261,7 @@ const SuperAdminDashboard = () => {
 
         <main className="p-6 lg:p-8 flex-1 overflow-y-auto max-w-7xl mx-auto w-full">
           {/* Header */}
-          <div className="pb-4 mb-6 border-b border-white/[0.06]">
+          <div className="pb-4 mb-6 border-b border-white/6">
             <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">
               Platform Overview
             </span>
@@ -325,8 +325,8 @@ const SuperAdminDashboard = () => {
           {/* Main Sections */}
           <div className="grid lg:grid-cols-2 gap-6 mt-6">
             {/* System Health */}
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-6 shadow-sm">
-              <div className="flex items-center justify-between pb-4 mb-5 border-b border-white/[0.06]">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-6 shadow-sm">
+              <div className="flex items-center justify-between pb-4 mb-5 border-b border-white/6">
                 <h2 className="text-sm font-semibold text-white tracking-tight">
                   System Health
                 </h2>
@@ -402,8 +402,8 @@ const SuperAdminDashboard = () => {
             </div>
 
             {/* Platform Activity */}
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-6 shadow-sm">
-              <div className="flex items-center justify-between pb-4 mb-5 border-b border-white/[0.06]">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-6 shadow-sm">
+              <div className="flex items-center justify-between pb-4 mb-5 border-b border-white/6">
                 <h2 className="text-sm font-semibold text-white tracking-tight">
                   Platform Activity
                 </h2>
@@ -442,8 +442,8 @@ const SuperAdminDashboard = () => {
           </div>
 
           {/* Recent Organizations */}
-          <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-6 shadow-sm mt-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-white/[0.06]">
+          <div className="bg-[#121520] border border-white/7 rounded-xl p-6 shadow-sm mt-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-white/6">
               <div>
                 <h2 className="text-sm font-semibold text-white tracking-tight">
                   Recent Organizations
@@ -466,9 +466,9 @@ const SuperAdminDashboard = () => {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[550px]">
+              <table className="w-full text-left border-collapse min-w-137.5">
                 <thead>
-                  <tr className="border-b border-white/[0.06] text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  <tr className="border-b border-white/6 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                     <th className="pb-3">Organization</th>
                     <th className="pb-3">Users</th>
                     <th className="pb-3">Exams</th>
@@ -476,7 +476,7 @@ const SuperAdminDashboard = () => {
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-white/[0.04]">
+                <tbody className="divide-y divide-white/4">
                   {loading ? (
                     <tr>
                       <td
@@ -527,7 +527,7 @@ const SuperAdminDashboard = () => {
 
 const StatCard = ({ title, value, change, color }) => {
   return (
-    <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 hover:border-white/[0.15] transition-all duration-200 shadow-sm">
+    <div className="bg-[#121520] border border-white/7 rounded-xl p-5 hover:border-white/15 transition-all duration-200 shadow-sm">
       <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">
         {title}
       </p>
@@ -571,7 +571,7 @@ const HealthBar = ({ title, value, status }) => {
         </span>
       </div>
 
-      <div className="h-1.5 bg-[#090a0f] border border-white/[0.06] rounded-full overflow-hidden">
+      <div className="h-1.5 bg-[#090a0f] border border-white/6 rounded-full overflow-hidden">
         <div
           className="h-full bg-purple-500 rounded-full transition-all duration-500"
           style={{ width }}
@@ -583,7 +583,7 @@ const HealthBar = ({ title, value, status }) => {
 
 const Activity = ({ title, time, badge }) => {
   return (
-    <div className="flex items-center justify-between gap-3 text-xs pb-3 border-b border-white/[0.04] last:border-none last:pb-0">
+    <div className="flex items-center justify-between gap-3 text-xs pb-3 border-b border-white/4 last:border-none last:pb-0">
       <div>
         <p className="text-slate-200 font-medium">
           {title}
@@ -616,7 +616,7 @@ const Organization = ({
     );
 
   return (
-    <tr className="hover:bg-white/[0.02] transition text-xs">
+    <tr className="hover:bg-white/2 transition text-xs">
       <td className="py-3.5 font-semibold text-white">
         {name}
       </td>

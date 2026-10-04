@@ -33,7 +33,7 @@ const Features = () => {
     >
       {/* Background ambient lighting */}
       <div
-        className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] rounded-full blur-[160px] pointer-events-none ${
+        className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-200 h-150 rounded-full blur-[160px] pointer-events-none ${
           isDark ? "bg-blue-600/5" : "bg-blue-400/10"
         }`}
       />
@@ -60,7 +60,7 @@ const Features = () => {
           <div
             className={`inline-flex items-center gap-2 p-1 rounded-full border mt-6 ${
               isDark
-                ? "bg-[#0d0f17] border-white/[0.08]"
+                ? "bg-[#0d0f17] border-white/8"
                 : "bg-white border-slate-200 shadow-sm"
             }`}
           >
@@ -68,7 +68,7 @@ const Features = () => {
               onClick={() => navigate("/docs")}
               className={`px-5 py-2 rounded-full text-xs font-semibold tracking-wider uppercase transition-all cursor-pointer ${
                 isDark
-                  ? "text-slate-300 hover:text-white hover:bg-white/[0.08]"
+                  ? "text-slate-300 hover:text-white hover:bg-white/8"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
               }`}
             >
@@ -89,7 +89,7 @@ const Features = () => {
           <div
             className={`border rounded-3xl p-6 sm:p-8 relative overflow-hidden group transition-all duration-300 ${
               isDark
-                ? "bg-[#090b12] border-white/[0.08] hover:border-blue-500/30"
+                ? "bg-[#090b12] border-white/8 hover:border-blue-500/30"
                 : "bg-white border-slate-200 shadow-lg shadow-slate-200/50 hover:border-blue-300"
             }`}
           >
@@ -113,7 +113,7 @@ const Features = () => {
             <div
               className={`mt-6 rounded-2xl border p-4 relative overflow-hidden h-52 flex flex-col justify-between ${
                 isDark
-                  ? "bg-[#05060a] border-white/[0.06]"
+                  ? "bg-[#05060a] border-white/6"
                   : "bg-slate-900 border-slate-800 text-white"
               }`}
             >
@@ -154,7 +154,7 @@ const Features = () => {
           <div
             className={`border rounded-3xl p-6 sm:p-8 relative overflow-hidden group transition-all duration-300 ${
               isDark
-                ? "bg-[#090b12] border-white/[0.08] hover:border-blue-500/30"
+                ? "bg-[#090b12] border-white/8 hover:border-blue-500/30"
                 : "bg-white border-slate-200 shadow-lg shadow-slate-200/50 hover:border-blue-300"
             }`}
           >
@@ -181,7 +181,7 @@ const Features = () => {
                   key={idx}
                   className={`border rounded-2xl p-4 flex flex-col items-center justify-center text-center transition-all ${
                     isDark
-                      ? "bg-[#0e111a] border-white/[0.06] group-hover:border-blue-500/25"
+                      ? "bg-[#0e111a] border-white/6 group-hover:border-blue-500/25"
                       : "bg-slate-50 border-slate-200 hover:border-blue-300 shadow-sm"
                   }`}
                 >
@@ -204,7 +204,7 @@ const Features = () => {
           <div
             className={`border rounded-3xl p-6 sm:p-8 relative overflow-hidden group transition-all duration-300 ${
               isDark
-                ? "bg-[#090b12] border-white/[0.08] hover:border-blue-500/30"
+                ? "bg-[#090b12] border-white/8 hover:border-blue-500/30"
                 : "bg-white border-slate-200 shadow-lg shadow-slate-200/50 hover:border-blue-300"
             }`}
           >
@@ -228,7 +228,7 @@ const Features = () => {
             <div
               className={`mt-6 rounded-2xl overflow-hidden border flex items-center justify-center h-52 ${
                 isDark
-                  ? "bg-[#05060a] border-white/[0.06]"
+                  ? "bg-[#05060a] border-white/6"
                   : "bg-slate-100 border-slate-200"
               }`}
             >
@@ -244,7 +244,7 @@ const Features = () => {
           <div
             className={`border rounded-3xl p-6 sm:p-8 relative overflow-hidden group transition-all duration-300 ${
               isDark
-                ? "bg-[#090b12] border-white/[0.08] hover:border-blue-500/30"
+                ? "bg-[#090b12] border-white/8 hover:border-blue-500/30"
                 : "bg-white border-slate-200 shadow-lg shadow-slate-200/50 hover:border-blue-300"
             }`}
           >
@@ -268,13 +268,13 @@ const Features = () => {
             <div
               className={`mt-6 rounded-2xl border p-5 h-52 flex flex-col justify-between ${
                 isDark
-                  ? "bg-[#05060a] border-white/[0.06]"
+                  ? "bg-[#05060a] border-white/6"
                   : "bg-slate-50 border-slate-200"
               }`}
             >
               <div
                 className={`flex items-center justify-between border-b pb-2 ${
-                  isDark ? "border-white/[0.06]" : "border-slate-200"
+                  isDark ? "border-white/6" : "border-slate-200"
                 }`}
               >
                 <span

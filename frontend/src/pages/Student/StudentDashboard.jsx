@@ -806,7 +806,7 @@ export default function StudentDashboard() {
             </div>
 
             <div className="card overflow-hidden overflow-x-auto">
-              <table className="w-full text-left min-w-[600px]">
+              <table className="w-full text-left min-w-150">
                 <thead>
                   <tr
                     style={{
@@ -922,8 +922,8 @@ export default function StudentDashboard() {
       {/* Available Active Exams Modal */}
       {showActiveExamsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-[#121520] border border-white/[0.1] rounded-xl shadow-2xl p-6">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.07]">
+          <div className="w-full max-w-md bg-[#121520] border border-white/10 rounded-xl shadow-2xl p-6">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/7">
               <div>
                 <h3 className="text-base font-bold text-white">Select Active Assessment</h3>
                 <p className="text-[11px] text-slate-400 mt-0.5">
@@ -944,7 +944,7 @@ export default function StudentDashboard() {
                 const examId = assignment.examId || assignment.exam?.id || assignment.id;
                 const examName = assignment.exam?.title || assignment.examTitle || assignment.exam?.name || `Assigned Exam #${idx + 1}`;
                 return (
-                  <div key={assignment.id || idx} className="bg-[#090a0f] p-3.5 rounded-xl border border-white/[0.06] flex items-center justify-between gap-3">
+                  <div key={assignment.id || idx} className="bg-[#090a0f] p-3.5 rounded-xl border border-white/6 flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-white truncate">{examName}</p>
                       <p className="text-[10px] text-slate-400 font-mono mt-0.5">Exam #{examId}</p>

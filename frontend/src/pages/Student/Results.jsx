@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import Sidebar from "../../components/layout/Sidebar";
 import Topbar from "../../components/layout/Topbar";
 import api from "../../services/api";
+import TrustBadge from "../../components/common/TrustBadge";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -72,7 +73,7 @@ const CorrectnessBadge = ({ isCorrect }) => {
  * Spinner shown while per-session result is loading.
  */
 const DetailSpinner = () => (
-  <div className="rounded-xl border border-white/[0.07] bg-[#121520] p-10 flex flex-col items-center justify-center gap-4 min-h-[320px]">
+  <div className="rounded-xl border border-white/7 bg-[#121520] p-10 flex flex-col items-center justify-center gap-4 min-h-80">
     <div className="w-10 h-10 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
     <p className="text-sm text-slate-400">Loading result details…</p>
   </div>
@@ -110,7 +111,8 @@ const Results = () => {
         const all = response.data?.data || [];
 
         const completed = all.filter(
-          (s) => s.status === "COMPLETED" || s.status === "SUBMITTED"
+          // TERMINATED = ended by a proctor or by repeated violations; still has a result
+          (s) => s.status === "COMPLETED" || s.status === "SUBMITTED" || s.status === "TERMINATED"
         );
 
         setSessions(completed);
@@ -259,7 +261,7 @@ const Results = () => {
                       className={`w-full text-left rounded-xl border p-4 transition ${
                         isActive
                           ? "border-blue-500/40 bg-blue-500/10"
-                          : "border-white/[0.07] bg-[#121520] hover:bg-white/3"
+                          : "border-white/7 bg-[#121520] hover:bg-white/3"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -270,6 +272,11 @@ const Results = () => {
                           <p className="text-[11px] text-slate-500 mt-0.5">
                             {fmt(s.startTime)} · Session #{s.id}
                           </p>
+                          {s.status === "TERMINATED" && (
+                            <span className="inline-block mt-1 text-[10px] font-semibold text-rose-300 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded">
+                              Terminated
+                            </span>
+                          )}
                         </div>
 
                         <div className="text-right shrink-0">
@@ -346,7 +353,7 @@ const Results = () => {
 
                 {/* Result loaded */}
                 {selectedId != null && !resultLoading && !resultError && result && (
-                  <div className="rounded-xl border border-white/[0.07] bg-[#121520] p-6 space-y-6">
+                  <div className="rounded-xl border border-white/7 bg-[#121520] p-6 space-y-6">
 
                     {/* ── Title row ── */}
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -393,6 +400,7 @@ const Results = () => {
                             {result.sessionStatus}
                           </span>
                         )}
+                        <TrustBadge score={result.trustScore} level={result.trustLevel} />
                       </div>
                     </div>
 
@@ -575,7 +583,7 @@ const Results = () => {
                         </p>
                         <div className="rounded-lg border border-white/6 overflow-hidden">
                           {/* Table header */}
-                          <div className="hidden sm:grid grid-cols-12 gap-3 px-4 py-2 bg-white/[0.03] border-b border-white/6 text-[11px] text-slate-500 uppercase tracking-wider font-medium">
+                          <div className="hidden sm:grid grid-cols-12 gap-3 px-4 py-2 bg-white/3 border-b border-white/6 text-[11px] text-slate-500 uppercase tracking-wider font-medium">
                             <div className="col-span-1">#</div>
                             <div className="col-span-4">Question</div>
                             <div className="col-span-2">Type</div>
@@ -592,10 +600,10 @@ const Results = () => {
                             return (
                               <div
                                 key={item.questionId ?? idx}
-                                className={`grid sm:grid-cols-12 grid-cols-1 gap-3 px-4 py-3 text-xs border-b border-white/[0.04] last:border-0 ${
+                                className={`grid sm:grid-cols-12 grid-cols-1 gap-3 px-4 py-3 text-xs border-b border-white/4 last:border-0 ${
                                   idx % 2 === 0
                                     ? "bg-transparent"
-                                    : "bg-white/[0.015]"
+                                    : "bg-white/1.5"
                                 }`}
                               >
                                 {/* # */}
@@ -619,7 +627,7 @@ const Results = () => {
                                   <span className="sm:hidden text-[10px] text-slate-500 mr-1">
                                     Type:
                                   </span>
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] bg-white/[0.05] border border-white/[0.06] font-medium">
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] bg-white/5 border border-white/6 font-medium">
                                     {item.questionType || "—"}
                                   </span>
                                 </div>
@@ -633,7 +641,7 @@ const Results = () => {
                                 </div>
 
                                 {/* Student answer */}
-                                <div className="sm:col-span-2 text-slate-300 break-words">
+                                <div className="sm:col-span-2 text-slate-300 wrap-break-word">
                                   <span className="sm:hidden text-[10px] text-slate-500 block mb-0.5">
                                     Your Answer
                                   </span>

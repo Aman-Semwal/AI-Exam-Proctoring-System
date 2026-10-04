@@ -23,4 +23,6 @@ public interface OrganizationService {
     void activateInvitation(InvitationActivationRequest request);
 
     void removeMember(Long organizationId, Long userId, String requesterEmail);
+
+    void removeMembers(Long organizationId, List<Long> userIds, String requesterEmail);
 }

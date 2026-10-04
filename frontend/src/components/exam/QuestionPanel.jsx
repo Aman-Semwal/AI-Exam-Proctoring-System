@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FaPlay,
   FaSpinner,
@@ -9,98 +9,137 @@ import {
 } from "react-icons/fa";
 import api from "../../services/api";
 
-const defaultQuestions = [
-  {
-    id: 1,
-    questionText: "Which of the following is used to create a React component?",
-    questionType: "MCQ",
-    marks: 4,
-    options: {
-      A: "function Component()",
-      B: "createComponent()",
-      C: "React.new()",
-      D: "Component.create()",
-    },
-  },
-  {
-    id: 2,
-    questionText:
-      "What is the time complexity of searching an element in a balanced Binary Search Tree?",
-    questionType: "MCQ",
-    marks: 4,
-    options: {
-      A: "O(n)",
-      B: "O(log n)",
-      C: "O(n log n)",
-      D: "O(1)",
-    },
-  },
-  {
-    id: 3,
-    questionText:
-      "Which protocol is primarily used for secure communication over the Internet?",
-    questionType: "MCQ",
-    marks: 4,
-    options: {
-      A: "HTTP",
-      B: "FTP",
-      C: "HTTPS",
-      D: "SMTP",
-    },
-  },
-];
+// Text/code answers are saved this long after the student stops typing
+const AUTOSAVE_DELAY_MS = 1500;
 
-const QuestionPanel = ({ examId, sessionId }) => {
-  const [questions, setQuestions] = useState(defaultQuestions);
+const isOptionType = (type) => type === "MCQ" || type === "TRUE_FALSE";
+
+/**
+ * Renders the exam questions and autosaves every answer (synopsis step 5).
+ * The parent passes `answerSyncRef`; `answerSyncRef.current.flush()` resolves once
+ * every pending answer has been sent — call it before submitting the exam.
+ */
+const QuestionPanel = ({ sessionId, answerSyncRef }) => {
+  const [questions, setQuestions] = useState([]);
+  const [loadState, setLoadState] = useState("loading"); // loading | ready | error
+  const [loadError, setLoadError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [saving, setSaving] = useState(false);
+  // questionId -> "saving" | "saved" | "error"
+  const [saveStatus, setSaveStatus] = useState({});
+  const [saveErrors, setSaveErrors] = useState({});
+
+  const timersRef = useRef({});
+  const pendingRef = useRef({});
+  const inflightRef = useRef(new Set());
 
   // Coding Runner State
   const [codeRunning, setCodeRunning] = useState(false);
   const [codeRunResult, setCodeRunResult] = useState(null);
   const [runError, setRunError] = useState("");
 
+  // Load questions and any answers already saved (resume after reload)
   useEffect(() => {
-    const fetchQuestions = async () => {
-      try {
-        if (sessionId) {
-          const res = await api.get(`/sessions/${sessionId}/questions`);
-          const list = res.data?.data;
-          if (Array.isArray(list) && list.length > 0) {
-            setQuestions(list);
-            return;
-          }
-        }
+    if (!sessionId) return;
+    let cancelled = false;
 
-        if (examId) {
-          const res = await api.get(`/questions/exam/${examId}`);
-          const list = res.data?.data;
-          if (Array.isArray(list) && list.length > 0) {
-            setQuestions(list);
-          }
+    Promise.all([
+      api.get(`/sessions/${sessionId}/questions`),
+      api.get(`/answers/session/${sessionId}`).catch(() => null),
+    ])
+      .then(([questionsRes, answersRes]) => {
+        if (cancelled) return;
+        const list = questionsRes.data?.data;
+        if (!Array.isArray(list) || list.length === 0) {
+          setLoadError("This exam has no questions assigned to you. Please contact your examiner.");
+          setLoadState("error");
+          return;
         }
-      } catch (err) {
-        console.warn(
-          "Could not load backend questions for session, using standard question set:",
-          err
-        );
-      }
+        const restored = {};
+        const restoredStatus = {};
+        (answersRes?.data?.data || []).forEach((a) => {
+          const value = a.selectedOption || a.textAnswer;
+          if (value) {
+            restored[a.questionId] = value;
+            restoredStatus[a.questionId] = "saved";
+          }
+        });
+        setQuestions(list);
+        setAnswers((prev) => ({ ...restored, ...prev }));
+        setSaveStatus((prev) => ({ ...restoredStatus, ...prev }));
+        setLoadState("ready");
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error("Failed to load exam questions:", err);
+        setLoadError(err.response?.data?.message || "Could not load the exam questions.");
+        setLoadState("error");
+      });
+
+    return () => {
+      cancelled = true;
     };
+  }, [sessionId, reloadKey]);
 
-    fetchQuestions();
-  }, [examId, sessionId]);
+  const saveNow = useCallback(
+    (question, value) => {
+      const qid = question.id;
+      delete pendingRef.current[qid];
+      clearTimeout(timersRef.current[qid]);
+      if (!sessionId || !value || !String(value).trim()) return Promise.resolve();
 
-  const currentQ = questions[currentIndex] || questions[0];
-  const qType = currentQ.questionType || "MCQ";
+      setSaveStatus((prev) => ({ ...prev, [qid]: "saving" }));
+      const request = api
+        .post("/answers", {
+          sessionId: Number(sessionId),
+          questionId: Number(qid),
+          selectedOption: isOptionType(question.questionType) ? value : null,
+          textAnswer: isOptionType(question.questionType) ? null : value,
+        })
+        .then(() => {
+          setSaveStatus((prev) => ({ ...prev, [qid]: "saved" }));
+          setSaveErrors((prev) => ({ ...prev, [qid]: "" }));
+        })
+        .catch((err) => {
+          setSaveStatus((prev) => ({ ...prev, [qid]: "error" }));
+          setSaveErrors((prev) => ({
+            ...prev,
+            [qid]: err.response?.data?.message || "Network error",
+          }));
+        })
+        .finally(() => inflightRef.current.delete(request));
+      inflightRef.current.add(request);
+      return request;
+    },
+    [sessionId]
+  );
 
-  // Pre-seed starter code for coding questions if not yet answered
+  const flush = useCallback(async () => {
+    Object.values(pendingRef.current).forEach(({ question, value }) => saveNow(question, value));
+    await Promise.allSettled([...inflightRef.current]);
+  }, [saveNow]);
+
+  // Expose flush() to the parent so submit / time-up / auto-submit never lose answers
   useEffect(() => {
-    if (
-      qType === "CODING" &&
-      !answers[currentQ.id] &&
-      currentQ.metadata?.starterCode
-    ) {
+    if (answerSyncRef) answerSyncRef.current = { flush };
+  }, [answerSyncRef, flush]);
+
+  // Unmounting (e.g. navigating to results) still sends anything pending
+  useEffect(
+    () => () => {
+      Object.values(pendingRef.current).forEach(({ question, value }) => saveNow(question, value));
+    },
+    [saveNow]
+  );
+
+  const currentQ = questions[currentIndex];
+  const qType = currentQ?.questionType || "MCQ";
+
+  // Pre-seed starter code for coding questions (not saved until the student edits it)
+  useEffect(() => {
+    if (!currentQ) return;
+    if (qType === "CODING" && !answers[currentQ.id] && currentQ.metadata?.starterCode) {
       setAnswers((prev) => ({
         ...prev,
         [currentQ.id]: currentQ.metadata.starterCode,
@@ -108,50 +147,65 @@ const QuestionPanel = ({ examId, sessionId }) => {
     }
     setCodeRunResult(null);
     setRunError("");
-  }, [currentQ.id, qType]);
+  }, [currentQ?.id, qType]);
+
+  if (loadState !== "ready") {
+    return (
+      <div className="bg-[#121520] border border-white/7 rounded-xl p-8 text-center">
+        {loadState === "loading" ? (
+          <p className="text-sm text-slate-400">Loading questions...</p>
+        ) : (
+          <>
+            <p className="text-sm text-rose-400">{loadError}</p>
+            <button
+              type="button"
+              onClick={() => {
+                setLoadState("loading");
+                setReloadKey((k) => k + 1);
+              }}
+              className="mt-4 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-lg text-xs font-semibold transition"
+            >
+              Retry
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }
 
   const currentAnswer = answers[currentQ.id] || "";
+  const currentStatus = saveStatus[currentQ.id];
+  const savedCount = Object.values(saveStatus).filter((st) => st === "saved").length;
+  const hasPending = () => !!pendingRef.current[currentQ.id];
 
   const handleSelectOption = (key) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [currentQ.id]: key,
-    }));
+    setAnswers((prev) => ({ ...prev, [currentQ.id]: key }));
+    saveNow(currentQ, key);
   };
 
   const handleTextAnswerChange = (val) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [currentQ.id]: val,
-    }));
+    setAnswers((prev) => ({ ...prev, [currentQ.id]: val }));
+    pendingRef.current[currentQ.id] = { question: currentQ, value: val };
+    clearTimeout(timersRef.current[currentQ.id]);
+    const question = currentQ;
+    timersRef.current[currentQ.id] = setTimeout(() => saveNow(question, val), AUTOSAVE_DELAY_MS);
+  };
+
+  const goTo = (index) => {
+    // Send the current answer right away instead of waiting for the debounce
+    if (hasPending()) saveNow(currentQ, pendingRef.current[currentQ.id].value);
+    setCurrentIndex(index);
   };
 
   const handlePrevious = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex((prev) => prev - 1);
-    }
+    if (currentIndex > 0) goTo(currentIndex - 1);
   };
 
-  const handleSaveAndNext = async () => {
-    try {
-      setSaving(true);
-      const answerVal = answers[currentQ.id] || "";
-      if (sessionId && answerVal && currentQ.id) {
-        const isMcq = qType === "MCQ" || qType === "TRUE_FALSE";
-        await api
-          .post("/answers", {
-            sessionId: Number(sessionId),
-            questionId: Number(currentQ.id),
-            selectedOption: isMcq ? answerVal : null,
-            textAnswer: answerVal,
-          })
-          .catch((err) => console.warn("Answer sync skipped:", err));
-      }
-    } finally {
-      setSaving(false);
-      if (currentIndex < questions.length - 1) {
-        setCurrentIndex((prev) => prev + 1);
-      }
+  const handleSaveAndNext = () => {
+    if (currentIndex < questions.length - 1) {
+      goTo(currentIndex + 1);
+    } else if (hasPending()) {
+      saveNow(currentQ, pendingRef.current[currentQ.id].value);
     }
   };
 
@@ -198,9 +252,9 @@ const QuestionPanel = ({ examId, sessionId }) => {
     : [];
 
   return (
-    <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-6 sm:p-8 shadow-sm">
+    <div className="bg-[#121520] border border-white/7 rounded-xl p-6 sm:p-8 shadow-sm">
       {/* Question Header */}
-      <div className="flex items-center justify-between pb-4 mb-6 border-b border-white/[0.06]">
+      <div className="flex items-center justify-between pb-4 mb-6 border-b border-white/6">
         <div>
           <span className="text-[11px] font-mono font-medium text-blue-400 uppercase tracking-wider">
             Assessment Section 1
@@ -209,7 +263,7 @@ const QuestionPanel = ({ examId, sessionId }) => {
             Question {currentIndex + 1} of {questions.length}
           </h2>
         </div>
-        <span className="text-xs text-slate-400 bg-white/[0.04] border border-white/[0.08] px-2.5 py-1 rounded-md font-mono">
+        <span className="text-xs text-slate-400 bg-white/4 border border-white/8 px-2.5 py-1 rounded-md font-mono">
           {qType} (+{currentQ.marks || 4} marks)
         </span>
       </div>
@@ -233,7 +287,7 @@ const QuestionPanel = ({ examId, sessionId }) => {
                 className={`w-full text-left p-4 rounded-xl border transition-all text-xs sm:text-sm font-medium flex items-center gap-3.5 ${
                   isSelected
                     ? "bg-blue-600/15 border-blue-500/50 text-white shadow-sm"
-                    : "bg-[#090a0f] border-white/[0.07] text-slate-300 hover:border-white/[0.15] hover:bg-white/[0.02]"
+                    : "bg-[#090a0f] border-white/7 text-slate-300 hover:border-white/15 hover:bg-white/2"
                 }`}
               >
                 <div
@@ -263,7 +317,7 @@ const QuestionPanel = ({ examId, sessionId }) => {
             value={currentAnswer}
             onChange={(e) => handleTextAnswerChange(e.target.value)}
             placeholder="Type your answer here..."
-            className="w-full bg-[#090a0f] border border-white/[0.08] focus:border-blue-500 rounded-xl px-4 py-3 text-sm text-white outline-none transition"
+            className="w-full bg-[#090a0f] border border-white/8 focus:border-blue-500 rounded-xl px-4 py-3 text-sm text-white outline-none transition"
           />
         </div>
       )}
@@ -285,7 +339,7 @@ const QuestionPanel = ({ examId, sessionId }) => {
             value={currentAnswer}
             onChange={(e) => handleTextAnswerChange(e.target.value)}
             placeholder="Provide your complete solution or explanation..."
-            className="w-full bg-[#090a0f] border border-white/[0.08] focus:border-blue-500 rounded-xl p-4 text-xs sm:text-sm text-white outline-none transition resize-none leading-relaxed"
+            className="w-full bg-[#090a0f] border border-white/8 focus:border-blue-500 rounded-xl p-4 text-xs sm:text-sm text-white outline-none transition resize-none leading-relaxed"
           />
         </div>
       )}
@@ -328,15 +382,15 @@ const QuestionPanel = ({ examId, sessionId }) => {
               value={currentAnswer}
               onChange={(e) => handleTextAnswerChange(e.target.value)}
               placeholder="// Write your code solution here..."
-              className="w-full bg-[#090a0f] border border-white/[0.08] focus:border-blue-500 rounded-xl p-4 text-xs font-mono text-emerald-300 outline-none transition resize-y leading-5"
+              className="w-full bg-[#090a0f] border border-white/8 focus:border-blue-500 rounded-xl p-4 text-xs font-mono text-emerald-300 outline-none transition resize-y leading-5"
               spellCheck="false"
             />
           </div>
 
           {/* Code Execution Results Panel */}
           {codeRunResult && (
-            <div className="p-4 rounded-xl border border-white/[0.08] bg-[#090a0f] space-y-2.5 text-xs">
-              <div className="flex items-center justify-between pb-2 border-b border-white/[0.06]">
+            <div className="p-4 rounded-xl border border-white/8 bg-[#090a0f] space-y-2.5 text-xs">
+              <div className="flex items-center justify-between pb-2 border-b border-white/6">
                 <div className="flex items-center gap-1.5 font-semibold text-white">
                   <FaTerminal size={11} className="text-blue-400" />
                   Test Results
@@ -357,7 +411,7 @@ const QuestionPanel = ({ examId, sessionId }) => {
                 codeRunResult.results.map((tr, idx) => (
                   <div
                     key={idx}
-                    className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] text-[11px] font-mono space-y-1"
+                    className="p-2.5 rounded-lg bg-white/2 border border-white/4 text-[11px] font-mono space-y-1"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-slate-400 font-semibold">
@@ -418,31 +472,41 @@ const QuestionPanel = ({ examId, sessionId }) => {
       )}
 
       {/* Navigation Buttons */}
-      <div className="flex justify-between items-center mt-8 pt-6 border-t border-white/[0.06]">
+      <div className="flex justify-between items-center mt-8 pt-6 border-t border-white/6">
         <button
           type="button"
           onClick={handlePrevious}
           disabled={currentIndex === 0}
-          className="bg-[#090a0f] hover:bg-white/[0.04] disabled:opacity-40 disabled:cursor-not-allowed border border-white/[0.08] px-5 py-2.5 rounded-lg text-xs font-medium text-slate-300 transition"
+          className="bg-[#090a0f] hover:bg-white/4 disabled:opacity-40 disabled:cursor-not-allowed border border-white/8 px-5 py-2.5 rounded-lg text-xs font-medium text-slate-300 transition"
         >
           Previous
         </button>
 
-        <div className="text-xs text-slate-500 font-mono">
-          {Object.keys(answers).length} answered
+        <div className="text-xs font-mono text-center">
+          <div className="text-slate-500">{savedCount} of {questions.length} saved</div>
+          {currentStatus === "saving" && <div className="text-blue-400 mt-0.5">Saving...</div>}
+          {currentStatus === "saved" && <div className="text-emerald-400 mt-0.5">✓ Answer saved</div>}
+          {currentStatus === "error" && (
+            <div className="text-rose-400 mt-0.5">
+              Not saved ({saveErrors[currentQ.id]}) —{" "}
+              <button
+                type="button"
+                onClick={() => saveNow(currentQ, currentAnswer)}
+                className="underline hover:text-rose-300"
+              >
+                retry
+              </button>
+            </div>
+          )}
         </div>
 
         <button
           type="button"
           onClick={handleSaveAndNext}
-          disabled={saving}
+          disabled={currentIndex === questions.length - 1}
           className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-6 py-2.5 rounded-lg text-xs font-semibold transition active:scale-[0.98]"
         >
-          {saving
-            ? "Saving..."
-            : currentIndex === questions.length - 1
-            ? "Save & Review"
-            : "Save & Next"}
+          Next
         </button>
       </div>
     </div>

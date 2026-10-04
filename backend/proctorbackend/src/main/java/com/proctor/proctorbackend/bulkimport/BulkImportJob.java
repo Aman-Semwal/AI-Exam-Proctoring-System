@@ -56,6 +56,6 @@ public class BulkImportJob {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now(java.time.ZoneOffset.UTC);
     }
 }

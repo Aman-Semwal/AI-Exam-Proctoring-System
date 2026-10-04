@@ -40,17 +40,21 @@ public class AnswerController {
     @GetMapping("/session/{sessionId}")
     @Operation(summary = "Get all answers for a session")
     @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN', 'STUDENT')")
-    public ResponseEntity<ApiResponse<List<AnswerResponse>>> getBySession(@PathVariable Long sessionId) {
-        return ResponseEntity.ok(
-                ApiResponse.success("Answers fetched", answerService.getAnswersBySession(sessionId)));
+    public ResponseEntity<ApiResponse<List<AnswerResponse>>> getBySession(
+            @PathVariable Long sessionId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(ApiResponse.success("Answers fetched",
+                answerService.getAnswersBySession(sessionId, userDetails.getUsername())));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get a specific answer by ID")
     @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN', 'STUDENT')")
-    public ResponseEntity<ApiResponse<AnswerResponse>> getAnswer(@PathVariable Long id) {
-        return ResponseEntity.ok(
-                ApiResponse.success("Answer fetched", answerService.getAnswerById(id)));
+    public ResponseEntity<ApiResponse<AnswerResponse>> getAnswer(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(ApiResponse.success("Answer fetched",
+                answerService.getAnswerById(id, userDetails.getUsername())));
     }
 
     @PatchMapping("/{id}/grade")

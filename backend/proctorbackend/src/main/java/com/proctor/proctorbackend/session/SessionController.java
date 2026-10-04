@@ -4,6 +4,8 @@ import com.proctor.proctorbackend.common.response.ApiResponse;
 import com.proctor.proctorbackend.question.QuestionService;
 import com.proctor.proctorbackend.question.dto.QuestionResponse;
 import com.proctor.proctorbackend.session.dto.ExamResultResponse;
+import com.proctor.proctorbackend.session.dto.ProctorActionRequest;
+import com.proctor.proctorbackend.session.dto.SessionReportResponse;
 import com.proctor.proctorbackend.session.dto.SessionRequest;
 import com.proctor.proctorbackend.session.dto.SessionResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,6 +31,8 @@ public class SessionController {
 
     private final SessionService sessionService;
     private final QuestionService questionService;
+    private final ProctorActionService proctorActionService;
+    private final SessionReportService sessionReportService;
 
     @PostMapping("/start")
     @Operation(summary = "Start an exam session")
@@ -90,13 +94,45 @@ public class SessionController {
     }
 
     @GetMapping("/{id}/result")
-    @Operation(summary = "Get full exam result with score breakdown for a session")
-    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Get full exam result with score breakdown (students: own finished session only)")
+    @PreAuthorize("hasAnyRole('STUDENT', 'EXAM_CREATOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<ExamResultResponse>> getResult(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(ApiResponse.success("Result fetched",
                 sessionService.getExamResult(id, userDetails.getUsername())));
+    }
+
+    @GetMapping("/{id}/report")
+    @Operation(summary = "Integrity report: trust score, violation summary and evidence timeline")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<SessionReportResponse>> getReport(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(ApiResponse.success("Report fetched",
+                sessionReportService.getReport(id, userDetails.getUsername())));
+    }
+
+    @PutMapping("/{id}/terminate")
+    @Operation(summary = "End a student's live session now (proctor / admin)")
+    @PreAuthorize("hasAnyRole('PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> terminateSession(
+            @PathVariable Long id,
+            @Valid @RequestBody ProctorActionRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        proctorActionService.terminate(id, request.getMessage(), userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success("Session terminated", null));
+    }
+
+    @PostMapping("/{id}/warn")
+    @Operation(summary = "Show a warning message on the student's exam screen (proctor / admin)")
+    @PreAuthorize("hasAnyRole('PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> warnStudent(
+            @PathVariable Long id,
+            @Valid @RequestBody ProctorActionRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        proctorActionService.warn(id, request.getMessage(), userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success("Warning sent", null));
     }
 
     @GetMapping("/{id}/questions")

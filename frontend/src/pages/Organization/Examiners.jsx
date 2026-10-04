@@ -6,14 +6,12 @@ import {
   FaTimes,
   FaEye,
   FaTrash,
-  FaUserTie,
   FaFileUpload,
   FaFileDownload,
   FaSpinner,
   FaHistory,
   FaExclamationTriangle,
-  FaCheckCircle,
-} from "react-icons/fa";
+  } from "react-icons/fa";
 import ActionDropdown from "../../components/common/ActionDropdown";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import Toast from "../../components/common/Toast";
@@ -329,7 +327,7 @@ export default function Examiners() {
 
       <main className="flex-1 p-6 lg:p-8 overflow-y-auto max-w-7xl mx-auto w-full">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/[0.06]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/6">
           <div>
             <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
               Faculty
@@ -348,7 +346,7 @@ export default function Examiners() {
             <button
               type="button"
               onClick={() => setShowBulkModal(true)}
-              className="bg-white/[0.05] hover:bg-white/[0.08] text-slate-200 border border-white/[0.08] px-3.5 py-2.5 rounded-lg font-semibold text-xs transition active:scale-[0.98] flex items-center gap-1.5"
+              className="bg-white/5 hover:bg-white/8 text-slate-200 border border-white/8 px-3.5 py-2.5 rounded-lg font-semibold text-xs transition active:scale-[0.98] flex items-center gap-1.5"
             >
               <FaFileUpload size={11} className="text-blue-400" />
               Bulk Import
@@ -384,7 +382,7 @@ export default function Examiners() {
         )}
 
         {/* Search & Stats */}
-        <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+        <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div className="relative flex-1 max-w-sm">
               <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs" />
@@ -394,7 +392,7 @@ export default function Examiners() {
                 placeholder="Search examiners by name, email, or department..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
+                className="w-full pl-9 pr-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
               />
             </div>
 
@@ -413,9 +411,9 @@ export default function Examiners() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[750px]">
+              <table className="w-full text-left border-collapse min-w-187.5">
                 <thead>
-                  <tr className="border-b border-white/[0.06] text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  <tr className="border-b border-white/6 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                     <th className="pb-3 px-3">Examiner</th>
                     <th className="pb-3 px-3">Department / Track</th>
                     <th className="pb-3 px-3">Active Exams</th>
@@ -424,7 +422,7 @@ export default function Examiners() {
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-white/[0.04] text-xs">
+                <tbody className="divide-y divide-white/4 text-xs">
                   {filteredExaminers.length > 0 ? (
                     filteredExaminers.map((examiner) => (
                       <ExaminerRow
@@ -456,8 +454,8 @@ export default function Examiners() {
       {/* Add Examiner Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-          <div className="w-full max-w-md bg-[#121520] border border-white/[0.08] rounded-xl shadow-2xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+          <div className="w-full max-w-md bg-[#121520] border border-white/8 rounded-xl shadow-2xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/6">
               <div>
                 <h2 className="text-base font-semibold text-white">
                   Add New Examiner
@@ -471,7 +469,7 @@ export default function Examiners() {
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.05]"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5"
               >
                 <FaTimes size={13} />
               </button>
@@ -494,7 +492,7 @@ export default function Examiners() {
                     }))
                   }
                   placeholder="e.g. Dr. Robert Vance"
-                  className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -514,7 +512,7 @@ export default function Examiners() {
                     }))
                   }
                   placeholder="examiner@college.edu"
-                  className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -522,7 +520,7 @@ export default function Examiners() {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2.5 rounded-lg font-medium text-slate-300 bg-white/[0.04] border border-white/[0.07] hover:bg-white/[0.07]"
+                  className="px-4 py-2.5 rounded-lg font-medium text-slate-300 bg-white/4 border border-white/7 hover:bg-white/7"
                 >
                   Cancel
                 </button>
@@ -543,8 +541,8 @@ export default function Examiners() {
       {/* Examiner Details Modal */}
       {detailExaminer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-[#121520] border border-white/[0.1] rounded-xl shadow-2xl p-6">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.07]">
+          <div className="w-full max-w-md bg-[#121520] border border-white/10 rounded-xl shadow-2xl p-6">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/7">
               <h3 className="text-base font-bold text-white">Examiner Profile</h3>
               <button
                 type="button"
@@ -556,7 +554,7 @@ export default function Examiners() {
             </div>
 
             <div className="space-y-3 text-xs">
-              <div className="flex items-center gap-3 pb-3 border-b border-white/[0.05]">
+              <div className="flex items-center gap-3 pb-3 border-b border-white/5">
                 <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-400 font-bold flex items-center justify-center text-sm">
                   {(detailExaminer.name || "EX").slice(0, 2).toUpperCase()}
                 </div>
@@ -567,11 +565,11 @@ export default function Examiners() {
               </div>
 
               <div className="grid grid-cols-2 gap-3 pt-1">
-                <div className="bg-[#090a0f] p-3 rounded-lg border border-white/[0.05]">
+                <div className="bg-[#090a0f] p-3 rounded-lg border border-white/5">
                   <span className="text-slate-500 block">Role</span>
                   <p className="font-semibold text-blue-400 mt-1">EXAM_CREATOR</p>
                 </div>
-                <div className="bg-[#090a0f] p-3 rounded-lg border border-white/[0.05]">
+                <div className="bg-[#090a0f] p-3 rounded-lg border border-white/5">
                   <span className="text-slate-500 block">Status</span>
                   <p className="font-semibold text-emerald-400 mt-1">
                     {detailExaminer.status || (detailExaminer.active === false ? "Inactive" : "Active")}
@@ -579,7 +577,7 @@ export default function Examiners() {
                 </div>
               </div>
 
-              <div className="bg-[#090a0f] p-3 rounded-lg border border-white/[0.05]">
+              <div className="bg-[#090a0f] p-3 rounded-lg border border-white/5">
                 <span className="text-slate-500 block">Department</span>
                 <p className="text-slate-200 mt-1">
                   {detailExaminer.department || detailExaminer.dept || detailExaminer.departmentName || "General Faculty"}
@@ -591,7 +589,7 @@ export default function Examiners() {
               <button
                 type="button"
                 onClick={() => setDetailExaminer(null)}
-                className="px-4 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-xs text-white"
+                className="px-4 py-2 rounded-lg bg-white/6 hover:bg-white/10 text-xs text-white"
               >
                 Close
               </button>
@@ -603,8 +601,8 @@ export default function Examiners() {
       {/* Bulk Import Modal */}
       {showBulkModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm px-4 overflow-y-auto">
-          <div className="w-full max-w-xl bg-[#121520] border border-white/[0.08] rounded-xl shadow-2xl p-6 my-8">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.06]">
+          <div className="w-full max-w-xl bg-[#121520] border border-white/8 rounded-xl shadow-2xl p-6 my-8">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/6">
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <FaFileUpload className="text-blue-400" size={14} />
@@ -628,7 +626,7 @@ export default function Examiners() {
             </div>
 
             {/* Modal Tabs */}
-            <div className="flex border-b border-white/[0.06] mb-4 gap-4 text-xs font-semibold">
+            <div className="flex border-b border-white/6 mb-4 gap-4 text-xs font-semibold">
               <button
                 type="button"
                 onClick={() => setBulkTab("upload")}
@@ -660,7 +658,7 @@ export default function Examiners() {
             {bulkTab === "upload" ? (
               <form onSubmit={handleBulkImport} className="space-y-4 text-xs">
                 {/* Download Template Banner */}
-                <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-white/2 border border-white/6">
                   <div className="text-[11px]">
                     <span className="text-slate-300 font-medium block">Need the exact CSV format?</span>
                     <span className="text-slate-500">Columns: name, email, role (EXAM_CREATOR), department</span>
@@ -676,7 +674,7 @@ export default function Examiners() {
                 </div>
 
                 {/* Upload Box */}
-                <div className="p-4 rounded-xl border border-dashed border-white/[0.15] bg-[#090a0f] text-center">
+                <div className="p-4 rounded-xl border border-dashed border-white/15 bg-[#090a0f] text-center">
                   <FaFileUpload size={24} className="mx-auto text-blue-400 mb-2" />
                   <p className="text-slate-200 font-medium">
                     {bulkFile ? bulkFile.name : "Choose CSV or XLSX file to upload"}
@@ -698,7 +696,7 @@ export default function Examiners() {
 
                   <label
                     htmlFor="bulk-examiner-file-input"
-                    className="mt-3 inline-block px-4 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-blue-400 font-semibold cursor-pointer transition"
+                    className="mt-3 inline-block px-4 py-1.5 rounded-lg bg-white/6 hover:bg-white/10 text-blue-400 font-semibold cursor-pointer transition"
                   >
                     {bulkFile ? "Change File" : "Browse Computer"}
                   </label>
@@ -706,7 +704,7 @@ export default function Examiners() {
 
                 {/* Live Processing Card & Row Error Report */}
                 {bulkActiveJob && (
-                  <div className="p-4 rounded-xl border border-white/[0.08] bg-[#090a0f] space-y-3">
+                  <div className="p-4 rounded-xl border border-white/8 bg-[#090a0f] space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-semibold text-slate-300">
                         Job Status:
@@ -728,19 +726,19 @@ export default function Examiners() {
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 text-center">
-                      <div className="bg-white/[0.02] p-2 rounded-lg border border-white/[0.04]">
+                      <div className="bg-white/2 p-2 rounded-lg border border-white/4">
                         <span className="text-[10px] text-slate-500 block">Total Rows</span>
                         <span className="text-sm font-bold font-mono text-white">
                           {bulkActiveJob.totalRows ?? "—"}
                         </span>
                       </div>
-                      <div className="bg-white/[0.02] p-2 rounded-lg border border-white/[0.04]">
+                      <div className="bg-white/2 p-2 rounded-lg border border-white/4">
                         <span className="text-[10px] text-emerald-500 block">Imported</span>
                         <span className="text-sm font-bold font-mono text-emerald-400">
                           {bulkActiveJob.successCount ?? 0}
                         </span>
                       </div>
-                      <div className="bg-white/[0.02] p-2 rounded-lg border border-white/[0.04]">
+                      <div className="bg-white/2 p-2 rounded-lg border border-white/4">
                         <span className="text-[10px] text-rose-500 block">Failed</span>
                         <span className="text-sm font-bold font-mono text-rose-400">
                           {bulkActiveJob.failedCount ?? 0}
@@ -750,7 +748,7 @@ export default function Examiners() {
 
                     {/* Row Errors */}
                     {Array.isArray(bulkActiveJob.errors) && bulkActiveJob.errors.length > 0 && (
-                      <div className="space-y-1.5 pt-2 border-t border-white/[0.05]">
+                      <div className="space-y-1.5 pt-2 border-t border-white/5">
                         <p className="text-[11px] font-semibold text-rose-300 flex items-center gap-1.5">
                           <FaExclamationTriangle size={11} />
                           Row Parsing Errors ({bulkActiveJob.errors.length}):
@@ -775,7 +773,7 @@ export default function Examiners() {
                   </div>
                 )}
 
-                <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.06]">
+                <div className="flex justify-end gap-2 pt-2 border-t border-white/6">
                   <button
                     type="button"
                     onClick={() => {
@@ -783,7 +781,7 @@ export default function Examiners() {
                       setBulkActiveJob(null);
                       setBulkFile(null);
                     }}
-                    className="px-4 py-2 rounded-lg border border-white/[0.08] text-slate-300 hover:text-white"
+                    className="px-4 py-2 rounded-lg border border-white/8 text-slate-300 hover:text-white"
                   >
                     Close
                   </button>
@@ -812,7 +810,7 @@ export default function Examiners() {
                     Loading import history...
                   </div>
                 ) : bulkHistory.length === 0 ? (
-                  <div className="py-10 text-center text-slate-500 border border-white/[0.04] rounded-lg">
+                  <div className="py-10 text-center text-slate-500 border border-white/4 rounded-lg">
                     No past bulk import jobs recorded for this organization.
                   </div>
                 ) : (
@@ -820,7 +818,7 @@ export default function Examiners() {
                     {bulkHistory.map((job) => (
                       <div
                         key={job.jobId}
-                        className="p-3 rounded-lg border border-white/[0.06] bg-[#090a0f] flex items-center justify-between"
+                        className="p-3 rounded-lg border border-white/6 bg-[#090a0f] flex items-center justify-between"
                       >
                         <div>
                           <p className="font-semibold text-white">
@@ -851,11 +849,11 @@ export default function Examiners() {
                     ))}
                   </div>
                 )}
-                <div className="flex justify-end pt-2 border-t border-white/[0.06]">
+                <div className="flex justify-end pt-2 border-t border-white/6">
                   <button
                     type="button"
                     onClick={() => setBulkTab("upload")}
-                    className="px-4 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-white"
+                    className="px-4 py-2 rounded-lg bg-white/6 hover:bg-white/10 text-white"
                   >
                     Back to Upload
                   </button>
@@ -940,7 +938,7 @@ const ExaminerRow = ({ examiner, onView, onRemove }) => {
   ];
 
   return (
-    <tr className="hover:bg-white/[0.02] transition">
+    <tr className="hover:bg-white/2 transition">
       <td className="py-3 px-3">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold text-xs">

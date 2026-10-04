@@ -42,7 +42,7 @@ const AnalyticsCard = () => {
       {cards.map((card, index) => (
         <div
           key={index}
-          className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 hover:border-white/[0.15] transition-all duration-200 shadow-sm"
+          className="bg-[#121520] border border-white/7 rounded-xl p-5 hover:border-white/15 transition-all duration-200 shadow-sm"
         >
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-medium text-slate-400">

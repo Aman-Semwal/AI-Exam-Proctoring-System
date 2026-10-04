@@ -62,6 +62,7 @@ public class ExamProctorServiceImpl implements ExamProctorService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ProctorAssignmentResponse> getProctorsByExam(Long examId, String requesterEmail) {
         User requester = getUser(requesterEmail);
         Exam exam = getExam(examId);
@@ -74,6 +75,7 @@ public class ExamProctorServiceImpl implements ExamProctorService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ProctorAssignmentResponse> getExamsByProctor(Long examinerId, String requesterEmail) {
         User requester = getUser(requesterEmail);
         if (requester.getRole() == Role.PROCTOR && !requester.getId().equals(examinerId)) {
@@ -83,6 +85,7 @@ public class ExamProctorServiceImpl implements ExamProctorService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public boolean isProctorAssignedToExam(Long examinerId, Long examId) {
         return proctorRepository.existsByExamIdAndExaminerId(examId, examinerId);
     }

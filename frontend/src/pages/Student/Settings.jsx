@@ -191,7 +191,7 @@ const Settings = () => {
         <Topbar />
 
         <main className="p-6 lg:p-8 flex-1 overflow-y-auto max-w-5xl mx-auto w-full">
-          <div className="pb-4 mb-6 border-b border-white/[0.06]">
+          <div className="pb-4 mb-6 border-b border-white/6">
             <h2 className="text-2xl font-bold text-white tracking-tight">
               Settings
             </h2>
@@ -202,7 +202,7 @@ const Settings = () => {
           </div>
 
           {loading ? (
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-10 text-center">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-10 text-center">
               <div className="w-10 h-10 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
 
               <p className="text-sm text-slate-400">
@@ -227,8 +227,8 @@ const Settings = () => {
 
               <div className="grid sm:grid-cols-2 gap-5">
                 {/* Account Settings */}
-                <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
-                  <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-white/[0.06]">
+                <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
+                  <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-white/6">
                     <FaUserCog className="text-blue-400 text-sm" />
 
                     <h3 className="text-sm font-semibold text-white">
@@ -247,7 +247,7 @@ const Settings = () => {
                         value={account.name}
                         onChange={handleAccountChange}
                         placeholder="Username"
-                        className="w-full bg-[#090a0f] border border-white/[0.08] rounded-lg px-3 py-2 text-white outline-none focus:border-blue-500 transition"
+                        className="w-full bg-[#090a0f] border border-white/8 rounded-lg px-3 py-2 text-white outline-none focus:border-blue-500 transition"
                       />
                     </div>
 
@@ -262,15 +262,15 @@ const Settings = () => {
                         value={account.email}
                         onChange={handleAccountChange}
                         placeholder="Email"
-                        className="w-full bg-[#090a0f] border border-white/[0.08] rounded-lg px-3 py-2 text-white outline-none focus:border-blue-500 transition"
+                        className="w-full bg-[#090a0f] border border-white/8 rounded-lg px-3 py-2 text-white outline-none focus:border-blue-500 transition"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Notifications */}
-                <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
-                  <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-white/[0.06]">
+                <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
+                  <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-white/6">
                     <FaBell className="text-amber-400 text-sm" />
 
                     <h3 className="text-sm font-semibold text-white">
@@ -308,8 +308,8 @@ const Settings = () => {
                 </div>
 
                 {/* Change Password */}
-                <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
-                  <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-white/[0.06]">
+                <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
+                  <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-white/6">
                     <FaLock className="text-rose-400 text-sm" />
 
                     <h3 className="text-sm font-semibold text-white">
@@ -329,7 +329,7 @@ const Settings = () => {
                         value={passwords.currentPassword}
                         onChange={handlePasswordChange}
                         placeholder="Current Password"
-                        className="w-full bg-[#090a0f] border border-white/[0.08] rounded-lg px-3 py-2 text-white outline-none focus:border-blue-500 transition"
+                        className="w-full bg-[#090a0f] border border-white/8 rounded-lg px-3 py-2 text-white outline-none focus:border-blue-500 transition"
                       />
                     </div>
 
@@ -344,7 +344,7 @@ const Settings = () => {
                         value={passwords.newPassword}
                         onChange={handlePasswordChange}
                         placeholder="New Password"
-                        className="w-full bg-[#090a0f] border border-white/[0.08] rounded-lg px-3 py-2 text-white outline-none focus:border-blue-500 transition"
+                        className="w-full bg-[#090a0f] border border-white/8 rounded-lg px-3 py-2 text-white outline-none focus:border-blue-500 transition"
                       />
                     </div>
 
@@ -356,8 +356,8 @@ const Settings = () => {
                 </div>
 
                 {/* Preferences */}
-                <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
-                  <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-white/[0.06]">
+                <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
+                  <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-white/6">
                     <FaMoon className="text-blue-400 text-sm" />
 
                     <h3 className="text-sm font-semibold text-white">
@@ -396,8 +396,8 @@ const Settings = () => {
               </div>
 
               {/* Recovery Email */}
-              <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm mt-5">
-                <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-white/[0.06]">
+              <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm mt-5">
+                <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-white/6">
                   <FaEnvelope className="text-blue-400 text-sm" />
 
                   <h3 className="text-sm font-semibold text-white">
@@ -415,7 +415,7 @@ const Settings = () => {
                     value={recoveryEmail}
                     onChange={(e) => setRecoveryEmail(e.target.value)}
                     placeholder="Recovery Email"
-                    className="w-full sm:w-96 bg-[#090a0f] border border-white/[0.08] rounded-lg px-3 py-2 text-white outline-none focus:border-blue-500 transition"
+                    className="w-full sm:w-96 bg-[#090a0f] border border-white/8 rounded-lg px-3 py-2 text-white outline-none focus:border-blue-500 transition"
                   />
                 </div>
               </div>

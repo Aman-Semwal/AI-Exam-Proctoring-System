@@ -22,6 +22,10 @@ public class ExamResultResponse {
     private String appliedRole;
     private String sessionStatus;
 
+    /** 0–100, computed from non-dismissed violations (see TrustScoreService). */
+    private Integer trustScore;
+    private com.proctor.proctorbackend.violation.TrustLevel trustLevel;
+
     private Integer score;
     private Integer totalMarks;
     private Double percentage;

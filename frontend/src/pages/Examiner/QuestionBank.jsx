@@ -531,14 +531,14 @@ export default function QuestionBank() {
   return (
     <div className="min-h-screen bg-[#090a0f] text-slate-100">
       {/* Header */}
-      <header className="border-b border-white/[0.07] bg-[#0d0f17]">
+      <header className="border-b border-white/7 bg-[#0d0f17]">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
               onClick={() =>
                 navigate("/examiner/dashboard")
               }
-              className="h-9 w-9 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.08] transition"
+              className="h-9 w-9 rounded-lg bg-white/4 border border-white/8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/8 transition"
               title="Back to Dashboard"
             >
               <FaArrowLeft size={13} />
@@ -596,7 +596,7 @@ export default function QuestionBank() {
         )}
 
         {/* Exam selector */}
-        <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 mb-6">
+        <div className="bg-[#121520] border border-white/7 rounded-xl p-5 mb-6">
           <label className="block text-xs font-semibold text-slate-300 mb-2">
             Select Exam
           </label>
@@ -611,7 +611,7 @@ export default function QuestionBank() {
               onChange={(e) =>
                 setSelectedExamId(e.target.value)
               }
-              className="w-full max-w-xl px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"
+              className="w-full max-w-xl px-3 py-2.5 bg-[#090a0f] border border-white/8 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"
             >
               <option value="">
                 Select an exam
@@ -641,7 +641,7 @@ export default function QuestionBank() {
         {/* Stats */}
         {selectedExamId && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-5">
               <p className="text-xs text-slate-400 uppercase tracking-wider">
                 Total Questions
               </p>
@@ -651,7 +651,7 @@ export default function QuestionBank() {
               </p>
             </div>
 
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-5">
               <p className="text-xs text-slate-400 uppercase tracking-wider">
                 Total Marks
               </p>
@@ -667,7 +667,7 @@ export default function QuestionBank() {
               </p>
             </div>
 
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-5">
               <p className="text-xs text-slate-400 uppercase tracking-wider">
                 Question Types
               </p>
@@ -688,7 +688,7 @@ export default function QuestionBank() {
         )}
 
         {/* Questions */}
-        <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5">
+        <div className="bg-[#121520] border border-white/7 rounded-xl p-5">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-base font-bold text-white">
@@ -738,7 +738,7 @@ export default function QuestionBank() {
               {questions.map((question, index) => (
                 <div
                   key={question.id}
-                  className="border border-white/[0.07] rounded-xl p-4 hover:bg-white/[0.02] transition"
+                  className="border border-white/7 rounded-xl p-4 hover:bg-white/2 transition"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex gap-3 min-w-0">
@@ -759,7 +759,7 @@ export default function QuestionBank() {
                           </span>
 
                           {question.track && (
-                            <span className="px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-slate-400 text-[10px]">
+                            <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/8 text-slate-400 text-[10px]">
                               {question.track}
                             </span>
                           )}
@@ -783,7 +783,7 @@ export default function QuestionBank() {
                                       question.correctOption ===
                                       key
                                         ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"
-                                        : "bg-[#090a0f] border-white/[0.06] text-slate-400"
+                                        : "bg-[#090a0f] border-white/6 text-slate-400"
                                     }`}
                                   >
                                     <span className="font-semibold mr-2">
@@ -834,8 +834,8 @@ export default function QuestionBank() {
       {/* Add / Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#121520] border border-white/[0.1] rounded-2xl max-w-2xl w-full p-6 shadow-2xl my-8">
-            <div className="flex items-center justify-between pb-4 mb-5 border-b border-white/[0.06]">
+          <div className="bg-[#121520] border border-white/10 rounded-2xl max-w-2xl w-full p-6 shadow-2xl my-8">
+            <div className="flex items-center justify-between pb-4 mb-5 border-b border-white/6">
               <div>
                 <h3 className="text-base font-bold text-white">
                   {editingQuestion
@@ -876,7 +876,7 @@ export default function QuestionBank() {
                     onChange={(e) =>
                       setQuestionType(e.target.value)
                     }
-                    className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/8 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   >
                     <option value="MCQ">MCQ</option>
                     <option value="TRUE_FALSE">
@@ -906,7 +906,7 @@ export default function QuestionBank() {
                     onChange={(e) =>
                       setMarks(e.target.value)
                     }
-                    className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/8 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
@@ -922,7 +922,7 @@ export default function QuestionBank() {
                       setTrack(e.target.value)
                     }
                     placeholder="COMMON"
-                    className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -940,7 +940,7 @@ export default function QuestionBank() {
                   }
                   rows="4"
                   placeholder="Enter your question..."
-                  className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none"
+                  className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none"
                 />
               </div>
 
@@ -972,7 +972,7 @@ export default function QuestionBank() {
                           setter(e.target.value)
                         }
                         placeholder={`Option ${letter}`}
-                        className="flex-1 px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                        className="flex-1 px-3 py-2.5 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                       />
                     </div>
                   ))}
@@ -987,7 +987,7 @@ export default function QuestionBank() {
                       onChange={(e) =>
                         setCorrectOption(e.target.value)
                       }
-                      className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-blue-500"
+                      className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/8 rounded-lg text-white focus:outline-none focus:border-blue-500"
                     >
                       <option value="A">A</option>
                       <option value="B">B</option>
@@ -1012,7 +1012,7 @@ export default function QuestionBank() {
                         e.target.value
                       )
                     }
-                    className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/8 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   >
                     <option value="True">True</option>
                     <option value="False">False</option>
@@ -1036,7 +1036,7 @@ export default function QuestionBank() {
                       )
                     }
                     placeholder="Enter expected answer"
-                    className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                   />
                 </div>
               )}
@@ -1057,7 +1057,7 @@ export default function QuestionBank() {
                         setMaxWords(e.target.value)
                       }
                       placeholder="e.g. 200"
-                      className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                      className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                     />
                   </div>
 
@@ -1073,7 +1073,7 @@ export default function QuestionBank() {
                       }
                       rows="3"
                       placeholder="Mention key points expected in the answer..."
-                      className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none"
+                      className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none"
                     />
                   </div>
                 </div>
@@ -1092,7 +1092,7 @@ export default function QuestionBank() {
                       onChange={(e) =>
                         setLanguage(e.target.value)
                       }
-                      className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-blue-500"
+                      className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/8 rounded-lg text-white focus:outline-none focus:border-blue-500"
                     >
                       <option value="java">Java</option>
                       <option value="cpp">C++</option>
@@ -1117,7 +1117,7 @@ export default function QuestionBank() {
                       }
                       rows="6"
                       placeholder="Enter starter code..."
-                      className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none font-mono"
+                      className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none font-mono"
                     />
                   </div>
 
@@ -1141,7 +1141,7 @@ export default function QuestionBank() {
                         (testCase, index) => (
                           <div
                             key={index}
-                            className="border border-white/[0.07] rounded-lg p-3"
+                            className="border border-white/7 rounded-lg p-3"
                           >
                             <div className="flex justify-between mb-2">
                               <span className="text-[11px] text-slate-500">
@@ -1177,7 +1177,7 @@ export default function QuestionBank() {
                                   )
                                 }
                                 placeholder="Input"
-                                className="px-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                                className="px-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                               />
 
                               <input
@@ -1193,7 +1193,7 @@ export default function QuestionBank() {
                                   )
                                 }
                                 placeholder="Expected Output"
-                                className="px-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                                className="px-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                               />
                             </div>
                           </div>
@@ -1205,14 +1205,14 @@ export default function QuestionBank() {
               )}
 
               {/* Buttons */}
-              <div className="flex justify-end gap-2.5 pt-4 border-t border-white/[0.06]">
+              <div className="flex justify-end gap-2.5 pt-4 border-t border-white/6">
                 <button
                   type="button"
                   onClick={() => {
                     setIsModalOpen(false);
                     resetForm();
                   }}
-                  className="px-4 py-2 bg-[#090a0f] hover:bg-white/[0.04] text-slate-300 rounded-lg font-medium border border-white/[0.08] transition"
+                  className="px-4 py-2 bg-[#090a0f] hover:bg-white/4 text-slate-300 rounded-lg font-medium border border-white/8 transition"
                 >
                   Cancel
                 </button>
@@ -1238,8 +1238,8 @@ export default function QuestionBank() {
 
       {/* Delete Modal */}
       {deleteQuestion && (
-        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#121520] border border-white/[0.1] rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+        <div className="fixed inset-0 z-60 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#121520] border border-white/10 rounded-2xl max-w-sm w-full p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-bold text-white">
                 Delete Question?
@@ -1274,7 +1274,7 @@ export default function QuestionBank() {
                   setDeleteQuestion(null)
                 }
                 disabled={deleting}
-                className="px-4 py-2 bg-[#090a0f] text-slate-300 rounded-lg border border-white/[0.08]"
+                className="px-4 py-2 bg-[#090a0f] text-slate-300 rounded-lg border border-white/8"
               >
                 Cancel
               </button>

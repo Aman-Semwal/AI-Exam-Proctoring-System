@@ -1,10 +1,13 @@
 package com.proctor.proctorbackend.proctoring;
 
 import com.proctor.proctorbackend.common.enums.Role;
+import com.proctor.proctorbackend.common.exception.BadRequestException;
 import com.proctor.proctorbackend.common.exception.ResourceNotFoundException;
 import com.proctor.proctorbackend.common.exception.UnauthorizedException;
+import com.proctor.proctorbackend.exam.ProctoringRules;
 import com.proctor.proctorbackend.examproctor.ExamProctorService;
 import com.proctor.proctorbackend.proctoring.dto.AnalyzeResponse;
+import com.proctor.proctorbackend.proctoring.dto.BrowserEventResponse;
 import com.proctor.proctorbackend.proctoring.dto.FrameUploadRequest;
 import com.proctor.proctorbackend.proctoring.dto.ProctoringEventResponse;
 import com.proctor.proctorbackend.session.ExamSession;
@@ -14,6 +17,8 @@ import com.proctor.proctorbackend.session.SessionStatus;
 import com.proctor.proctorbackend.user.User;
 import com.proctor.proctorbackend.user.UserRepository;
 import com.proctor.proctorbackend.violation.Violation;
+import com.proctor.proctorbackend.violation.ViolationEvidence;
+import com.proctor.proctorbackend.violation.ViolationEvidenceRepository;
 import com.proctor.proctorbackend.violation.ViolationRepository;
 import com.proctor.proctorbackend.violation.ViolationSeverity;
 import com.proctor.proctorbackend.violation.ViolationType;
@@ -73,6 +78,10 @@ public class ProctoringServiceImpl implements ProctoringService {
     private final ExamProctorService        examProctorService;
     private final ScoreCalculationService   scoreCalculationService;
     private final StringRedisTemplate       stringRedisTemplate;
+    private final ViolationEvidenceRepository evidenceRepository;
+
+    /** Violation string the backend adds itself (the AI service never emits it). */
+    private static final String SPEECH_VIOLATION = "speech_detected";
 
     /** Redis key prefix for violation deduplication. */
     private static final String DEDUP_PREFIX = "proctor:dedupe:";
@@ -103,6 +112,10 @@ public class ProctoringServiceImpl implements ProctoringService {
     @Value("${proctoring.identity.check-interval-frames:10}")
     private int identityCheckIntervalFrames;
 
+    /** Minimum share of a chunk classified as speech before it counts as SPEECH_DETECTED. */
+    @Value("${proctoring.audio.speech-fraction-threshold:0.3}")
+    private double speechFractionThreshold;
+
     // -----------------------------------------------------------------------
     // AI violation string → Java enum + severity
     // -----------------------------------------------------------------------
@@ -128,6 +141,7 @@ public class ProctoringServiceImpl implements ProctoringService {
             case "looking_away"        -> ViolationType.LOOKING_AWAY;
             case "unauthorized_object" -> ViolationType.UNAUTHORIZED_OBJECT;
             case "identity_mismatch"   -> ViolationType.IDENTITY_MISMATCH;
+            case SPEECH_VIOLATION      -> ViolationType.SPEECH_DETECTED;
             default -> {
                 // Unknown violation string from AI — log and skip rather than crash
                 log.warn("Unrecognised AI violation type: '{}'", aiViolation);
@@ -156,7 +170,19 @@ public class ProctoringServiceImpl implements ProctoringService {
             case LOOKING_AWAY           -> ViolationSeverity.MEDIUM;
             case UNAUTHORIZED_OBJECT    -> ViolationSeverity.CRITICAL;
             case IDENTITY_MISMATCH      -> ViolationSeverity.CRITICAL;
+            case SPEECH_DETECTED        -> ViolationSeverity.MEDIUM;
             default                     -> ViolationSeverity.LOW;
+        };
+    }
+
+    /** Whether the exam's rules want this AI violation type recorded. */
+    private static boolean isEnabled(ViolationType type, ProctoringRules rules) {
+        if (type == null) return true; // unknown strings are logged and skipped later
+        return switch (type) {
+            case LOOKING_AWAY        -> rules.isGazeTrackingEnabled();
+            case UNAUTHORIZED_OBJECT -> rules.isObjectDetectionEnabled();
+            case IDENTITY_MISMATCH   -> rules.isIdentityCheckEnabled();
+            default                  -> true;
         };
     }
 
@@ -167,7 +193,8 @@ public class ProctoringServiceImpl implements ProctoringService {
      */
     private static boolean shouldDedup(ViolationType type) {
         return type == ViolationType.MULTIPLE_FACES_DETECTED
-                || type == ViolationType.LOOKING_AWAY;
+                || type == ViolationType.LOOKING_AWAY
+                || type == ViolationType.SPEECH_DETECTED;
     }
 
     // -----------------------------------------------------------------------
@@ -188,11 +215,13 @@ public class ProctoringServiceImpl implements ProctoringService {
             throw new IllegalStateException("Session is not active");
         }
 
-        // ── Identity check enforcement (Fix #2) ──────────────────────────────
-        // Increment per-session frame counter and decide whether identity
-        // verification is due this frame.
-        List<Double> embeddingToSend = request.getReferenceEmbedding();
-        if (identityCheckIntervalFrames > 0) {
+        // ── Identity check every N frames ────────────────────────────────────
+        // The reference embedding comes only from the server-side enrollment
+        // (enrollReference) — never from the client, which could otherwise send
+        // its own embedding and pass every check.
+        ProctoringRules rules = session.getExam().getProctoringRules();
+        List<Double> embeddingToSend = null;
+        if (identityCheckIntervalFrames > 0 && rules.isIdentityCheckEnabled()) {
             String counterKey = FRAME_COUNTER_PREFIX + session.getId();
             Long frameCount = stringRedisTemplate.opsForValue().increment(counterKey);
             // Set a generous TTL so the counter expires if the session goes idle
@@ -200,21 +229,22 @@ public class ProctoringServiceImpl implements ProctoringService {
                 stringRedisTemplate.expire(counterKey, Duration.ofHours(12));
             }
             boolean identityDue = (frameCount != null) && (frameCount % identityCheckIntervalFrames == 0);
-            if (identityDue && embeddingToSend == null) {
-                // Identity check is due but the client did not send an embedding.
-                // Log a warning — this is the enforcement signal. We do NOT synthesize
-                // a false violation here; instead we rely on the client to supply the
-                // embedding on the next frame. The policy is: warn and record, not punish.
-                log.warn("Identity check due at frame {} for session {} but no reference "
-                        + "embedding was provided — identity cannot be verified for this frame.",
-                        frameCount, session.getId());
+            if (identityDue) {
+                embeddingToSend = session.getReferenceEmbedding();
+                if (embeddingToSend == null) {
+                    // Warn, don't punish: a missing enrollment is not evidence of cheating.
+                    log.warn("Identity check due at frame {} for session {} but no reference "
+                            + "photo is enrolled — identity cannot be verified for this frame.",
+                            frameCount, session.getId());
+                }
             }
         }
 
         // ── Call AI service (/infer/analyze) ────────────────────────────────
-        // Pass the reference embedding when available so the AI service runs
-        // identity verification in the same round trip (Fix #2).
-        AnalyzeResponse ai = aiServiceClient.analyze(request.getFrameBase64(), embeddingToSend, null);
+        // Pass the reference embedding when due so the AI service runs
+        // identity verification in the same round trip.
+        String audioToSend = rules.isAudioMonitoringEnabled() ? request.getAudioBase64() : null;
+        AnalyzeResponse ai = aiServiceClient.analyze(request.getFrameBase64(), embeddingToSend, audioToSend);
 
         // ── Skip-frame fallback (Fix #3) ─────────────────────────────────────
         // AiServiceClient.analyze() returns null when the AI service is
@@ -260,9 +290,20 @@ public class ProctoringServiceImpl implements ProctoringService {
         ProctoringEvent saved = eventRepository.save(event);
 
         // ── No violations — clean frame ──────────────────────────────────────
-        List<String> aiViolations = ai.getViolations() != null ? ai.getViolations() : List.of();
+        // Checks the exam has switched off are dropped here (the AI runs every detector)
+        List<String> aiViolations = (ai.getViolations() != null ? ai.getViolations() : List.<String>of())
+                .stream()
+                .filter(v -> isEnabled(mapAiViolation(v), rules))
+                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+        // The AI reports voice activity but leaves the "is this cheating" call to us:
+        // only sustained speech (not a cough) becomes a violation
+        if (ai.getVoiceActivity() != null
+                && ai.getVoiceActivity().isSpeechDetected()
+                && ai.getVoiceActivity().getSpeechFraction() >= speechFractionThreshold) {
+            aiViolations.add(SPEECH_VIOLATION);
+        }
         if (aiViolations.isEmpty()) {
-            return toResponse(saved);
+            return toResponse(saved, aiViolations, session.getStatus());
         }
 
         // ── Map and persist violations ───────────────────────────────────────
@@ -293,6 +334,7 @@ public class ProctoringServiceImpl implements ProctoringService {
                     .reviewed(false)
                     .build();
             violationRepository.save(violation);
+            saveEvidence(violation, request.getFrameBase64());
             persistedTypes.add(javaType);
         }
 
@@ -320,7 +362,7 @@ public class ProctoringServiceImpl implements ProctoringService {
                             .build());
 
             // Return early — do NOT also send a regular violation alert (BUG-002 fix)
-            return toResponse(saved);
+            return toResponse(saved, aiViolations, session.getStatus());
         }
 
         // ── Broadcast violation alert to examiner(s) ─────────────────────────
@@ -337,7 +379,125 @@ public class ProctoringServiceImpl implements ProctoringService {
         log.warn("Proctoring alert: session={} violations={} severity={}",
                 session.getId(), aiViolations, ai.getSeverityLevel());
 
-        return toResponse(saved);
+        return toResponse(saved, aiViolations, session.getStatus());
+    }
+
+    // -----------------------------------------------------------------------
+    // enrollReference
+    // -----------------------------------------------------------------------
+
+    @Override
+    @Transactional
+    public void enrollReference(Long sessionId, String imageBase64, String studentEmail) {
+        ExamSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Session", sessionId));
+
+        if (!session.getStudent().getEmail().equals(studentEmail)) {
+            throw new UnauthorizedException("You do not own this session");
+        }
+        if (session.getStatus() != SessionStatus.ACTIVE) {
+            throw new IllegalStateException("Session is not active");
+        }
+        // Once set, the reference is fixed — re-enrolling mid-exam would let a
+        // stand-in replace the original candidate's face.
+        if (session.getReferenceEmbedding() != null) {
+            throw new IllegalStateException("Reference photo already enrolled for this session");
+        }
+
+        List<Double> embedding = aiServiceClient.embed(imageBase64);
+        if (embedding == null) {
+            throw new BadRequestException("No face detected in the photo — please retake it");
+        }
+
+        session.setReferenceEmbedding(embedding);
+        sessionRepository.save(session);
+        log.info("Reference photo enrolled for session {}", sessionId);
+    }
+
+    // -----------------------------------------------------------------------
+    // recordBrowserEvent
+    // -----------------------------------------------------------------------
+
+    @Override
+    @Transactional
+    public BrowserEventResponse recordBrowserEvent(Long sessionId, ViolationType type, String studentEmail) {
+        // Severity is fixed server-side so a client cannot downgrade its own violations
+        ViolationSeverity severity = switch (type) {
+            case TAB_SWITCH      -> ViolationSeverity.HIGH;
+            case FULLSCREEN_EXIT -> ViolationSeverity.MEDIUM;
+            default -> throw new BadRequestException("Unsupported browser event type: " + type);
+        };
+
+        ExamSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Session", sessionId));
+        if (!session.getStudent().getEmail().equals(studentEmail)) {
+            throw new UnauthorizedException("You do not own this session");
+        }
+        if (session.getStatus() != SessionStatus.ACTIVE) {
+            throw new IllegalStateException("Session is not active");
+        }
+
+        String detail = type == ViolationType.TAB_SWITCH
+                ? "Student switched tab or left the exam window"
+                : "Student exited full-screen mode";
+        violationRepository.save(Violation.builder()
+                .session(session)
+                .organization(session.getOrganization())
+                .type(type)
+                .severity(severity)
+                .details(detail)
+                .reviewed(false)
+                .build());
+
+        String alertTopic = "/topic/alerts/" + session.getExam().getId();
+        messagingTemplate.convertAndSend(alertTopic, AlertMessage.builder()
+                .sessionId(session.getId())
+                .studentName(session.getStudent().getName())
+                .eventType(type.name())
+                .details(detail + " | severity=" + severity)
+                .build());
+
+        long tabSwitchCount = violationRepository.countBySessionIdAndType(session.getId(), ViolationType.TAB_SWITCH);
+        int tabSwitchLimit = session.getExam().getProctoringRules().getTabSwitchLimit();
+        boolean autoSubmit = type == ViolationType.TAB_SWITCH
+                && tabSwitchLimit > 0
+                && tabSwitchCount >= tabSwitchLimit;
+
+        if (autoSubmit) {
+            // Same outcome as a normal submit: answers are scored and the session is COMPLETED
+            session.setScore(scoreCalculationService.calculate(session));
+            session.setStatus(SessionStatus.COMPLETED);
+            session.setEndTime(LocalDateTime.now(ZoneId.of("UTC")));
+            sessionRepository.save(session);
+
+            log.warn("Session {} auto-submitted after {} tab switches", session.getId(), tabSwitchCount);
+            messagingTemplate.convertAndSend(alertTopic, AlertMessage.builder()
+                    .sessionId(session.getId())
+                    .studentName(session.getStudent().getName())
+                    .eventType("SESSION_AUTO_SUBMITTED")
+                    .details("Exam auto-submitted after " + tabSwitchCount + " tab switches")
+                    .build());
+        }
+
+        return BrowserEventResponse.builder()
+                .tabSwitchCount(tabSwitchCount)
+                .autoSubmitted(autoSubmit)
+                .build();
+    }
+
+    // -----------------------------------------------------------------------
+    // getMyViolationCount
+    // -----------------------------------------------------------------------
+
+    @Override
+    @Transactional(readOnly = true)
+    public long getMyViolationCount(Long sessionId, String studentEmail) {
+        ExamSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Session", sessionId));
+        if (!session.getStudent().getEmail().equals(studentEmail)) {
+            throw new UnauthorizedException("You do not own this session");
+        }
+        return violationRepository.countBySessionId(sessionId);
     }
 
     // -----------------------------------------------------------------------
@@ -345,6 +505,7 @@ public class ProctoringServiceImpl implements ProctoringService {
     // -----------------------------------------------------------------------
 
     @Override
+    @Transactional(readOnly = true)
     public List<ProctoringEventResponse> getEventsBySession(Long sessionId, String requesterEmail) {
         User requester = userRepository.findByEmail(requesterEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User", requesterEmail));
@@ -358,6 +519,23 @@ public class ProctoringServiceImpl implements ProctoringService {
     // -----------------------------------------------------------------------
     // Private helpers
     // -----------------------------------------------------------------------
+
+    /** Stores the frame behind a violation so a reviewer can see why it was flagged. */
+    private void saveEvidence(Violation violation, String frameBase64) {
+        byte[] image;
+        try {
+            image = java.util.Base64.getDecoder().decode(frameBase64);
+        } catch (IllegalArgumentException ex) {
+            log.warn("Frame for session {} is not valid base64 — no evidence stored",
+                    violation.getSession().getId());
+            return;
+        }
+        evidenceRepository.save(ViolationEvidence.builder()
+                .violation(violation)
+                .contentType("image/jpeg")
+                .data(image)
+                .build());
+    }
 
     /** Builds a human-readable detail string for the proctoring event record. */
     private String buildEventDetails(int faceCount, AnalyzeResponse ai) {
@@ -399,6 +577,8 @@ public class ProctoringServiceImpl implements ProctoringService {
                         ? String.format("similarity=%.3f", ai.getIdentity().getSimilarity()) : "";
                 yield "Identity mismatch" + (sim.isEmpty() ? "" : " (" + sim + ")");
             }
+            case SPEECH_DETECTED -> String.format("Speech detected (%.0f%% of the audio chunk)",
+                    ai.getVoiceActivity().getSpeechFraction() * 100);
             case NO_FACE_DETECTED       -> "No face detected in frame";
             case MULTIPLE_FACES_DETECTED -> {
                 int count = (ai.getFace() != null) ? ai.getFace().getFaceCount() : 0;
@@ -419,6 +599,14 @@ public class ProctoringServiceImpl implements ProctoringService {
                         user.getId(), session.getExam().getId())) {
             throw new UnauthorizedException("You are not assigned to proctor this exam");
         }
+    }
+
+    private ProctoringEventResponse toResponse(ProctoringEvent event, List<String> violations,
+                                               SessionStatus sessionStatus) {
+        ProctoringEventResponse response = toResponse(event);
+        response.setViolationsDetected(violations);
+        response.setSessionStatus(sessionStatus);
+        return response;
     }
 
     private ProctoringEventResponse toResponse(ProctoringEvent event) {

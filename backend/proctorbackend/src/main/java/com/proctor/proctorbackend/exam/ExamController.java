@@ -83,4 +83,14 @@ public class ExamController {
         examService.deleteExam(id, userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success("Exam deleted"));
     }
+
+    @PatchMapping("/{id}/publish")
+    @Operation(summary = "Publish an exam (DRAFT → PUBLISHED)")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<ExamResponse>> publishExam(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        ExamResponse response = examService.publishExam(id, userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success("Exam published successfully", response));
+    }
 }

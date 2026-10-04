@@ -5,6 +5,9 @@ import ActionDropdown from "../../components/common/ActionDropdown";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import Toast from "../../components/common/Toast";
 import api from "../../services/api";
+import { toApiDateTime } from "../../utils/dateTime";
+import ProctoringRulesFields from "../../components/exam/ProctoringRulesFields";
+import { DEFAULT_PROCTORING_RULES } from "../../utils/proctoringRules";
 
 export default function UpcomingExams() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -23,15 +26,23 @@ export default function UpcomingExams() {
 
   // ── NEW: Assigned students per exam ─────────────────────────────────────────
   const [examAssignments, setExamAssignments] = useState({}); // { [examId]: AssignmentResponse[] }
-  const [assignmentsLoading, setAssignmentsLoading] = useState(false);
+  const [, setAssignmentsLoading] = useState(false);
 
   // ── NEW: Individual assign form ──────────────────────────────────────────────
   const [showAssignForm, setShowAssignForm] = useState(false);
   const [assignStudentEmail, setAssignStudentEmail] = useState("");
-  const [assigningIndividual, setAssigningIndividual] = useState(false);
 
   // ── NEW: Per-row remove loading ──────────────────────────────────────────────
-  const [removingAssignmentId, setRemovingAssignmentId] = useState(null);
+  const [, setRemovingAssignmentId] = useState(null);
+
+  // ── NEW: Exam roles management ──────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState("students");
+  const [orgMembers, setOrgMembers] = useState([]);
+  const [, setMembersLoading] = useState(false);
+
+  const [examExaminers, setExamExaminers] = useState({});
+  const [examProctors, setExamProctors] = useState({});
+  const [assigningRole, setAssigningRole] = useState(false);
 
   // Toast
   const [toast, setToast] = useState(null);
@@ -43,6 +54,9 @@ export default function UpcomingExams() {
     durationMinutes: "60",
     startTime: "",
     endTime: "",
+    examinerId: "",
+    proctorId: "",
+    proctoringRules: DEFAULT_PROCTORING_RULES,
   });
 
   const currentUser = useMemo(() => {
@@ -92,16 +106,19 @@ export default function UpcomingExams() {
     const fetchAssignments = async () => {
       try {
         setAssignmentsLoading(true);
-        const res = await api.get(`/assignments/exam/${detailExam.id}`);
-        const list = Array.isArray(res.data?.data)
-          ? res.data.data
-          : Array.isArray(res.data)
-          ? res.data
-          : [];
-        setExamAssignments((prev) => ({ ...prev, [detailExam.id]: list }));
+        const [studentRes, examinerRes, proctorRes] = await Promise.all([
+          api.get(`/assignments/exam/${detailExam.id}`),
+          api.get(`/exams/${detailExam.id}/examiners`),
+          api.get(`/exams/${detailExam.id}/proctors`)
+        ]);
+
+        const extractList = (res) => Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+
+        setExamAssignments((prev) => ({ ...prev, [detailExam.id]: extractList(studentRes) }));
+        setExamExaminers((prev) => ({ ...prev, [detailExam.id]: extractList(examinerRes) }));
+        setExamProctors((prev) => ({ ...prev, [detailExam.id]: extractList(proctorRes) }));
       } catch (err) {
         console.error("Failed to load assignments:", err);
-        setExamAssignments((prev) => ({ ...prev, [detailExam.id]: [] }));
       } finally {
         setAssignmentsLoading(false);
       }
@@ -111,7 +128,24 @@ export default function UpcomingExams() {
     // Reset individual-assign form state on modal open
     setShowAssignForm(false);
     setAssignStudentEmail("");
-  }, [detailExam?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    setActiveTab("students");
+  }, [detailExam?.id]);
+
+  useEffect(() => {
+    const fetchOrgMembers = async () => {
+      if (!currentUser?.orgId) return;
+      try {
+        setMembersLoading(true);
+        const res = await api.get(`/organizations/${currentUser.orgId}/members`);
+        setOrgMembers(Array.isArray(res.data?.data) ? res.data.data : []);
+      } catch (err) {
+        console.error("Failed to fetch org members", err);
+      } finally {
+        setMembersLoading(false);
+      }
+    };
+    fetchOrgMembers();
+  }, [currentUser?.orgId]);
 
   const upcomingExams = useMemo(() => {
     const now = new Date();
@@ -208,11 +242,22 @@ export default function UpcomingExams() {
         title: form.title.trim(),
         description: form.description.trim(),
         durationMinutes: Number(form.durationMinutes),
-        startTime: form.startTime,
-        endTime: form.endTime,
+        startTime: toApiDateTime(form.startTime),
+        endTime: toApiDateTime(form.endTime),
+        proctoringRules: form.proctoringRules,
       };
 
-      await api.post("/exams", payload);
+      const response = await api.post("/exams", payload);
+      const examId = response.data?.data?.id || response.data?.id;
+
+      if (examId) {
+        if (form.examinerId) {
+          await api.post(`/exams/${examId}/examiners`, { examinerId: Number(form.examinerId) }).catch(e => console.error("Failed to assign examiner", e));
+        }
+        if (form.proctorId) {
+          await api.post(`/exams/${examId}/proctors`, { examinerId: Number(form.proctorId) }).catch(e => console.error("Failed to assign proctor", e));
+        }
+      }
 
       setToast({ type: "success", message: `Exam "${form.title}" scheduled successfully!` });
       setShowScheduleModal(false);
@@ -222,6 +267,9 @@ export default function UpcomingExams() {
         durationMinutes: "60",
         startTime: "",
         endTime: "",
+        examinerId: "",
+        proctorId: "",
+        proctoringRules: DEFAULT_PROCTORING_RULES,
       });
 
       await loadUpcomingExams();
@@ -283,73 +331,78 @@ export default function UpcomingExams() {
     }
   };
 
-  // ── NEW: Assign individual student handler ───────────────────────────────────
-  const handleAssignIndividual = async (e) => {
+  // ── NEW: Assign role handler ───────────────────────────────────
+  const handleAssignRole = async (e, roleType, userId) => {
     e.preventDefault();
-    if (!detailExam || !assignStudentEmail.trim()) return;
+    if (!detailExam || !userId) return;
 
     try {
-      setAssigningIndividual(true);
-      const res = await api.post("/assignments", {
-        examId: Number(detailExam.id),
-        studentEmail: assignStudentEmail.trim(),
-      });
+      setAssigningRole(true);
+      if (roleType === "STUDENT") {
+        const res = await api.post("/assignments", {
+          examId: Number(detailExam.id),
+          studentId: Number(userId),
+        });
+        const newAssignment = res.data?.data ?? { examId: detailExam.id, studentId: userId };
+        setExamAssignments((prev) => ({
+          ...prev,
+          [detailExam.id]: [...(prev[detailExam.id] || []), newAssignment],
+        }));
+      } else if (roleType === "EXAMINER") {
+        const res = await api.post(`/exams/${detailExam.id}/examiners`, { examinerId: Number(userId) });
+        setExamExaminers((prev) => ({
+          ...prev,
+          [detailExam.id]: [...(prev[detailExam.id] || []), res.data?.data],
+        }));
+      } else if (roleType === "PROCTOR") {
+        const res = await api.post(`/exams/${detailExam.id}/proctors`, { examinerId: Number(userId) }); // Using examinerId in proctor request DTO per existing code
+        setExamProctors((prev) => ({
+          ...prev,
+          [detailExam.id]: [...(prev[detailExam.id] || []), res.data?.data],
+        }));
+      }
 
-      // Build the new assignment object from the response
-      const newAssignment =
-        res.data?.data ?? res.data ?? {
-          examId: detailExam.id,
-          studentEmail: assignStudentEmail.trim(),
-        };
-
-      setExamAssignments((prev) => ({
-        ...prev,
-        [detailExam.id]: [...(prev[detailExam.id] || []), newAssignment],
-      }));
-
-      setToast({
-        type: "success",
-        message: `Student "${assignStudentEmail.trim()}" assigned successfully.`,
-      });
-      setAssignStudentEmail("");
-      setShowAssignForm(false);
+      setToast({ type: "success", message: `Successfully assigned user.` });
+      setAssignStudentEmail(""); // reset dropdowns
     } catch (err) {
-      console.error("Assign individual error:", err);
-      setToast({
-        type: "error",
-        message: err.response?.data?.message || "Failed to assign student.",
-      });
+      console.error(`Failed to assign ${roleType}:`, err);
+      setToast({ type: "error", message: err.response?.data?.message || "Failed to assign user." });
     } finally {
-      setAssigningIndividual(false);
+      setAssigningRole(false);
     }
   };
 
-  // ── NEW: Remove individual assignment handler ────────────────────────────────
-  const handleRemoveAssignment = async (assignmentId) => {
-    if (!detailExam) return;
-
+  const handleRemoveRole = async (roleType, assignmentId, userId) => {
     try {
-      setRemovingAssignmentId(assignmentId);
-      await api.delete(`/assignments/${assignmentId}`);
-
-      setExamAssignments((prev) => ({
-        ...prev,
-        [detailExam.id]: (prev[detailExam.id] || []).filter(
-          (a) => a.id !== assignmentId
-        ),
-      }));
-
-      setToast({ type: "success", message: "Student removed from exam." });
+      setRemovingAssignmentId(assignmentId || userId);
+      if (roleType === "STUDENT") {
+        await api.delete(`/assignments/${assignmentId}`);
+        setExamAssignments((prev) => ({
+          ...prev,
+          [detailExam.id]: prev[detailExam.id].filter((a) => a.id !== assignmentId),
+        }));
+      } else if (roleType === "EXAMINER") {
+        await api.delete(`/exams/${detailExam.id}/examiners/${userId}`);
+        setExamExaminers((prev) => ({
+          ...prev,
+          [detailExam.id]: prev[detailExam.id].filter((a) => a.examinerId !== userId),
+        }));
+      } else if (roleType === "PROCTOR") {
+        await api.delete(`/exams/${detailExam.id}/proctors/${userId}`);
+        setExamProctors((prev) => ({
+          ...prev,
+          [detailExam.id]: prev[detailExam.id].filter((a) => a.examinerId !== userId),
+        }));
+      }
+      setToast({ type: "success", message: `Successfully removed user.` });
     } catch (err) {
-      console.error("Remove assignment error:", err);
-      setToast({
-        type: "error",
-        message: err.response?.data?.message || "Failed to remove student.",
-      });
+      console.error(`Failed to remove ${roleType}:`, err);
+      setToast({ type: "error", message: "Failed to remove user." });
     } finally {
       setRemovingAssignmentId(null);
     }
   };
+
 
   // Derived list of assignments for the currently open detail modal
   const currentAssignments =
@@ -361,7 +414,7 @@ export default function UpcomingExams() {
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="h-16 bg-[#090a0f]/80 backdrop-blur-xl border-b border-white/[0.07] flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30">
+        <header className="h-16 bg-[#090a0f]/80 backdrop-blur-xl border-b border-white/7 flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30">
           <div>
             <h1 className="text-base font-semibold text-white tracking-tight">
               Upcoming Exams Schedule
@@ -390,7 +443,7 @@ export default function UpcomingExams() {
         {/* Main */}
         <main className="p-6 lg:p-8 flex-1 overflow-y-auto max-w-7xl mx-auto w-full">
           {/* Action Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/[0.06]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/6">
             <div>
               <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
                 Timetable
@@ -416,7 +469,7 @@ export default function UpcomingExams() {
           </div>
 
           {/* Search & Stats */}
-          <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+          <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div className="relative flex-1 max-w-sm">
                 <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs" />
@@ -426,7 +479,7 @@ export default function UpcomingExams() {
                   placeholder="Search upcoming exams by title, course, or examiner..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
+                  className="w-full pl-9 pr-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
                 />
               </div>
 
@@ -460,9 +513,9 @@ export default function UpcomingExams() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[750px]">
+                <table className="w-full text-left border-collapse min-w-187.5">
                   <thead>
-                    <tr className="border-b border-white/[0.06] text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    <tr className="border-b border-white/6 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                       <th className="pb-3 px-3">Exam Details</th>
                       <th className="pb-3 px-3">Date & Time</th>
                       <th className="pb-3 px-3">Assigned Examiner</th>
@@ -471,7 +524,7 @@ export default function UpcomingExams() {
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-white/[0.04] text-xs">
+                  <tbody className="divide-y divide-white/4 text-xs">
                     {filteredExams.length > 0 ? (
                       filteredExams.map((exam) => (
                         <UpcomingExamRow
@@ -503,8 +556,8 @@ export default function UpcomingExams() {
       {/* Schedule Exam Modal */}
       {showScheduleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="w-full max-w-lg bg-[#121520] border border-white/[0.1] rounded-xl shadow-2xl p-6 my-8">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.07]">
+          <div className="w-full max-w-lg bg-[#121520] border border-white/10 rounded-xl shadow-2xl p-6 my-8">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/7">
               <div>
                 <h3 className="text-base font-bold text-white tracking-tight">
                   Schedule New Exam
@@ -533,7 +586,7 @@ export default function UpcomingExams() {
                   placeholder="e.g., Computer Architecture End-Sem"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  className="w-full px-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -546,7 +599,7 @@ export default function UpcomingExams() {
                   placeholder="Instructions or exam details..."
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="w-full px-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none"
+                  className="w-full px-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none"
                 />
               </div>
 
@@ -561,11 +614,11 @@ export default function UpcomingExams() {
                   placeholder="60"
                   value={form.durationMinutes}
                   onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })}
-                  className="w-full px-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block font-medium text-slate-300 mb-1">
                     Start Date & Time *
@@ -575,7 +628,7 @@ export default function UpcomingExams() {
                     required
                     value={form.startTime}
                     onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
@@ -588,16 +641,54 @@ export default function UpcomingExams() {
                     required
                     value={form.endTime}
                     onChange={(e) => setForm({ ...form, endTime: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-white/[0.07]">
+              <ProctoringRulesFields
+                value={form.proctoringRules}
+                onChange={(proctoringRules) => setForm({ ...form, proctoringRules })}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-medium text-slate-300 mb-1">
+                    Assign Examiner
+                  </label>
+                  <select
+                    value={form.examinerId}
+                    onChange={(e) => setForm({ ...form, examinerId: e.target.value })}
+                    className="w-full px-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="">Select Examiner...</option>
+                    {orgMembers.filter(m => m.role === "EXAM_CREATOR").map(m => (
+                      <option key={m.id} value={m.id}>{m.name} ({m.email})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-medium text-slate-300 mb-1">
+                    Assign Proctor
+                  </label>
+                  <select
+                    value={form.proctorId}
+                    onChange={(e) => setForm({ ...form, proctorId: e.target.value })}
+                    className="w-full px-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="">Select Proctor...</option>
+                    {orgMembers.filter(m => m.role === "PROCTOR").map(m => (
+                      <option key={m.id} value={m.id}>{m.name} ({m.email})</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-white/7">
                 <button
                   type="button"
                   onClick={() => setShowScheduleModal(false)}
-                  className="px-4 py-2 rounded-lg border border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/[0.03]"
+                  className="px-4 py-2 rounded-lg border border-white/8 text-slate-300 hover:text-white hover:bg-white/3"
                 >
                   Cancel
                 </button>
@@ -617,8 +708,8 @@ export default function UpcomingExams() {
       {/* ── Exam Details Modal (expanded with assigned students) ── */}
       {detailExam && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="w-full max-w-xl bg-[#121520] border border-white/[0.1] rounded-xl shadow-2xl p-6 my-8">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.07]">
+          <div className="w-full max-w-xl bg-[#121520] border border-white/10 rounded-xl shadow-2xl p-6 my-8">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/7">
               <h3 className="text-base font-bold text-white">Exam Details</h3>
               <button
                 type="button"
@@ -644,14 +735,14 @@ export default function UpcomingExams() {
               )}
 
               <div className="grid grid-cols-2 gap-3 pt-2">
-                <div className="bg-[#090a0f] p-3 rounded-lg border border-white/[0.05]">
+                <div className="bg-[#090a0f] p-3 rounded-lg border border-white/5">
                   <span className="text-slate-500 block">Duration</span>
                   <p className="font-mono font-semibold text-blue-400 mt-1">
                     {detailExam.durationMinutes || detailExam.duration || 60} mins
                   </p>
                 </div>
 
-                <div className="bg-[#090a0f] p-3 rounded-lg border border-white/[0.05]">
+                <div className="bg-[#090a0f] p-3 rounded-lg border border-white/5">
                   <span className="text-slate-500 block">Status</span>
                   <p className="font-mono font-semibold text-emerald-400 mt-1">
                     {detailExam.status || "SCHEDULED"}
@@ -659,7 +750,7 @@ export default function UpcomingExams() {
                 </div>
               </div>
 
-              <div className="bg-[#090a0f] p-3 rounded-lg border border-white/[0.05] space-y-1.5">
+              <div className="bg-[#090a0f] p-3 rounded-lg border border-white/5 space-y-1.5">
                 <div className="flex items-center gap-2 text-slate-300">
                   <FaCalendarAlt className="text-blue-400" size={11} />
                   <span>Start: {detailExam.startTime ? new Date(detailExam.startTime).toLocaleString() : "Not set"}</span>
@@ -671,116 +762,113 @@ export default function UpcomingExams() {
               </div>
             </div>
 
-            {/* ── Assigned Students Section ── */}
-            <div className="mt-5 pt-4 border-t border-white/[0.07]">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                  Assigned Students
-                  {currentAssignments !== null && (
-                    <span className="ml-2 text-slate-500 normal-case font-normal">
-                      ({currentAssignments.length})
-                    </span>
-                  )}
-                </h4>
-
+            {/* ── Tabs for Roles ── */}
+            <div className="mt-5 pt-4 border-t border-white/7">
+              <div className="flex items-center gap-4 mb-4 border-b border-white/10 pb-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowAssignForm((v) => !v);
-                    setAssignStudentEmail("");
-                  }}
-                  className="flex items-center gap-1 text-[11px] font-semibold text-blue-400 hover:text-blue-300 transition"
+                  onClick={() => setActiveTab("students")}
+                  className={`text-xs font-semibold pb-2 border-b-2 transition ${activeTab === "students" ? "text-blue-400 border-blue-400" : "text-slate-400 border-transparent hover:text-slate-300"}`}
                 >
-                  <FaUserPlus size={10} />
-                  Assign Student
+                  Students ({currentAssignments?.length || 0})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("examiners")}
+                  className={`text-xs font-semibold pb-2 border-b-2 transition ${activeTab === "examiners" ? "text-blue-400 border-blue-400" : "text-slate-400 border-transparent hover:text-slate-300"}`}
+                >
+                  Examiners ({examExaminers[detailExam.id]?.length || 0})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("proctors")}
+                  className={`text-xs font-semibold pb-2 border-b-2 transition ${activeTab === "proctors" ? "text-blue-400 border-blue-400" : "text-slate-400 border-transparent hover:text-slate-300"}`}
+                >
+                  Proctors ({examProctors[detailExam.id]?.length || 0})
                 </button>
               </div>
 
-              {/* Individual assign inline form */}
-              {showAssignForm && (
-                <form
-                  onSubmit={handleAssignIndividual}
-                  className="flex gap-2 mb-3"
-                >
-                  <input
-                    type="email"
-                    required
-                    placeholder="student@email.com"
-                    value={assignStudentEmail}
-                    onChange={(e) => setAssignStudentEmail(e.target.value)}
-                    className="flex-1 px-3 py-1.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
-                  />
-                  <button
-                    type="submit"
-                    disabled={assigningIndividual || !assignStudentEmail.trim()}
-                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold transition whitespace-nowrap"
-                  >
-                    {assigningIndividual ? "Assigning…" : "Assign"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setShowAssignForm(false); setAssignStudentEmail(""); }}
-                    className="px-2 py-1.5 rounded-lg border border-white/[0.08] text-slate-400 hover:text-white text-xs transition"
-                  >
-                    <FaTimes size={10} />
-                  </button>
-                </form>
+              {activeTab === "students" && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs text-slate-400">Assign students to this exam</span>
+                    <button type="button" onClick={() => setShowAssignForm(!showAssignForm)} className="text-[11px] text-blue-400 hover:text-blue-300"><FaUserPlus className="inline mr-1"/>Assign Student</button>
+                  </div>
+                  {showAssignForm && (
+                    <form onSubmit={(e) => handleAssignRole(e, "STUDENT", assignStudentEmail)} className="flex gap-2 mb-3">
+                      <select required value={assignStudentEmail} onChange={(e) => setAssignStudentEmail(e.target.value)} className="flex-1 px-3 py-1.5 bg-[#090a0f] border border-white/8 rounded-lg text-xs text-white">
+                        <option value="">Select Student...</option>
+                        {orgMembers.filter(m => m.role === "STUDENT").map(m => (
+                          <option key={m.id} value={m.id}>{m.name} ({m.email})</option>
+                        ))}
+                      </select>
+                      <button type="submit" disabled={assigningRole || !assignStudentEmail} className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs">{assigningRole ? "Assigning..." : "Assign"}</button>
+                    </form>
+                  )}
+                  <div className="space-y-1.5 max-h-52 overflow-y-auto">
+                    {currentAssignments?.map((a) => (
+                      <div key={a.id} className="flex justify-between items-center bg-[#090a0f] border border-white/5 rounded-lg px-3 py-2">
+                        <div><p className="text-xs text-white">{a.studentName}</p><p className="text-[11px] text-slate-400">{a.studentEmail}</p></div>
+                        <button type="button" onClick={() => handleRemoveRole("STUDENT", a.id, a.studentId)} className="text-rose-400 hover:text-rose-300"><FaUserMinus size={11} /></button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
 
-              {/* Assigned students list */}
-              {assignmentsLoading ? (
-                <p className="text-xs text-slate-500 py-3 text-center">Loading assigned students…</p>
-              ) : currentAssignments === null || currentAssignments.length === 0 ? (
-                <p className="text-xs text-slate-500 py-3 text-center">
-                  No students assigned yet.
-                </p>
-              ) : (
-                <div className="space-y-1.5 max-h-52 overflow-y-auto pr-0.5">
-                  {currentAssignments.map((assignment) => (
-                    <div
-                      key={assignment.id}
-                      className="flex items-center justify-between gap-2 bg-[#090a0f] border border-white/[0.05] rounded-lg px-3 py-2"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-white truncate">
-                          {assignment.studentName || "—"}
-                        </p>
-                        <p className="text-[11px] text-slate-400 truncate">
-                          {assignment.studentEmail || "—"}
-                        </p>
+              {activeTab === "examiners" && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs text-slate-400">Assign examiners to set questions</span>
+                    <button type="button" onClick={() => setShowAssignForm(!showAssignForm)} className="text-[11px] text-blue-400 hover:text-blue-300"><FaUserPlus className="inline mr-1"/>Assign Examiner</button>
+                  </div>
+                  {showAssignForm && (
+                    <form onSubmit={(e) => handleAssignRole(e, "EXAMINER", assignStudentEmail)} className="flex gap-2 mb-3">
+                      <select required value={assignStudentEmail} onChange={(e) => setAssignStudentEmail(e.target.value)} className="flex-1 px-3 py-1.5 bg-[#090a0f] border border-white/8 rounded-lg text-xs text-white">
+                        <option value="">Select Examiner...</option>
+                        {orgMembers.filter(m => m.role === "EXAM_CREATOR").map(m => (
+                          <option key={m.id} value={m.id}>{m.name} ({m.email})</option>
+                        ))}
+                      </select>
+                      <button type="submit" disabled={assigningRole || !assignStudentEmail} className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs">{assigningRole ? "Assigning..." : "Assign"}</button>
+                    </form>
+                  )}
+                  <div className="space-y-1.5 max-h-52 overflow-y-auto">
+                    {examExaminers[detailExam.id]?.map((a) => (
+                      <div key={a.id} className="flex justify-between items-center bg-[#090a0f] border border-white/5 rounded-lg px-3 py-2">
+                        <div><p className="text-xs text-white">{a.examinerName}</p><p className="text-[11px] text-slate-400">{a.examinerEmail}</p></div>
+                        <button type="button" onClick={() => handleRemoveRole("EXAMINER", a.id, a.examinerId)} className="text-rose-400 hover:text-rose-300"><FaUserMinus size={11} /></button>
                       </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                      <div className="flex items-center gap-2 shrink-0">
-                        {/* Track badge */}
-                        {assignment.track && (
-                          <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/20 whitespace-nowrap">
-                            {assignment.track}
-                          </span>
-                        )}
-
-                        {/* Assigned at */}
-                        {assignment.assignedAt && (
-                          <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap hidden sm:inline">
-                            {new Date(assignment.assignedAt).toLocaleDateString()}
-                          </span>
-                        )}
-
-                        {/* Remove button */}
-                        <button
-                          type="button"
-                          disabled={removingAssignmentId === assignment.id}
-                          onClick={() => handleRemoveAssignment(assignment.id)}
-                          className="flex items-center gap-1 text-[11px] font-semibold text-rose-400 hover:text-rose-300 disabled:opacity-40 transition"
-                          title="Remove student"
-                        >
-                          <FaUserMinus size={11} />
-                          <span className="hidden sm:inline">
-                            {removingAssignmentId === assignment.id ? "Removing…" : "Remove"}
-                          </span>
-                        </button>
+              {activeTab === "proctors" && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs text-slate-400">Assign proctors for live monitoring</span>
+                    <button type="button" onClick={() => setShowAssignForm(!showAssignForm)} className="text-[11px] text-blue-400 hover:text-blue-300"><FaUserPlus className="inline mr-1"/>Assign Proctor</button>
+                  </div>
+                  {showAssignForm && (
+                    <form onSubmit={(e) => handleAssignRole(e, "PROCTOR", assignStudentEmail)} className="flex gap-2 mb-3">
+                      <select required value={assignStudentEmail} onChange={(e) => setAssignStudentEmail(e.target.value)} className="flex-1 px-3 py-1.5 bg-[#090a0f] border border-white/8 rounded-lg text-xs text-white">
+                        <option value="">Select Proctor...</option>
+                        {orgMembers.filter(m => m.role === "PROCTOR").map(m => (
+                          <option key={m.id} value={m.id}>{m.name} ({m.email})</option>
+                        ))}
+                      </select>
+                      <button type="submit" disabled={assigningRole || !assignStudentEmail} className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs">{assigningRole ? "Assigning..." : "Assign"}</button>
+                    </form>
+                  )}
+                  <div className="space-y-1.5 max-h-52 overflow-y-auto">
+                    {examProctors[detailExam.id]?.map((a) => (
+                      <div key={a.id} className="flex justify-between items-center bg-[#090a0f] border border-white/5 rounded-lg px-3 py-2">
+                        <div><p className="text-xs text-white">{a.examinerName}</p><p className="text-[11px] text-slate-400">{a.examinerEmail}</p></div>
+                        <button type="button" onClick={() => handleRemoveRole("PROCTOR", a.id, a.examinerId)} className="text-rose-400 hover:text-rose-300"><FaUserMinus size={11} /></button>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -789,7 +877,7 @@ export default function UpcomingExams() {
               <button
                 type="button"
                 onClick={() => setDetailExam(null)}
-                className="px-4 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-xs text-white"
+                className="px-4 py-2 rounded-lg bg-white/6 hover:bg-white/10 text-xs text-white"
               >
                 Close
               </button>
@@ -899,7 +987,7 @@ const UpcomingExamRow = ({ exam, onView, onAssign, onDelete }) => {
   ];
 
   return (
-    <tr className="hover:bg-white/[0.02] transition">
+    <tr className="hover:bg-white/2 transition">
       <td className="py-3 px-3">
         <div>
           <p className="font-semibold text-white">{title}</p>
@@ -927,7 +1015,7 @@ const UpcomingExamRow = ({ exam, onView, onAssign, onDelete }) => {
       </td>
 
       <td className="py-3 px-3 text-right">
-        <ActionDropdown items={menuItems} />
+        <ActionDropdown actions={menuItems} />
       </td>
     </tr>
   );

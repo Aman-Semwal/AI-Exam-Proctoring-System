@@ -38,6 +38,9 @@ import QuestionBank from "../pages/Examiner/QuestionBank";
 // Proctor
 import ProctorDashboard from "../pages/Proctor/ProctorDashboard";
 
+// Reports (staff)
+import SessionReport from "../pages/Reports/SessionReport";
+
 // Route protection
 import ProtectedRoute from "./ProtectedRoute";
 
@@ -283,6 +286,17 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={["PROCTOR"]}>
             <ProctorDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ================= REPORTS ================= */}
+
+      <Route
+        path="/reports/session/:id"
+        element={
+          <ProtectedRoute allowedRoles={["EXAM_CREATOR", "PROCTOR", "ORG_ADMIN", "SUPER_ADMIN"]}>
+            <SessionReport />
           </ProtectedRoute>
         }
       />

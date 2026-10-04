@@ -24,7 +24,7 @@ const Docs = () => {
   return (
     <div className="min-h-screen bg-[#050508] text-slate-300 font-sans">
       {/* Header Bar */}
-      <header className="sticky top-0 z-50 bg-[#090b12]/90 backdrop-blur-md border-b border-white/[0.08] px-6 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-50 bg-[#090b12]/90 backdrop-blur-md border-b border-white/8 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
             type="button"
@@ -56,7 +56,7 @@ const Docs = () => {
       <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col md:flex-row gap-10">
         {/* Sidebar Navigation */}
         <aside className="w-full md:w-64 shrink-0">
-          <div className="sticky top-24 bg-[#090b12] border border-white/[0.08] rounded-2xl p-4">
+          <div className="sticky top-24 bg-[#090b12] border border-white/8 rounded-2xl p-4">
             <h3 className="text-xs font-mono font-semibold text-slate-400 uppercase tracking-wider mb-4 px-2">
               Documentation
             </h3>
@@ -70,7 +70,7 @@ const Docs = () => {
                   className={`block px-3 py-2 rounded-xl text-xs font-medium transition ${
                     activeSection === sec.id
                       ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
-                      : "text-slate-400 hover:text-white hover:bg-white/[0.04]"
+                      : "text-slate-400 hover:text-white hover:bg-white/4"
                   }`}
                 >
                   {sec.label}
@@ -92,7 +92,7 @@ const Docs = () => {
               Executive Overview
             </h2>
 
-            <div className="bg-[#090b12] border border-white/[0.08] rounded-2xl p-6 space-y-4">
+            <div className="bg-[#090b12] border border-white/8 rounded-2xl p-6 space-y-4">
               <p className="text-sm text-slate-300 leading-relaxed">
                 <strong>ProctorAI</strong> is an autonomous, AI-driven online
                 examination proctoring platform designed to ensure academic
@@ -126,7 +126,7 @@ const Docs = () => {
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-[#090b12] border border-white/[0.08] rounded-2xl p-5">
+              <div className="bg-[#090b12] border border-white/8 rounded-2xl p-5">
                 <div className="flex items-center gap-2 text-blue-400 font-semibold text-sm mb-2">
                   <FaCode />
                   Frontend Stack
@@ -138,7 +138,7 @@ const Docs = () => {
                 </p>
               </div>
 
-              <div className="bg-[#090b12] border border-white/[0.08] rounded-2xl p-5">
+              <div className="bg-[#090b12] border border-white/8 rounded-2xl p-5">
                 <div className="flex items-center gap-2 text-indigo-400 font-semibold text-sm mb-2">
                   <FaMicrochip />
                   AI & Computer Vision
@@ -162,8 +162,8 @@ const Docs = () => {
               AI Proctoring Modules
             </h2>
 
-            <div className="bg-[#090b12] border border-white/[0.08] rounded-2xl p-6 space-y-4">
-              <div className="border-b border-white/[0.06] pb-4">
+            <div className="bg-[#090b12] border border-white/8 rounded-2xl p-6 space-y-4">
+              <div className="border-b border-white/6 pb-4">
                 <h4 className="text-sm font-semibold text-white">
                   1. Face Verification & Multi-Face Detection
                 </h4>
@@ -174,7 +174,7 @@ const Docs = () => {
                 </p>
               </div>
 
-              <div className="border-b border-white/[0.06] pb-4">
+              <div className="border-b border-white/6 pb-4">
                 <h4 className="text-sm font-semibold text-white">
                   2. Neural Gaze Tracking
                 </h4>
@@ -208,7 +208,7 @@ const Docs = () => {
               API & Event Hook Spec
             </h2>
 
-            <div className="bg-[#090b12] border border-white/[0.08] rounded-2xl p-5 font-mono text-xs overflow-x-auto">
+            <div className="bg-[#090b12] border border-white/8 rounded-2xl p-5 font-mono text-xs overflow-x-auto">
               <div className="text-slate-400">
                 // Example WebSocket Anomaly Event Payload
               </div>
@@ -241,14 +241,14 @@ const Docs = () => {
               Security & Integrity Index
             </h2>
 
-            <div className="bg-[#090b12] border border-white/[0.08] rounded-2xl p-6">
+            <div className="bg-[#090b12] border border-white/8 rounded-2xl p-6">
               <p className="text-xs text-slate-400 leading-relaxed">
                 The overall Integrity Index score ($I_s$) is dynamically
                 computed using a weighted algorithm across all recorded
                 anomaly vectors:
               </p>
 
-              <div className="mt-4 p-4 rounded-xl bg-[#05060a] border border-white/[0.06] text-xs font-mono text-emerald-400 flex items-center gap-2">
+              <div className="mt-4 p-4 rounded-xl bg-[#05060a] border border-white/6 text-xs font-mono text-emerald-400 flex items-center gap-2">
                 <FaCheckCircle />
                 <span>
                   Integrity Index Formula: Score = 100 - Σ (Severity Weight ×

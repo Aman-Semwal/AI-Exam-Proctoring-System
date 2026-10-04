@@ -25,9 +25,9 @@ import java.util.List;
  */
 public interface QuestionService {
 
-    QuestionResponse createQuestion(QuestionRequest request);
+    QuestionResponse createQuestion(QuestionRequest request, String requesterEmail);
 
-    QuestionResponse getQuestionById(Long id, boolean includeAnswer);
+    QuestionResponse getQuestionById(Long id, boolean includeAnswer, String requesterEmail);
 
     /**
      * Returns questions for an exam, applying org-scoping and track-filtering
@@ -52,7 +52,7 @@ public interface QuestionService {
      */
     List<QuestionResponse> getQuestionsForSession(Long sessionId, String studentEmail);
 
-    QuestionResponse updateQuestion(Long id, QuestionRequest request);
+    QuestionResponse updateQuestion(Long id, QuestionRequest request, String requesterEmail);
 
-    void deleteQuestion(Long id);
+    void deleteQuestion(Long id, String requesterEmail);
 }

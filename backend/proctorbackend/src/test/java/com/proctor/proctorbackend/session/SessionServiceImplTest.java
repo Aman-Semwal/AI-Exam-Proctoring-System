@@ -1,7 +1,6 @@
 package com.proctor.proctorbackend.session;
 
 import com.proctor.proctorbackend.answer.AnswerRepository;
-import com.proctor.proctorbackend.assignment.ExamAssignment;
 import com.proctor.proctorbackend.assignment.ExamAssignmentRepository;
 import com.proctor.proctorbackend.common.enums.Role;
 import com.proctor.proctorbackend.common.exception.BadRequestException;
@@ -14,6 +13,9 @@ import com.proctor.proctorbackend.question.QuestionRepository;
 import com.proctor.proctorbackend.session.dto.SessionRequest;
 import com.proctor.proctorbackend.session.dto.SessionResponse;
 import com.proctor.proctorbackend.user.User;
+import com.proctor.proctorbackend.violation.TrustLevel;
+import com.proctor.proctorbackend.violation.TrustScore;
+import com.proctor.proctorbackend.violation.TrustScoreService;
 import com.proctor.proctorbackend.user.UserRepository;
 import com.proctor.proctorbackend.violation.ViolationRepository;
 import com.proctor.proctorbackend.violation.ViolationSeverity;
@@ -42,6 +44,8 @@ class SessionServiceImplTest {
     @Mock ExamAssignmentRepository assignmentRepository;
     @Mock ExamProctorService examProctorService;
     @Mock ViolationRepository violationRepository;
+    @Mock ScoreCalculationService scoreCalculationService;
+    @Mock TrustScoreService trustScoreService;
     @InjectMocks SessionServiceImpl service;
 
     Organization org;
@@ -167,15 +171,45 @@ class SessionServiceImplTest {
     void endSession_calculatesScoreAndCompletes() {
         when(userRepository.findByEmail("rahul@gmail.com")).thenReturn(Optional.of(student));
         when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
-        when(assignmentRepository.findByExamIdAndStudentId(10L, 2L))
-                .thenReturn(Optional.of(ExamAssignment.builder().track("SDE1").build()));
-        when(questionRepository.findByExamIdAndTrackIn(eq(10L), anyList())).thenReturn(java.util.List.of());
+        when(scoreCalculationService.calculate(activeSession)).thenReturn(7);
         when(sessionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SessionResponse resp = service.endSession(55L, "rahul@gmail.com");
 
         assertEquals(SessionStatus.COMPLETED, resp.getStatus());
+        assertEquals(7, resp.getScore());
         assertNotNull(resp.getEndTime());
+    }
+
+    // --- referenceEnrolled flag (resume must not skip the identity photo) ---
+
+    @Test
+    void getSessionById_reportsReferenceNotEnrolled() {
+        when(userRepository.findByEmail("rahul@gmail.com")).thenReturn(Optional.of(student));
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+
+        assertFalse(service.getSessionById(55L, "rahul@gmail.com").isReferenceEnrolled());
+    }
+
+    @Test
+    void getSessionById_reportsReferenceEnrolled() {
+        activeSession.setReferenceEmbedding(java.util.List.of(0.1, 0.2));
+        when(userRepository.findByEmail("rahul@gmail.com")).thenReturn(Optional.of(student));
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+
+        assertTrue(service.getSessionById(55L, "rahul@gmail.com").isReferenceEnrolled());
+    }
+
+    @Test
+    void getSessionById_includesTrustScore() {
+        when(userRepository.findByEmail("rahul@gmail.com")).thenReturn(Optional.of(student));
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(trustScoreService.calculate(55L)).thenReturn(new TrustScore(65, TrustLevel.REVIEW));
+
+        SessionResponse resp = service.getSessionById(55L, "rahul@gmail.com");
+
+        assertEquals(65, resp.getTrustScore());
+        assertEquals(TrustLevel.REVIEW, resp.getTrustLevel());
     }
 
     // --- getExamResult access control ---
@@ -193,13 +227,35 @@ class SessionServiceImplTest {
     }
 
     @Test
-    void getExamResult_throwsForStudent() {
+    void getExamResult_allowsStudentOwnFinishedSession() {
         activeSession.setStatus(SessionStatus.COMPLETED);
+        activeSession.setScore(10);
 
+        when(userRepository.findByEmail("rahul@gmail.com")).thenReturn(Optional.of(student));
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(questionRepository.findByExamId(10L)).thenReturn(java.util.List.of());
+        when(answerRepository.findBySessionId(55L)).thenReturn(java.util.List.of());
+
+        assertEquals(10, service.getExamResult(55L, "rahul@gmail.com").getScore());
+    }
+
+    @Test
+    void getExamResult_throwsForStudentWhileSessionActive() {
         when(userRepository.findByEmail("rahul@gmail.com")).thenReturn(Optional.of(student));
         when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
 
         assertThrows(UnauthorizedException.class, () -> service.getExamResult(55L, "rahul@gmail.com"));
+    }
+
+    @Test
+    void getExamResult_throwsForAnotherStudent() {
+        activeSession.setStatus(SessionStatus.COMPLETED);
+        User other = User.builder().id(9L).email("other@gmail.com").role(Role.STUDENT).organization(org).build();
+
+        when(userRepository.findByEmail("other@gmail.com")).thenReturn(Optional.of(other));
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+
+        assertThrows(UnauthorizedException.class, () -> service.getExamResult(55L, "other@gmail.com"));
     }
 
     @Test

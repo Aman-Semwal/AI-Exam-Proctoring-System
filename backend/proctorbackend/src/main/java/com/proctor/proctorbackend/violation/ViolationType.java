@@ -56,6 +56,9 @@ public enum ViolationType {
      */
     IDENTITY_MISMATCH,
 
+    /** Backend-derived from the AI's voice-activity result (speech while answering). */
+    SPEECH_DETECTED,
+
     // ── Client/frontend-detected ──────────────────────────────────────────
 
     /** Student switched browser tab during the exam. Detected by the frontend. */

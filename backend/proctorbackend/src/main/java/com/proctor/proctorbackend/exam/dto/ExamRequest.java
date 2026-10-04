@@ -4,6 +4,8 @@ import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import com.proctor.proctorbackend.exam.ProctoringRules;
+import jakarta.validation.Valid;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -26,4 +28,8 @@ public class ExamRequest {
 
     @NotNull(message = "End time is required")
     private LocalDateTime endTime;
+
+    /** Optional — defaults apply when omitted. */
+    @Valid
+    private ProctoringRules proctoringRules;
 }

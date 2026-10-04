@@ -34,7 +34,7 @@ public class HealthController {
         data.put("server",  "Server is running on Java ☕");
         data.put("db",      checkDatabase());
         data.put("cache",   checkRedis());
-        data.put("time",    LocalDateTime.now().toString());
+        data.put("time",    LocalDateTime.now(java.time.ZoneOffset.UTC).toString());
 
         return ResponseEntity.ok(ApiResponse.success("Health check passed", data));
     }

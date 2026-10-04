@@ -9,7 +9,7 @@ const Footer = () => {
     <footer
       className={`transition-colors duration-300 border-t ${
         isDark
-          ? "bg-[#030406] border-white/[0.06] text-slate-400"
+          ? "bg-[#030406] border-white/6 text-slate-400"
           : "bg-slate-100 border-slate-200 text-slate-600"
       }`}
     >
@@ -235,7 +235,7 @@ const Footer = () => {
         <div
           className={`mt-16 pt-8 border-t flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] ${
             isDark
-              ? "border-white/[0.05] text-slate-400"
+              ? "border-white/5 text-slate-400"
               : "border-slate-200 text-slate-500"
           }`}
         >

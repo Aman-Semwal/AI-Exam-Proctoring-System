@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { FaShieldAlt, FaCheckCircle, FaExclamationTriangle } from "react-icons/fa";
 import api from "../../services/api";
 
-const AIStatus = ({ sessionId }) => {
+/** `tabSwitches` comes from LiveExam, which gets the server-side count. */
+const AIStatus = ({ sessionId, tabSwitches = 0 }) => {
   const [warningCount, setWarningCount] = useState(0);
-  const [tabSwitches, setTabSwitches] = useState(0);
 
   // Poll violation count for this session
   useEffect(() => {
@@ -14,13 +14,10 @@ const AIStatus = ({ sessionId }) => {
 
     const fetchViolations = async () => {
       try {
-        const res = await api.get(`/violations/session/${sessionId}`);
-        const data = res.data?.data ?? res.data ?? [];
-        if (isMounted) {
-          setWarningCount(Array.isArray(data) ? data.length : 0);
-        }
-      } catch (err) {
-        // quiet warning
+        const res = await api.get(`/proctor/session/${sessionId}/my-violation-count`);
+        if (isMounted) setWarningCount(Number(res.data?.data) || 0);
+      } catch {
+        // transient — the next poll retries
       }
     };
 
@@ -33,22 +30,12 @@ const AIStatus = ({ sessionId }) => {
     };
   }, [sessionId]);
 
-  // Track browser window blur / tab switches
-  useEffect(() => {
-    const handleBlur = () => {
-      setTabSwitches((prev) => prev + 1);
-    };
-
-    window.addEventListener("blur", handleBlur);
-    return () => window.removeEventListener("blur", handleBlur);
-  }, []);
-
   const isCritical = warningCount >= 3 || tabSwitches >= 3;
   const isElevated = warningCount > 0 || tabSwitches > 0;
 
   return (
-    <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
-      <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/[0.06]">
+    <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
+      <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/6">
         <h2 className="text-xs font-semibold text-white tracking-tight flex items-center gap-1.5">
           <FaShieldAlt
             className={
@@ -103,7 +90,7 @@ const AIStatus = ({ sessionId }) => {
             className={`font-mono font-semibold px-1.5 py-0.5 rounded text-[11px] ${
               tabSwitches > 0
                 ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                : "bg-white/[0.04] text-slate-300"
+                : "bg-white/4 text-slate-300"
             }`}
           >
             {tabSwitches}

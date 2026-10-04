@@ -26,12 +26,12 @@ const ConfirmDialog = ({
 
   return (
     <div
-      className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-60 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget && !loading) onCancel();
       }}
     >
-      <div className="w-full max-w-sm bg-[#121520] border border-white/[0.08] rounded-xl shadow-2xl animate-scale-in">
+      <div className="w-full max-w-sm bg-[#121520] border border-white/8 rounded-xl shadow-2xl animate-scale-in">
         <div className="p-5">
           <div className="flex items-start gap-3.5">
             <div className="w-9 h-9 shrink-0 rounded-lg bg-rose-500/15 border border-rose-500/25 flex items-center justify-center text-rose-400">
@@ -53,7 +53,7 @@ const ConfirmDialog = ({
             type="button"
             onClick={onCancel}
             disabled={loading}
-            className="flex-1 py-2.5 rounded-lg border border-white/[0.08] bg-[#090a0f] text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/[0.05] transition disabled:opacity-50"
+            className="flex-1 py-2.5 rounded-lg border border-white/8 bg-[#090a0f] text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition disabled:opacity-50"
           >
             Cancel
           </button>

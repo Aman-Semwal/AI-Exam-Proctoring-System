@@ -5,7 +5,6 @@ import {
   FaPlus,
   FaTimes,
   FaEye,
-  FaUserShield,
   FaTrash,
   FaCalendarCheck,
 } from "react-icons/fa";
@@ -82,7 +81,7 @@ export default function Proctors() {
       // Build map: examinerId -> [{examId, examTitle}]
       const map = {};
 
-      results.forEach((result, idx) => {
+      results.forEach((result) => {
         if (result.status === "fulfilled") {
           const assignments = result.value; // ProctorAssignmentResponse[]
           assignments.forEach((assignment) => {
@@ -311,7 +310,6 @@ export default function Proctors() {
 
   // NEW: remove a proctor from a specific exam
   const handleRemoveFromExam = async (examId, examinerId, examTitle) => {
-    const key = `${examId}-${examinerId}`;
     try {
       setRemovingAssignment({ examId, examinerId });
 
@@ -352,7 +350,7 @@ export default function Proctors() {
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="h-16 bg-[#090a0f]/80 backdrop-blur-xl border-b border-white/[0.07] flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30">
+        <header className="h-16 bg-[#090a0f]/80 backdrop-blur-xl border-b border-white/7 flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30">
           <div>
             <h1 className="text-base font-semibold text-white tracking-tight">
               Proctors Management
@@ -383,7 +381,7 @@ export default function Proctors() {
         {/* Main Body */}
         <main className="p-6 lg:p-8 flex-1 overflow-y-auto max-w-7xl mx-auto w-full">
           {/* Action Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/[0.06]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/6">
             <div>
               <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
                 Invigilators
@@ -427,7 +425,7 @@ export default function Proctors() {
           )}
 
           {/* Search & Stats */}
-          <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+          <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div className="relative flex-1 max-w-sm">
                 <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs" />
@@ -437,7 +435,7 @@ export default function Proctors() {
                   placeholder="Search proctors by name, email, or assigned exam..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
+                  className="w-full pl-9 pr-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
                 />
               </div>
 
@@ -456,9 +454,9 @@ export default function Proctors() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[900px]">
+                <table className="w-full text-left border-collapse min-w-225">
                   <thead>
-                    <tr className="border-b border-white/[0.06] text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    <tr className="border-b border-white/6 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                       <th className="pb-3 px-3">Proctor</th>
                       <th className="pb-3 px-3">Assigned Exams</th>
                       <th className="pb-3 px-3">Shift</th>
@@ -467,7 +465,7 @@ export default function Proctors() {
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-white/[0.04] text-xs">
+                  <tbody className="divide-y divide-white/4 text-xs">
                     {filteredProctors.length > 0 ? (
                       filteredProctors.map((proctor) => (
                         <ProctorRow
@@ -505,8 +503,8 @@ export default function Proctors() {
       {/* Add Proctor Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-          <div className="w-full max-w-md bg-[#121520] border border-white/[0.08] rounded-xl shadow-2xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+          <div className="w-full max-w-md bg-[#121520] border border-white/8 rounded-xl shadow-2xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/6">
               <div>
                 <h2 className="text-base font-semibold text-white">
                   Add New Proctor
@@ -520,7 +518,7 @@ export default function Proctors() {
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.05]"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5"
               >
                 <FaTimes size={13} />
               </button>
@@ -543,7 +541,7 @@ export default function Proctors() {
                     }))
                   }
                   placeholder="e.g. Marcus Thorne"
-                  className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -563,7 +561,7 @@ export default function Proctors() {
                     }))
                   }
                   placeholder="proctor@college.edu"
-                  className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -571,7 +569,7 @@ export default function Proctors() {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2.5 rounded-lg font-medium text-slate-300 bg-white/[0.04] border border-white/[0.07] hover:bg-white/[0.07]"
+                  className="px-4 py-2.5 rounded-lg font-medium text-slate-300 bg-white/4 border border-white/7 hover:bg-white/7"
                 >
                   Cancel
                 </button>
@@ -592,8 +590,8 @@ export default function Proctors() {
       {/* Assign to Exam Modal */}
       {assignProctorTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-          <div className="w-full max-w-md bg-[#121520] border border-white/[0.08] rounded-xl shadow-2xl p-6">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.06]">
+          <div className="w-full max-w-md bg-[#121520] border border-white/8 rounded-xl shadow-2xl p-6">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/6">
               <div>
                 <h3 className="text-base font-bold text-white">Assign Exam Duty</h3>
                 <p className="text-[11px] text-slate-400 mt-0.5">
@@ -621,7 +619,7 @@ export default function Proctors() {
                     value={selectedExamId}
                     onChange={(e) => setSelectedExamId(e.target.value)}
                     required
-                    className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2.5 bg-[#090a0f] border border-white/8 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   >
                     <option value="">Select an exam</option>
                     {exams.map((ex) => (
@@ -633,11 +631,11 @@ export default function Proctors() {
                 )}
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.06]">
+              <div className="flex justify-end gap-2 pt-2 border-t border-white/6">
                 <button
                   type="button"
                   onClick={() => setAssignProctorTarget(null)}
-                  className="px-4 py-2 rounded-lg border border-white/[0.08] text-slate-300 hover:text-white"
+                  className="px-4 py-2 rounded-lg border border-white/8 text-slate-300 hover:text-white"
                 >
                   Cancel
                 </button>
@@ -657,8 +655,8 @@ export default function Proctors() {
       {/* Proctor Details Modal */}
       {detailProctor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-[#121520] border border-white/[0.1] rounded-xl shadow-2xl p-6">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.07]">
+          <div className="w-full max-w-md bg-[#121520] border border-white/10 rounded-xl shadow-2xl p-6">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/7">
               <h3 className="text-base font-bold text-white">Proctor Details</h3>
               <button
                 type="button"
@@ -670,7 +668,7 @@ export default function Proctors() {
             </div>
 
             <div className="space-y-3 text-xs">
-              <div className="flex items-center gap-3 pb-3 border-b border-white/[0.05]">
+              <div className="flex items-center gap-3 pb-3 border-b border-white/5">
                 <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-400 font-bold flex items-center justify-center text-sm">
                   {(detailProctor.name || "PR").slice(0, 2).toUpperCase()}
                 </div>
@@ -681,11 +679,11 @@ export default function Proctors() {
               </div>
 
               <div className="grid grid-cols-2 gap-3 pt-1">
-                <div className="bg-[#090a0f] p-3 rounded-lg border border-white/[0.05]">
+                <div className="bg-[#090a0f] p-3 rounded-lg border border-white/5">
                   <span className="text-slate-500 block">Role</span>
                   <p className="font-semibold text-blue-400 mt-1">PROCTOR</p>
                 </div>
-                <div className="bg-[#090a0f] p-3 rounded-lg border border-white/[0.05]">
+                <div className="bg-[#090a0f] p-3 rounded-lg border border-white/5">
                   <span className="text-slate-500 block">Status</span>
                   <p className="font-semibold text-emerald-400 mt-1">
                     {detailProctor.status || "Active"}
@@ -694,7 +692,7 @@ export default function Proctors() {
               </div>
 
               {/* NEW: Assigned Exams with Remove button */}
-              <div className="bg-[#090a0f] p-3 rounded-lg border border-white/[0.05]">
+              <div className="bg-[#090a0f] p-3 rounded-lg border border-white/5">
                 <span className="text-slate-500 block mb-2">Assigned Examinations</span>
 
                 {(examProctorMap[detailProctor.id] || []).length === 0 ? (
@@ -740,7 +738,7 @@ export default function Proctors() {
               <button
                 type="button"
                 onClick={() => setDetailProctor(null)}
-                className="px-4 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-xs text-white"
+                className="px-4 py-2 rounded-lg bg-white/6 hover:bg-white/10 text-xs text-white"
               >
                 Close
               </button>
@@ -840,7 +838,7 @@ const ProctorRow = ({ proctor, assignedExams, onView, onAssign, onRemove }) => {
   ];
 
   return (
-    <tr className="hover:bg-white/[0.02] transition">
+    <tr className="hover:bg-white/2 transition">
       <td className="py-3 px-3">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold text-xs">

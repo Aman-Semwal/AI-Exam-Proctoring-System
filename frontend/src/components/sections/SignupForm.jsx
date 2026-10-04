@@ -130,7 +130,7 @@ const SignupForm = () => {
           <select
             value={selectedRole}
             onChange={(e) => setSelectedRole(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-lg border border-white/[0.08] bg-[#090a0f] text-slate-200 text-xs outline-none focus:border-blue-500 transition"
+            className="w-full px-3.5 py-2.5 rounded-lg border border-white/8 bg-[#090a0f] text-slate-200 text-xs outline-none focus:border-blue-500 transition"
           >
             <option value="STUDENT">Student</option>
             <option value="EXAM_CREATOR">Examiner</option>
@@ -152,7 +152,7 @@ const SignupForm = () => {
             onChange={handleChange}
             placeholder="Enter your full name"
             required
-            className="w-full px-3.5 py-2.5 rounded-lg border border-white/[0.08] bg-[#090a0f] text-slate-200 text-xs placeholder-slate-500 outline-none focus:border-blue-500 transition"
+            className="w-full px-3.5 py-2.5 rounded-lg border border-white/8 bg-[#090a0f] text-slate-200 text-xs placeholder-slate-500 outline-none focus:border-blue-500 transition"
           />
         </div>
 
@@ -169,7 +169,7 @@ const SignupForm = () => {
             onChange={handleChange}
             placeholder="you@example.com"
             required
-            className="w-full px-3.5 py-2.5 rounded-lg border border-white/[0.08] bg-[#090a0f] text-slate-200 text-xs placeholder-slate-500 outline-none focus:border-blue-500 transition"
+            className="w-full px-3.5 py-2.5 rounded-lg border border-white/8 bg-[#090a0f] text-slate-200 text-xs placeholder-slate-500 outline-none focus:border-blue-500 transition"
           />
         </div>
 
@@ -188,7 +188,7 @@ const SignupForm = () => {
               placeholder="Create a password"
               required
               minLength={6}
-              className="w-full px-3.5 py-2.5 pr-10 rounded-lg border border-white/[0.08] bg-[#090a0f] text-slate-200 text-xs placeholder-slate-500 outline-none focus:border-blue-500 transition"
+              className="w-full px-3.5 py-2.5 pr-10 rounded-lg border border-white/8 bg-[#090a0f] text-slate-200 text-xs placeholder-slate-500 outline-none focus:border-blue-500 transition"
             />
 
             <button
@@ -225,20 +225,20 @@ const SignupForm = () => {
 
         {/* Divider */}
         <div className="flex items-center gap-3 py-1">
-          <div className="flex-1 h-px bg-white/[0.06]" />
+          <div className="flex-1 h-px bg-white/6" />
 
           <span className="text-slate-500 text-[10px] uppercase">
             OR
           </span>
 
-          <div className="flex-1 h-px bg-white/[0.06]" />
+          <div className="flex-1 h-px bg-white/6" />
         </div>
 
         {/* Google */}
         <button
           type="button"
           onClick={handleGoogleSignup}
-          className="w-full py-2.5 rounded-lg border border-white/[0.08] bg-[#090a0f] hover:bg-white/[0.04] text-slate-200 text-xs font-medium flex items-center justify-center gap-2.5 transition"
+          className="w-full py-2.5 rounded-lg border border-white/8 bg-[#090a0f] hover:bg-white/4 text-slate-200 text-xs font-medium flex items-center justify-center gap-2.5 transition"
         >
           <FaGoogle className="text-red-400 text-xs" />
           Sign up with Google

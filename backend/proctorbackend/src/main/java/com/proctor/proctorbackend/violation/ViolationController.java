@@ -2,6 +2,7 @@ package com.proctor.proctorbackend.violation;
 
 import com.proctor.proctorbackend.common.response.ApiResponse;
 import com.proctor.proctorbackend.violation.dto.ViolationRequest;
+import com.proctor.proctorbackend.violation.dto.ReviewRequest;
 import com.proctor.proctorbackend.violation.dto.ViolationResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -70,14 +71,30 @@ public class ViolationController {
                         violationService.getUnreviewedBySession(sessionId, userDetails.getUsername())));
     }
 
+    @GetMapping("/{id}/evidence")
+    @Operation(summary = "Webcam snapshot that triggered the violation (image/jpeg)")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<byte[]> getEvidence(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        ViolationEvidence evidence = violationService.getEvidence(id, userDetails.getUsername());
+        return ResponseEntity.ok()
+                .contentType(org.springframework.http.MediaType.parseMediaType(evidence.getContentType()))
+                .header("Cache-Control", "private, max-age=3600")
+                .body(evidence.getData());
+    }
+
     @PatchMapping("/{id}/review")
-    @Operation(summary = "Mark a violation as reviewed")
+    @Operation(summary = "Review a violation: confirm it, or dismiss it as a false positive")
     @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<ViolationResponse>> markReviewed(
             @PathVariable Long id,
+            @RequestBody(required = false) ReviewRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(
                 ApiResponse.success("Violation marked as reviewed",
-                        violationService.markReviewed(id, userDetails.getUsername())));
+                        violationService.markReviewed(id,
+                                request != null ? request.getOutcome() : null,
+                                userDetails.getUsername())));
     }
 }

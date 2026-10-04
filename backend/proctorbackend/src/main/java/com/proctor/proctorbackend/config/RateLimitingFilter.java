@@ -2,7 +2,6 @@ package com.proctor.proctorbackend.config;
 
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Refill;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -109,10 +108,10 @@ public class RateLimitingFilter extends OncePerRequestFilter {
      * a hard window rather than allowing 1 attempt every 90 s indefinitely).
      */
     private Bucket buildLoginBucket() {
-        Bandwidth limit = Bandwidth.classic(
-                LOGIN_CAPACITY,
-                Refill.intervally(LOGIN_CAPACITY, Duration.ofMinutes(LOGIN_REFILL_MINUTES))
-        );
+        Bandwidth limit = Bandwidth.builder()
+                .capacity(LOGIN_CAPACITY)
+                .refillIntervally(LOGIN_CAPACITY, Duration.ofMinutes(LOGIN_REFILL_MINUTES))
+                .build();
         return Bucket.builder().addLimit(limit).build();
     }
 
@@ -121,10 +120,10 @@ public class RateLimitingFilter extends OncePerRequestFilter {
      * 5 requests per 60-minute window.
      */
     private Bucket buildRegisterBucket() {
-        Bandwidth limit = Bandwidth.classic(
-                REGISTER_CAPACITY,
-                Refill.intervally(REGISTER_CAPACITY, Duration.ofMinutes(REGISTER_REFILL_MINUTES))
-        );
+        Bandwidth limit = Bandwidth.builder()
+                .capacity(REGISTER_CAPACITY)
+                .refillIntervally(REGISTER_CAPACITY, Duration.ofMinutes(REGISTER_REFILL_MINUTES))
+                .build();
         return Bucket.builder().addLimit(limit).build();
     }
 

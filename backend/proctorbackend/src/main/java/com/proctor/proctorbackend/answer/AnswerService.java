@@ -9,9 +9,10 @@ public interface AnswerService {
 
     AnswerResponse submitAnswer(AnswerRequest request, String studentEmail);
 
-    List<AnswerResponse> getAnswersBySession(Long sessionId);
+    /** Students: own session only, correctness hidden while the session is active. */
+    List<AnswerResponse> getAnswersBySession(Long sessionId, String requesterEmail);
 
-    AnswerResponse getAnswerById(Long id);
+    AnswerResponse getAnswerById(Long id, String requesterEmail);
 
     /** Manually grade a CODING or DESCRIPTIVE answer (proctor/admin only). */
     AnswerResponse gradeAnswer(Long answerId, Boolean isCorrect, String graderEmail);

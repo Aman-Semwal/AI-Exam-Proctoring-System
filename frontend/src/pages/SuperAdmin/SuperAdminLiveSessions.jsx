@@ -288,7 +288,7 @@ const SuperAdminLiveSessions = () => {
 
         <main className="p-6 lg:p-8 flex-1 overflow-y-auto max-w-7xl mx-auto w-full">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/[0.06]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/6">
             <div>
               <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">
                 Surveillance Grid
@@ -329,7 +329,7 @@ const SuperAdminLiveSessions = () => {
 
           {/* Loading */}
           {loading ? (
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-12 text-center">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-12 text-center">
               <div className="w-8 h-8 mx-auto mb-3 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin" />
 
               <p className="text-sm text-slate-400">
@@ -337,7 +337,7 @@ const SuperAdminLiveSessions = () => {
               </p>
             </div>
           ) : sessions.length === 0 ? (
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-12 text-center">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-12 text-center">
               <FaVideo className="mx-auto text-slate-700 text-3xl mb-3" />
 
               <h3 className="text-sm font-semibold text-white">
@@ -353,7 +353,7 @@ const SuperAdminLiveSessions = () => {
               {sessions.map((s) => (
                 <div
                   key={s.id}
-                  className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm"
+                  className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm"
                 >
                   {/* Student Header */}
                   <div className="flex items-center justify-between mb-3">
@@ -387,7 +387,7 @@ const SuperAdminLiveSessions = () => {
                   </div>
 
                   {/* Video / Feed */}
-                  <div className="relative w-full h-36 bg-[#090a0f] rounded-lg overflow-hidden border border-white/[0.06] flex items-center justify-center mb-3">
+                  <div className="relative w-full h-36 bg-[#090a0f] rounded-lg overflow-hidden border border-white/6 flex items-center justify-center mb-3">
                     <FaVideo className="text-slate-800 text-2xl animate-pulse" />
 
                     <div className="absolute bottom-2.5 left-2.5 text-[10px] text-slate-300 font-mono bg-black/60 px-1.5 py-0.5 rounded max-w-[85%] truncate">
@@ -403,7 +403,7 @@ const SuperAdminLiveSessions = () => {
                   </div>
 
                   {/* Footer */}
-                  <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-white/[0.05]">
+                  <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-white/5">
                     <span className="flex items-center gap-1.5 text-[11px]">
                       <FaUserShield
                         className="text-blue-400"
@@ -415,7 +415,7 @@ const SuperAdminLiveSessions = () => {
 
                     <button
                       onClick={() => handleInspectFeed(s)}
-                      className="px-2.5 py-1 rounded bg-[#090a0f] hover:bg-white/[0.05] border border-white/[0.08] text-blue-400 text-[11px] font-medium transition hover:text-blue-300"
+                      className="px-2.5 py-1 rounded bg-[#090a0f] hover:bg-white/5 border border-white/8 text-blue-400 text-[11px] font-medium transition hover:text-blue-300"
                     >
                       Inspect Feed
                     </button>
@@ -443,9 +443,9 @@ const SuperAdminLiveSessions = () => {
             if (e.target === e.currentTarget) setInspectSession(null);
           }}
         >
-          <div className="w-full max-w-lg bg-[#121520] border border-white/[0.08] rounded-xl shadow-2xl animate-scale-in">
+          <div className="w-full max-w-lg bg-[#121520] border border-white/8 rounded-xl shadow-2xl animate-scale-in">
             {/* Header */}
-            <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
+            <div className="flex items-center justify-between p-5 border-b border-white/6">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
                   <FaDesktop size={14} />
@@ -463,7 +463,7 @@ const SuperAdminLiveSessions = () => {
 
               <button
                 onClick={() => setInspectSession(null)}
-                className="p-2 rounded-lg hover:bg-white/[0.05] text-slate-400 hover:text-white"
+                className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white"
               >
                 <FaTimes size={13} />
               </button>
@@ -514,7 +514,7 @@ const SuperAdminLiveSessions = () => {
                   </p>
                 </div>
               ) : events.length === 0 ? (
-                <div className="text-center py-8 bg-[#090a0f] border border-white/[0.06] rounded-lg">
+                <div className="text-center py-8 bg-[#090a0f] border border-white/6 rounded-lg">
                   <FaCheckCircle
                     className="mx-auto text-emerald-500/40 mb-2"
                     size={20}
@@ -582,7 +582,7 @@ const SuperAdminLiveSessions = () => {
             <div className="px-5 pb-5">
               <button
                 onClick={() => setInspectSession(null)}
-                className="w-full py-2.5 rounded-lg border border-white/[0.08] bg-[#090a0f] text-xs text-slate-300 font-semibold hover:text-white hover:bg-white/[0.05] transition"
+                className="w-full py-2.5 rounded-lg border border-white/8 bg-[#090a0f] text-xs text-slate-300 font-semibold hover:text-white hover:bg-white/5 transition"
               >
                 Close Inspector
               </button>
@@ -606,7 +606,7 @@ const SuperAdminLiveSessions = () => {
 /* ===================== Info Chip Subcomponent ===================== */
 
 const InfoChip = ({ label, value, color = "text-white" }) => (
-  <div className="bg-[#090a0f] border border-white/[0.06] rounded-lg px-3 py-2">
+  <div className="bg-[#090a0f] border border-white/6 rounded-lg px-3 py-2">
     <p className="text-[9px] text-slate-500 uppercase tracking-wider font-medium">
       {label}
     </p>

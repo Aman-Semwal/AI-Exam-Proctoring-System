@@ -144,7 +144,7 @@ const Profile = () => {
         <Topbar />
 
         <main className="p-6 lg:p-8 flex-1 overflow-y-auto max-w-4xl mx-auto w-full">
-          <div className="pb-4 mb-6 border-b border-white/[0.06]">
+          <div className="pb-4 mb-6 border-b border-white/6">
             <h2 className="text-2xl font-bold text-white tracking-tight">
               My Profile
             </h2>
@@ -155,7 +155,7 @@ const Profile = () => {
           </div>
 
           {loading ? (
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-10 text-center">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-10 text-center">
               <div className="w-10 h-10 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
 
               <p className="text-sm text-slate-400">
@@ -163,9 +163,9 @@ const Profile = () => {
               </p>
             </div>
           ) : (
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-6 sm:p-8 shadow-sm">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-6 sm:p-8 shadow-sm">
               {/* Avatar Section */}
-              <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-white/[0.06]">
+              <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-white/6">
                 <div className="relative group">
                   {avatarUrl ? (
                     <img
@@ -241,7 +241,7 @@ const Profile = () => {
                     name="name"
                     value={profile.name}
                     onChange={handleChange}
-                    className="w-full bg-[#090a0f] border border-white/[0.08] rounded-lg px-3.5 py-2.5 text-xs text-white focus:border-blue-500 outline-none transition"
+                    className="w-full bg-[#090a0f] border border-white/8 rounded-lg px-3.5 py-2.5 text-xs text-white focus:border-blue-500 outline-none transition"
                   />
                 </div>
 
@@ -255,7 +255,7 @@ const Profile = () => {
                     type="email"
                     value={profile.email}
                     onChange={handleChange}
-                    className="w-full bg-[#090a0f] border border-white/[0.08] rounded-lg px-3.5 py-2.5 text-xs text-white focus:border-blue-500 outline-none transition"
+                    className="w-full bg-[#090a0f] border border-white/8 rounded-lg px-3.5 py-2.5 text-xs text-white focus:border-blue-500 outline-none transition"
                   />
                 </div>
 
@@ -269,7 +269,7 @@ const Profile = () => {
                     value={profile.phone}
                     onChange={handleChange}
                     placeholder="Enter phone number"
-                    className="w-full bg-[#090a0f] border border-white/[0.08] rounded-lg px-3.5 py-2.5 text-xs text-white focus:border-blue-500 outline-none transition"
+                    className="w-full bg-[#090a0f] border border-white/8 rounded-lg px-3.5 py-2.5 text-xs text-white focus:border-blue-500 outline-none transition"
                   />
                 </div>
 
@@ -283,7 +283,7 @@ const Profile = () => {
                     value={profile.university}
                     onChange={handleChange}
                     placeholder="Enter university"
-                    className="w-full bg-[#090a0f] border border-white/[0.08] rounded-lg px-3.5 py-2.5 text-xs text-white focus:border-blue-500 outline-none transition"
+                    className="w-full bg-[#090a0f] border border-white/8 rounded-lg px-3.5 py-2.5 text-xs text-white focus:border-blue-500 outline-none transition"
                   />
                 </div>
 
@@ -297,7 +297,7 @@ const Profile = () => {
                     value={profile.course}
                     onChange={handleChange}
                     placeholder="Enter course"
-                    className="w-full bg-[#090a0f] border border-white/[0.08] rounded-lg px-3.5 py-2.5 text-xs text-white focus:border-blue-500 outline-none transition"
+                    className="w-full bg-[#090a0f] border border-white/8 rounded-lg px-3.5 py-2.5 text-xs text-white focus:border-blue-500 outline-none transition"
                   />
                 </div>
 
@@ -311,13 +311,13 @@ const Profile = () => {
                     value={profile.semester}
                     onChange={handleChange}
                     placeholder="Enter semester"
-                    className="w-full bg-[#090a0f] border border-white/[0.08] rounded-lg px-3.5 py-2.5 text-xs text-white focus:border-blue-500 outline-none transition"
+                    className="w-full bg-[#090a0f] border border-white/8 rounded-lg px-3.5 py-2.5 text-xs text-white focus:border-blue-500 outline-none transition"
                   />
                 </div>
               </div>
 
               {/* Save */}
-              <div className="mt-8 pt-6 border-t border-white/[0.06] flex justify-end">
+              <div className="mt-8 pt-6 border-t border-white/6 flex justify-end">
                 <button
                   type="button"
                   onClick={handleSave}

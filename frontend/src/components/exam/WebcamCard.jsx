@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { FaCamera, FaExclamationTriangle, FaCheckCircle } from "react-icons/fa";
 import api from "../../services/api";
+import { createAudioRecorder } from "../../utils/audioRecorder";
 
 // Capture and POST a frame every FRAME_INTERVAL_MS milliseconds.
 // 5 s is a reasonable default — frequent enough to catch violations,
@@ -9,6 +10,9 @@ const FRAME_INTERVAL_MS = 5000;
 
 // JPEG quality for canvas.toDataURL — 0.75 gives a good size/quality tradeoff
 const JPEG_QUALITY = 0.75;
+
+// Frames are scaled down to this width at most (~30–50 KB) — enough for the AI and evidence
+const MAX_FRAME_WIDTH = 640;
 
 /**
  * WebcamCard
@@ -22,29 +26,46 @@ const JPEG_QUALITY = 0.75;
  *
  * Props:
  *   sessionId {string|number} — required; the active exam session ID.
+ *   audioEnabled {boolean} — also record the mic and send each interval's audio with the frame.
+ *   onSessionEnded {() => void} — called when the server reports the session is no longer active
+ *                                  (auto-terminated, submitted elsewhere, or expired).
  */
-const WebcamCard = ({ sessionId }) => {
+const WebcamCard = ({ sessionId, audioEnabled = false, onSessionEnded }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const intervalRef = useRef(null);
   const configErrorLoggedRef = useRef(false);
+  const recorderRef = useRef(null);
 
   const [camState, setCamState] = useState("idle"); // idle | loading | active | denied | error
   const [configError, setConfigError] = useState(false);
   const [aiStatus, setAiStatus] = useState(null);   // null | "clean" | "violation"
   const [lastViolations, setLastViolations] = useState([]);
   const [frameCount, setFrameCount] = useState(0);
+  const [micState, setMicState] = useState("off"); // off | active | denied
 
   // ─── Start webcam ──────────────────────────────────────────────────────────
   const startCamera = useCallback(async () => {
     setCamState("loading");
+    const video = { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" };
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
-        audio: false,
-      });
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video, audio: audioEnabled });
+      } catch (err) {
+        // A missing or blocked mic must not stop the exam — fall back to video only
+        if (!audioEnabled) throw err;
+        console.warn("Microphone unavailable, continuing with video only:", err.name);
+        setMicState("denied");
+        stream = await navigator.mediaDevices.getUserMedia({ video, audio: false });
+      }
       streamRef.current = stream;
+      if (stream.getAudioTracks().length > 0) {
+        recorderRef.current?.stop();
+        recorderRef.current = createAudioRecorder(stream);
+        setMicState("active");
+      }
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
@@ -57,7 +78,7 @@ const WebcamCard = ({ sessionId }) => {
         setCamState("error");
       }
     }
-  }, []);
+  }, [audioEnabled]);
 
   // ─── Capture one frame and POST to backend ─────────────────────────────────
   const captureAndPostFrame = useCallback(async () => {
@@ -80,8 +101,9 @@ const WebcamCard = ({ sessionId }) => {
     // Video must be playing and have real dimensions
     if (video.readyState < video.HAVE_CURRENT_DATA || video.videoWidth === 0) return;
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    const scale = Math.min(1, MAX_FRAME_WIDTH / video.videoWidth);
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
     const ctx = canvas.getContext("2d");
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
@@ -90,22 +112,33 @@ const WebcamCard = ({ sessionId }) => {
     const frameBase64 = dataUrl.replace(/^data:image\/jpeg;base64,/, "");
 
     try {
+      const audioBase64 = recorderRef.current?.takeChunk() ?? undefined;
       const response = await api.post("/proctor/frame", {
         sessionId: Number(sessionId),
         frameBase64,
+        audioBase64,
       });
 
       const event = response.data?.data;
       const violations = event?.violationsDetected ?? [];
+      if (event?.sessionStatus && event.sessionStatus !== "ACTIVE") {
+        onSessionEnded?.();
+        return;
+      }
 
       setLastViolations(violations);
       setAiStatus(violations.length > 0 ? "violation" : "clean");
       setFrameCount((c) => c + 1);
     } catch (err) {
-      // Non-fatal — log and continue. A transient failure shouldn't crash the exam.
+      // 409 = the session is no longer active (terminated, submitted or expired)
+      if (err.response?.status === 409) {
+        onSessionEnded?.();
+        return;
+      }
+      // Otherwise non-fatal — a transient failure shouldn't crash the exam.
       console.warn("Frame POST failed:", err?.response?.data?.message || err.message);
     }
-  }, [sessionId]);
+  }, [sessionId, onSessionEnded]);
 
   // ─── Lifecycle: mount → start camera; unmount → stop ──────────────────────
   useEffect(() => {
@@ -116,6 +149,8 @@ const WebcamCard = ({ sessionId }) => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
+      recorderRef.current?.stop();
+      recorderRef.current = null;
       clearInterval(intervalRef.current);
     };
   }, [startCamera]);
@@ -145,7 +180,7 @@ const WebcamCard = ({ sessionId }) => {
   const status = statusLabel();
 
   return (
-    <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+    <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-white tracking-tight">
@@ -165,7 +200,7 @@ const WebcamCard = ({ sessionId }) => {
       </div>
 
       {/* Camera Preview */}
-      <div className="relative h-48 rounded-lg bg-[#090a0f] border border-white/[0.08] overflow-hidden">
+      <div className="relative h-48 rounded-lg bg-[#090a0f] border border-white/8 overflow-hidden">
         {/* Live video — hidden until active to avoid blank flash */}
         <video
           ref={videoRef}
@@ -196,7 +231,7 @@ const WebcamCard = ({ sessionId }) => {
         {/* Placeholder when camera is not active */}
         {camState !== "active" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-10 px-4">
-            <div className="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-slate-400 mx-auto mb-2">
+            <div className="w-12 h-12 rounded-xl bg-white/3 border border-white/8 flex items-center justify-center text-slate-400 mx-auto mb-2">
               {camState === "denied" || camState === "error"
                 ? <FaExclamationTriangle size={20} className="text-red-400" />
                 : <FaCamera size={20} />}
@@ -236,6 +271,13 @@ const WebcamCard = ({ sessionId }) => {
         </div>
       )}
 
+      {audioEnabled && (
+        <p className={`mt-3 text-[11px] ${micState === "denied" ? "text-amber-400" : "text-slate-500"}`}>
+          {micState === "active" && "🎙 Microphone monitored — speech is flagged to your proctor"}
+          {micState === "denied" && "⚠ Microphone unavailable — continuing with video monitoring only"}
+        </p>
+      )}
+
       {/* Footer status + retry */}
       <div className="mt-4 flex justify-between items-center text-xs">
         <span className={`flex items-center gap-1.5 text-[11px] font-medium ${status.color}`}>
@@ -248,7 +290,7 @@ const WebcamCard = ({ sessionId }) => {
         {(camState === "denied" || camState === "error") && (
           <button
             onClick={startCamera}
-            className="bg-[#090a0f] hover:bg-white/[0.04] border border-white/[0.08] text-slate-200 px-3 py-1.5 rounded-md text-[11px] font-medium transition"
+            className="bg-[#090a0f] hover:bg-white/4 border border-white/8 text-slate-200 px-3 py-1.5 rounded-md text-[11px] font-medium transition"
           >
             Retry Camera
           </button>

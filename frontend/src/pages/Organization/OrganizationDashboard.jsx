@@ -181,7 +181,7 @@ const OrganizationDashboard = () => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Topbar */}
-        <header className="h-16 bg-[#090a0f]/80 backdrop-blur-xl border-b border-white/[0.07] flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30">
+        <header className="h-16 bg-[#090a0f]/80 backdrop-blur-xl border-b border-white/7 flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30">
           <div>
             <h1 className="text-base font-semibold text-white tracking-tight">
               Organization Dashboard
@@ -227,7 +227,7 @@ const OrganizationDashboard = () => {
           )}
 
           {/* Welcome Header */}
-          <div className="pb-4 mb-6 border-b border-white/[0.06]">
+          <div className="pb-4 mb-6 border-b border-white/6">
             <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
               Overview
             </span>
@@ -277,8 +277,8 @@ const OrganizationDashboard = () => {
           {/* Middle Section */}
           <div className="grid lg:grid-cols-3 gap-6 mt-6">
             {/* Upcoming Exams */}
-            <div className="lg:col-span-2 bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
-              <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.06]">
+            <div className="lg:col-span-2 bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
+              <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/6">
                 <div>
                   <h3 className="text-sm font-semibold text-white tracking-tight">
                     Upcoming Exams
@@ -315,7 +315,7 @@ const OrganizationDashboard = () => {
                     />
                   ))
                 ) : (
-                  <div className="p-5 text-center text-xs text-slate-500 border border-white/[0.05] rounded-lg">
+                  <div className="p-5 text-center text-xs text-slate-500 border border-white/5 rounded-lg">
                     No upcoming exams found.
                   </div>
                 )}
@@ -323,7 +323,7 @@ const OrganizationDashboard = () => {
             </div>
 
             {/* Organization Overview */}
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
               <h3 className="text-sm font-semibold text-white tracking-tight">
                 Organization Overview
               </h3>
@@ -357,8 +357,8 @@ const OrganizationDashboard = () => {
           {/* Bottom Section */}
           <div className="grid lg:grid-cols-2 gap-6 mt-6">
             {/* Recent Activity */}
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
-              <h3 className="text-sm font-semibold text-white tracking-tight pb-3 mb-4 border-b border-white/[0.06]">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
+              <h3 className="text-sm font-semibold text-white tracking-tight pb-3 mb-4 border-b border-white/6">
                 Recent Activity
               </h3>
 
@@ -386,7 +386,7 @@ const OrganizationDashboard = () => {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
               <h3 className="text-sm font-semibold text-white tracking-tight">
                 Quick Actions
               </h3>
@@ -400,7 +400,7 @@ const OrganizationDashboard = () => {
                   onClick={() =>
                     navigate("/organization/students")
                   }
-                  className="p-3.5 rounded-lg bg-[#090a0f] border border-white/[0.07] text-left hover:border-white/[0.15] hover:bg-white/[0.02] transition"
+                  className="p-3.5 rounded-lg bg-[#090a0f] border border-white/7 text-left hover:border-white/15 hover:bg-white/2 transition"
                 >
                   <FaUsers className="text-blue-400 text-sm mb-2" />
 
@@ -417,7 +417,7 @@ const OrganizationDashboard = () => {
                   onClick={() =>
                     navigate("/organization/examiners")
                   }
-                  className="p-3.5 rounded-lg bg-[#090a0f] border border-white/[0.07] text-left hover:border-white/[0.15] hover:bg-white/[0.02] transition"
+                  className="p-3.5 rounded-lg bg-[#090a0f] border border-white/7 text-left hover:border-white/15 hover:bg-white/2 transition"
                 >
                   <FaUserTie className="text-blue-400 text-sm mb-2" />
 
@@ -434,7 +434,7 @@ const OrganizationDashboard = () => {
                   onClick={() =>
                     navigate("/organization/proctors")
                   }
-                  className="p-3.5 rounded-lg bg-[#090a0f] border border-white/[0.07] text-left hover:border-white/[0.15] hover:bg-white/[0.02] transition"
+                  className="p-3.5 rounded-lg bg-[#090a0f] border border-white/7 text-left hover:border-white/15 hover:bg-white/2 transition"
                 >
                   <FaUserShield className="text-blue-400 text-sm mb-2" />
 
@@ -451,7 +451,7 @@ const OrganizationDashboard = () => {
                   onClick={() =>
                     navigate("/organization/active-exams")
                   }
-                  className="p-3.5 rounded-lg bg-[#090a0f] border border-white/[0.07] text-left hover:border-white/[0.15] hover:bg-white/[0.02] transition"
+                  className="p-3.5 rounded-lg bg-[#090a0f] border border-white/7 text-left hover:border-white/15 hover:bg-white/2 transition"
                 >
                   <FaFileAlt className="text-blue-400 text-sm mb-2" />
 
@@ -476,7 +476,7 @@ const OrganizationDashboard = () => {
 
 const StatCard = ({ title, value, icon, change }) => {
   return (
-    <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm hover:border-white/[0.15] transition-all">
+    <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm hover:border-white/15 transition-all">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
@@ -508,7 +508,7 @@ const StatCard = ({ title, value, icon, change }) => {
 
 const ExamRow = ({ title, date, time, students }) => {
   return (
-    <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-[#090a0f] border border-white/[0.05] hover:border-white/[0.1] transition text-xs">
+    <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-[#090a0f] border border-white/5 hover:border-white/10 transition text-xs">
       <div className="flex items-center gap-3 min-w-0">
         <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
           <FaFileAlt size={12} />
@@ -551,7 +551,7 @@ const ProgressItem = ({ title, value, width }) => {
         </span>
       </div>
 
-      <div className="h-1.5 bg-[#090a0f] border border-white/[0.06] rounded-full overflow-hidden">
+      <div className="h-1.5 bg-[#090a0f] border border-white/6 rounded-full overflow-hidden">
         <div
           className="h-full bg-blue-500 rounded-full"
           style={{ width }}
@@ -563,7 +563,7 @@ const ProgressItem = ({ title, value, width }) => {
 
 const Activity = ({ text, time }) => {
   return (
-    <div className="flex gap-2.5 items-start text-xs pb-2.5 border-b border-white/[0.04] last:border-none last:pb-0">
+    <div className="flex gap-2.5 items-start text-xs pb-2.5 border-b border-white/4 last:border-none last:pb-0">
       <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
 
       <div>

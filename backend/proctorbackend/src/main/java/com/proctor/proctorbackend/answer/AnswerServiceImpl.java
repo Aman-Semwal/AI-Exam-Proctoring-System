@@ -84,26 +84,32 @@ public class AnswerServiceImpl implements AnswerService {
             answer.setIsCorrect(request.getSelectedOption().equals(question.getCorrectOption()));
         }
 
-        return toResponse(answerRepository.save(answer));
+        // Never tell the student mid-exam whether the answer was right
+        return toResponse(answerRepository.save(answer), false);
     }
 
     @Override
-    public List<AnswerResponse> getAnswersBySession(Long sessionId) {
-        if (!sessionRepository.existsById(Objects.requireNonNull(sessionId))) {
-            throw new ResourceNotFoundException("ExamSession", sessionId);
-        }
-        return answerRepository.findBySessionId(Objects.requireNonNull(sessionId)).stream()
-                .map(this::toResponse)
+    @Transactional(readOnly = true)
+    public List<AnswerResponse> getAnswersBySession(Long sessionId, String requesterEmail) {
+        ExamSession session = sessionRepository.findById(Objects.requireNonNull(sessionId))
+                .orElseThrow(() -> new ResourceNotFoundException("ExamSession", sessionId));
+        boolean showCorrectness = validateReadAccess(getUser(requesterEmail), session);
+        return answerRepository.findBySessionId(sessionId).stream()
+                .map(a -> toResponse(a, showCorrectness))
                 .toList();
     }
 
     @Override
-    public AnswerResponse getAnswerById(Long id) {
-        return toResponse(answerRepository.findById(Objects.requireNonNull(id))
-                .orElseThrow(() -> new ResourceNotFoundException("Answer", id)));
+    @Transactional(readOnly = true)
+    public AnswerResponse getAnswerById(Long id, String requesterEmail) {
+        Answer answer = answerRepository.findById(Objects.requireNonNull(id))
+                .orElseThrow(() -> new ResourceNotFoundException("Answer", id));
+        boolean showCorrectness = validateReadAccess(getUser(requesterEmail), answer.getSession());
+        return toResponse(answer, showCorrectness);
     }
 
     @Override
+    @Transactional
     public AnswerResponse gradeAnswer(Long answerId, Boolean isCorrect, String graderEmail) {
         Answer answer = answerRepository.findById(Objects.requireNonNull(answerId))
                 .orElseThrow(() -> new ResourceNotFoundException("Answer", answerId));
@@ -117,7 +123,38 @@ public class AnswerServiceImpl implements AnswerService {
         validateGraderAccess(grader, answer);
 
         answer.setIsCorrect(isCorrect);
-        return toResponse(answerRepository.save(answer));
+        return toResponse(answerRepository.save(answer), true);
+    }
+
+    /**
+     * Students may read only their own session's answers, and see correctness only once the
+     * session has ended (otherwise they could probe for the right option). Staff need the same
+     * organization, and proctors must be assigned to the exam.
+     *
+     * @return whether correctness may be shown to this requester
+     */
+    private boolean validateReadAccess(User requester, ExamSession session) {
+        if (requester.getRole() == Role.STUDENT) {
+            if (!session.getStudent().getId().equals(requester.getId())) {
+                throw new UnauthorizedException("You are not authorized to view these answers");
+            }
+            return session.getStatus() != SessionStatus.ACTIVE;
+        }
+        if (requester.getRole() == Role.SUPER_ADMIN) return true;
+        if (session.getOrganization() == null || requester.getOrganization() == null
+                || !session.getOrganization().getId().equals(requester.getOrganization().getId())) {
+            throw new UnauthorizedException("You are not authorized to view these answers");
+        }
+        if (requester.getRole() == Role.PROCTOR
+                && !examProctorService.isProctorAssignedToExam(requester.getId(), session.getExam().getId())) {
+            throw new UnauthorizedException("You are not assigned to proctor this exam");
+        }
+        return true;
+    }
+
+    private User getUser(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
     private static final Set<QuestionType> TEXT_BASED_TYPES =
@@ -140,7 +177,7 @@ public class AnswerServiceImpl implements AnswerService {
         return null; // CODING / DESCRIPTIVE: requires manual or AI grading
     }
 
-    private AnswerResponse toResponse(Answer a) {
+    private AnswerResponse toResponse(Answer a, boolean showCorrectness) {
         return AnswerResponse.builder()
                 .id(a.getId())
                 .sessionId(a.getSession().getId())
@@ -148,7 +185,7 @@ public class AnswerServiceImpl implements AnswerService {
                 .questionText(a.getQuestion().getQuestionText())
                 .selectedOption(a.getSelectedOption())
                 .textAnswer(a.getTextAnswer())
-                .isCorrect(a.getIsCorrect())
+                .isCorrect(showCorrectness ? a.getIsCorrect() : null)
                 .answeredAt(a.getAnsweredAt())
                 .build();
     }

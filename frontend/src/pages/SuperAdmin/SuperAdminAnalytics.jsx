@@ -124,7 +124,7 @@ const SuperAdminAnalytics = () => {
 
         <main className="p-6 lg:p-8 flex-1 overflow-y-auto max-w-7xl mx-auto w-full">
           {/* Header */}
-          <div className="pb-4 mb-6 border-b border-white/[0.06]">
+          <div className="pb-4 mb-6 border-b border-white/6">
             <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">
               Analytics & Telemetry
             </span>
@@ -156,7 +156,7 @@ const SuperAdminAnalytics = () => {
           {/* Analytics Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {/* Organizations */}
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
               <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">
                 Total Institutions
               </span>
@@ -171,7 +171,7 @@ const SuperAdminAnalytics = () => {
             </div>
 
             {/* Exams */}
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
               <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">
                 Total Exams
               </span>
@@ -186,7 +186,7 @@ const SuperAdminAnalytics = () => {
             </div>
 
             {/* Completed */}
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
               <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">
                 Exams Completed
               </span>
@@ -201,7 +201,7 @@ const SuperAdminAnalytics = () => {
             </div>
 
             {/* Pass Rate */}
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
               <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">
                 Average Pass Rate
               </span>
@@ -217,7 +217,7 @@ const SuperAdminAnalytics = () => {
           </div>
 
           {/* Data Summary */}
-          <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+          <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-sm font-semibold text-white">
@@ -231,14 +231,14 @@ const SuperAdminAnalytics = () => {
 
               <button
                 onClick={fetchAnalytics}
-                className="px-3 py-1.5 rounded-lg bg-[#090a0f] border border-white/[0.08] text-xs text-purple-400 hover:text-white hover:bg-white/[0.05] transition"
+                className="px-3 py-1.5 rounded-lg bg-[#090a0f] border border-white/8 text-xs text-purple-400 hover:text-white hover:bg-white/5 transition"
               >
                 Refresh
               </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="rounded-lg border border-white/[0.06] bg-[#090a0f] p-4">
+              <div className="rounded-lg border border-white/6 bg-[#090a0f] p-4">
                 <p className="text-[10px] uppercase tracking-wider text-slate-500">
                   Institutions
                 </p>
@@ -248,7 +248,7 @@ const SuperAdminAnalytics = () => {
                 </p>
               </div>
 
-              <div className="rounded-lg border border-white/[0.06] bg-[#090a0f] p-4">
+              <div className="rounded-lg border border-white/6 bg-[#090a0f] p-4">
                 <p className="text-[10px] uppercase tracking-wider text-slate-500">
                   Exams
                 </p>
@@ -258,7 +258,7 @@ const SuperAdminAnalytics = () => {
                 </p>
               </div>
 
-              <div className="rounded-lg border border-white/[0.06] bg-[#090a0f] p-4">
+              <div className="rounded-lg border border-white/6 bg-[#090a0f] p-4">
                 <p className="text-[10px] uppercase tracking-wider text-slate-500">
                   Completed Sessions
                 </p>

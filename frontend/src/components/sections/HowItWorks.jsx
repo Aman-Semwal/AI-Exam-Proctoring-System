@@ -24,7 +24,7 @@ const HowItWorks = () => {
       {/* ================= HIGHLIGHT SECTION 1: Captivating Security ================= */}
       <section
         className={`py-28 relative overflow-hidden border-t transition-colors duration-300 ${
-          isDark ? "border-white/[0.05]" : "border-slate-200"
+          isDark ? "border-white/5" : "border-slate-200"
         }`}
       >
         <div className="max-w-6xl mx-auto px-6 grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
@@ -179,14 +179,14 @@ const HowItWorks = () => {
             <div
               className={`relative rounded-3xl overflow-hidden border transition-all duration-300 group ${
                 isDark
-                  ? "bg-[#090b12] border-white/[0.12] shadow-2xl shadow-blue-950/50"
+                  ? "bg-[#090b12] border-white/12 shadow-2xl shadow-blue-950/50"
                   : "bg-white border-slate-200 shadow-xl shadow-slate-300/50"
               }`}
             >
               <img
                 src={sensorDeviceImg}
                 alt="AI Proctoring Sensor Device"
-                className="w-full h-auto object-cover max-h-[420px] group-hover:scale-105 transition-transform duration-700"
+                className="w-full h-auto object-cover max-h-105 group-hover:scale-105 transition-transform duration-700"
               />
               <div
                 className={`absolute inset-0 pointer-events-none ${
@@ -209,14 +209,14 @@ const HowItWorks = () => {
       {/* ================= HIGHLIGHT SECTION 2: Constellation / Shared Universe ================= */}
       <section
         className={`py-28 relative overflow-hidden border-t transition-colors duration-300 ${
-          isDark ? "border-white/[0.05]" : "border-slate-200"
+          isDark ? "border-white/5" : "border-slate-200"
         }`}
       >
         <div className="max-w-6xl mx-auto px-6 grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           {/* Left Column: Glowing Constellation Disc Network */}
           <div className="lg:col-span-5 flex justify-center order-2 lg:order-1">
             <div
-              className={`relative w-[320px] sm:w-[380px] h-[320px] sm:h-[380px] rounded-full border flex items-center justify-center transition-all ${
+              className={`relative w-80 sm:w-95 h-80 sm:h-95 rounded-full border flex items-center justify-center transition-all ${
                 isDark
                   ? "border-blue-500/25 bg-[#080a12] shadow-2xl shadow-blue-950/60"
                   : "border-blue-300 bg-white shadow-xl shadow-slate-200/80"

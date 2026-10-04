@@ -75,6 +75,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<OrganizationResponse> listAllOrganizations() {
         return organizationRepository.findAll().stream()
                 .map(this::toResponse)
@@ -82,6 +83,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public OrganizationResponse getOrganization(Long id, String requesterEmail) {
         User         requester    = getUserByEmail(requesterEmail);
         Organization organization = requireActiveOrganization(id);
@@ -211,6 +213,29 @@ public class OrganizationServiceImpl implements OrganizationService {
             throw new BadRequestException("SUPER_ADMIN cannot be removed from an organization");
         }
         userRepository.delete(user);
+    }
+
+    @Override
+    @Transactional
+    public void removeMembers(Long organizationId, List<Long> userIds, String requesterEmail) {
+        User requester = getUserByEmail(requesterEmail);
+        Organization organization = requireActiveOrganization(organizationId);
+        validateOrgAdminAccess(requester, organization.getId());
+
+        List<User> users = userRepository.findAllById(userIds);
+        for (User user : users) {
+            if (user.getOrganization() == null || !user.getOrganization().getId().equals(organizationId)) {
+                throw new BadRequestException("One or more users do not belong to this organization");
+            }
+            if (user.getRole() == Role.SUPER_ADMIN) {
+                throw new BadRequestException("SUPER_ADMIN cannot be removed from an organization");
+            }
+            if (user.getId().equals(requester.getId())) {
+                throw new BadRequestException("You cannot delete your own account via bulk delete");
+            }
+        }
+        
+        userRepository.deleteAll(users);
     }
 
     // -----------------------------------------------------------------------

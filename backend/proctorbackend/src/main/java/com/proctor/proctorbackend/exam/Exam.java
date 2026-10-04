@@ -56,6 +56,21 @@ public class Exam {
     @JoinColumn(name = "organization_id", nullable = false)
     private Organization organization;
 
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ExamStatus status = ExamStatus.DRAFT;
+
+    @Builder.Default
+    @Embedded
+    private ProctoringRules proctoringRules = new ProctoringRules();
+
+    /** Never null — Hibernate leaves an embeddable null only if every column is null. */
+    public ProctoringRules getProctoringRules() {
+        if (proctoringRules == null) proctoringRules = new ProctoringRules();
+        return proctoringRules;
+    }
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
 

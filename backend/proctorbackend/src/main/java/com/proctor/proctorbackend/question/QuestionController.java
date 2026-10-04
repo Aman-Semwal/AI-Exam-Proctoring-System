@@ -30,8 +30,9 @@ public class QuestionController {
     @Operation(summary = "Add a question to an exam")
     @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<QuestionResponse>> createQuestion(
-            @Valid @RequestBody QuestionRequest request) {
-        QuestionResponse response = questionService.createQuestion(request);
+            @Valid @RequestBody QuestionRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        QuestionResponse response = questionService.createQuestion(request, userDetails.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Question created", response));
     }
@@ -40,10 +41,11 @@ public class QuestionController {
     @Operation(summary = "Get a question by ID (correct answer hidden for students)")
     public ResponseEntity<ApiResponse<QuestionResponse>> getQuestion(
             @PathVariable Long id,
-            @RequestParam(defaultValue = "false") boolean includeAnswer) {
+            @RequestParam(defaultValue = "false") boolean includeAnswer,
+            @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(
                 ApiResponse.success("Question fetched",
-                        questionService.getQuestionById(id, includeAnswer)));
+                        questionService.getQuestionById(id, includeAnswer, userDetails.getUsername())));
     }
 
     @GetMapping("/exam/{examId}")
@@ -62,17 +64,20 @@ public class QuestionController {
     @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<QuestionResponse>> updateQuestion(
             @PathVariable Long id,
-            @Valid @RequestBody QuestionRequest request) {
+            @Valid @RequestBody QuestionRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(
                 ApiResponse.success("Question updated",
-                        questionService.updateQuestion(id, request)));
+                        questionService.updateQuestion(id, request, userDetails.getUsername())));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a question")
     @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> deleteQuestion(@PathVariable Long id) {
-        questionService.deleteQuestion(id);
+    public ResponseEntity<ApiResponse<Void>> deleteQuestion(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        questionService.deleteQuestion(id, userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success("Question deleted"));
     }
 }

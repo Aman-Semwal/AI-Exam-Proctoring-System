@@ -13,10 +13,14 @@ import {
   FaChalkboardTeacher,
   FaChevronRight,
   FaCalculator,
+  FaRocket,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
 import api from "../../services/api";
+import { toApiDateTime } from "../../utils/dateTime";
+import ProctoringRulesFields from "../../components/exam/ProctoringRulesFields";
+import { DEFAULT_PROCTORING_RULES } from "../../utils/proctoringRules";
 
 // ─── Tab IDs ─────────────────────────────────────────────────────────────────
 const TAB_EXAMS = "my_exams";
@@ -38,6 +42,7 @@ export default function ExaminerDashboard() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -49,6 +54,7 @@ export default function ExaminerDashboard() {
   const [newDuration, setNewDuration] = useState("");
   const [newStartTime, setNewStartTime] = useState("");
   const [newEndTime, setNewEndTime] = useState("");
+  const [newRules, setNewRules] = useState(DEFAULT_PROCTORING_RULES);
 
   // Delete Confirmation
   const [deleteExam, setDeleteExam] = useState(null);
@@ -112,6 +118,7 @@ export default function ExaminerDashboard() {
     setNewDuration("");
     setNewStartTime("");
     setNewEndTime("");
+    setNewRules(DEFAULT_PROCTORING_RULES);
     setEditingExam(null);
   };
 
@@ -143,6 +150,7 @@ export default function ExaminerDashboard() {
     );
     setNewStartTime(formatDateTimeForInput(exam.startTime));
     setNewEndTime(formatDateTimeForInput(exam.endTime));
+    setNewRules({ ...DEFAULT_PROCTORING_RULES, ...exam.proctoringRules });
     setIsModalOpen(true);
   };
 
@@ -176,8 +184,9 @@ export default function ExaminerDashboard() {
         title: newTitle.trim(),
         description: newDescription.trim(),
         durationMinutes: Number(newDuration),
-        startTime: newStartTime,
-        endTime: newEndTime,
+        startTime: toApiDateTime(newStartTime),
+        endTime: toApiDateTime(newEndTime),
+        proctoringRules: newRules,
       };
       let response;
       if (editingExam) {
@@ -228,6 +237,29 @@ export default function ExaminerDashboard() {
       setError(err.response?.data?.message || "Unable to delete the exam.");
     } finally {
       setDeleting(false);
+    }
+  };
+
+  // ── Publish exam ───────────────────────────────────────────────────────────
+  const handlePublishExam = async (exam) => {
+    if (!exam?.id) return;
+    try {
+      setPublishing(true);
+      setError("");
+      setMessage("");
+      const response = await api.patch(`/exams/${exam.id}/publish`);
+      const updatedExam = response.data?.data;
+      if (updatedExam) {
+        setExams((prev) => prev.map((ex) => (ex.id === exam.id ? updatedExam : ex)));
+      } else {
+        await fetchExams(true);
+      }
+      setMessage("Exam published successfully!");
+    } catch (err) {
+      console.error("Failed to publish exam:", err);
+      setError(err.response?.data?.message || "Unable to publish the exam.");
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -403,7 +435,7 @@ export default function ExaminerDashboard() {
   return (
     <div className="min-h-screen bg-[#090a0f] text-slate-100 flex">
       {/* ── Sidebar ── */}
-      <aside className="w-64 min-h-screen bg-[#0d0f17] border-r border-white/[0.07] flex flex-col justify-between p-4 shrink-0 sticky top-0 h-screen">
+      <aside className="w-64 min-h-screen bg-[#0d0f17] border-r border-white/7 flex flex-col justify-between p-4 shrink-0 sticky top-0 h-screen">
         <div>
           <div
             className="p-3 mb-4 cursor-pointer flex items-center gap-3 group"
@@ -430,7 +462,7 @@ export default function ExaminerDashboard() {
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-semibold text-xs transition ${
                 activeTab === TAB_EXAMS
                   ? "bg-blue-600/15 text-blue-400 border border-blue-500/20 shadow-sm"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-white/4 border border-transparent"
               }`}
             >
               <FaClipboardList size={14} />
@@ -442,7 +474,7 @@ export default function ExaminerDashboard() {
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-semibold text-xs transition ${
                 activeTab === TAB_SESSIONS
                   ? "bg-violet-600/15 text-violet-400 border border-violet-500/20 shadow-sm"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-white/4 border border-transparent"
               }`}
             >
               <FaChalkboardTeacher size={14} />
@@ -451,7 +483,7 @@ export default function ExaminerDashboard() {
           </nav>
         </div>
 
-        <div className="pt-3 border-t border-white/[0.07]">
+        <div className="pt-3 border-t border-white/7">
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 text-xs font-medium text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 py-2 rounded-lg transition"
@@ -465,7 +497,7 @@ export default function ExaminerDashboard() {
       {/* ── Main Content ── */}
       <main className="flex-1 p-6 lg:p-8 overflow-y-auto max-w-7xl mx-auto w-full">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/[0.06]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/6">
           <div>
             <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
               Faculty Portal
@@ -490,7 +522,7 @@ export default function ExaminerDashboard() {
         </div>
 
         {/* Tab Bar */}
-        <div className="flex gap-1 mb-6 bg-[#121520] p-1 rounded-xl border border-white/[0.07] w-fit">
+        <div className="flex gap-1 mb-6 bg-[#121520] p-1 rounded-xl border border-white/7 w-fit">
           <button
             onClick={() => setActiveTab(TAB_EXAMS)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition ${
@@ -534,7 +566,7 @@ export default function ExaminerDashboard() {
           <>
             {/* Quick Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              <div className="bg-[#121520] p-5 rounded-xl border border-white/[0.07] shadow-sm">
+              <div className="bg-[#121520] p-5 rounded-xl border border-white/7 shadow-sm">
                 <p className="text-xs text-slate-400 font-medium flex items-center gap-2 uppercase tracking-wider">
                   <FaClipboardList className="text-blue-400" />
                   Total Exams Created
@@ -544,7 +576,7 @@ export default function ExaminerDashboard() {
                 </p>
               </div>
 
-              <div className="bg-[#121520] p-5 rounded-xl border border-white/[0.07] shadow-sm">
+              <div className="bg-[#121520] p-5 rounded-xl border border-white/7 shadow-sm">
                 <p className="text-xs text-slate-400 font-medium flex items-center gap-2 uppercase tracking-wider">
                   <FaCheckCircle className="text-emerald-400" />
                   Published / Active
@@ -554,7 +586,7 @@ export default function ExaminerDashboard() {
                 </p>
               </div>
 
-              <div className="bg-[#121520] p-5 rounded-xl border border-white/[0.07] shadow-sm">
+              <div className="bg-[#121520] p-5 rounded-xl border border-white/7 shadow-sm">
                 <p className="text-xs text-slate-400 font-medium flex items-center gap-2 uppercase tracking-wider">
                   <FaFileAlt className="text-amber-400" />
                   Drafts
@@ -566,9 +598,9 @@ export default function ExaminerDashboard() {
             </div>
 
             {/* Search + Table */}
-            <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+            <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                <div className="flex items-center bg-[#090a0f] border border-white/[0.08] rounded-lg px-3 py-2 w-full sm:w-80">
+                <div className="flex items-center bg-[#090a0f] border border-white/8 rounded-lg px-3 py-2 w-full sm:w-80">
                   <FaSearch className="text-slate-500 text-xs mr-2.5" />
                   <input
                     type="text"
@@ -591,9 +623,9 @@ export default function ExaminerDashboard() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[950px]">
+                  <table className="w-full text-left border-collapse min-w-237.5">
                     <thead>
-                      <tr className="border-b border-white/[0.06] text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                      <tr className="border-b border-white/6 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                         <th className="pb-3 px-3">Exam Title</th>
                         <th className="pb-3 px-3">Status</th>
                         <th className="pb-3 px-3">Registered Candidates</th>
@@ -601,14 +633,14 @@ export default function ExaminerDashboard() {
                         <th className="pb-3 px-3 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/[0.04] text-xs">
+                    <tbody className="divide-y divide-white/4 text-xs">
                       {filteredExams.length > 0 ? (
                         filteredExams.map((exam) => {
                           const status = getStatus(exam);
                           const isPublished =
                             status === "PUBLISHED" || status === "ACTIVE" || status === "ONGOING";
                           return (
-                            <tr key={exam.id} className="hover:bg-white/[0.02] transition">
+                            <tr key={exam.id} className="hover:bg-white/2 transition">
                               <td className="py-3.5 px-3">
                                 <p className="font-semibold text-white">{getExamTitle(exam)}</p>
                                 {exam.description && (
@@ -636,6 +668,18 @@ export default function ExaminerDashboard() {
                               </td>
                               <td className="py-3.5 px-3">
                                 <div className="flex items-center justify-end gap-2">
+                                  {status === "DRAFT" && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handlePublishExam(exam)}
+                                      disabled={publishing}
+                                      title="Publish Exam"
+                                      className="h-8 px-3 rounded-lg flex items-center justify-center gap-1.5 text-violet-400 bg-violet-500/10 border border-violet-500/20 hover:bg-violet-500/20 transition disabled:opacity-50"
+                                    >
+                                      <FaRocket size={12} />
+                                      <span className="hidden xl:inline">{publishing ? "Publishing..." : "Publish"}</span>
+                                    </button>
+                                  )}
                                   <button
                                     type="button"
                                     onClick={() => openQuestionBank(exam)}
@@ -695,17 +739,17 @@ export default function ExaminerDashboard() {
             {/* Left Column: exam selector + sessions table */}
             <div className={`flex-1 min-w-0 transition-all ${resultPanelOpen ? "max-w-[55%]" : ""}`}>
               {/* Exam Selector */}
-              <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm mb-5">
+              <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm mb-5">
                 <label className="block text-xs font-semibold text-slate-300 mb-2 uppercase tracking-wider">
                   Select Exam
                 </label>
                 {loading ? (
-                  <div className="h-9 bg-[#090a0f] border border-white/[0.08] rounded-lg animate-pulse" />
+                  <div className="h-9 bg-[#090a0f] border border-white/8 rounded-lg animate-pulse" />
                 ) : (
                   <select
                     value={selectedExamId}
                     onChange={handleExamSelect}
-                    className="w-full px-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-xs text-white focus:outline-none focus:border-violet-500 transition appearance-none cursor-pointer"
+                    className="w-full px-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-xs text-white focus:outline-none focus:border-violet-500 transition appearance-none cursor-pointer"
                   >
                     <option value="">— Choose an exam to view sessions —</option>
                     {exams.map((exam) => (
@@ -719,7 +763,7 @@ export default function ExaminerDashboard() {
 
               {/* Sessions Table */}
               {selectedExamId && (
-                <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+                <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-sm font-bold text-white">
                       Exam Sessions
@@ -746,9 +790,9 @@ export default function ExaminerDashboard() {
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse min-w-[600px]">
+                      <table className="w-full text-left border-collapse min-w-150">
                         <thead>
-                          <tr className="border-b border-white/[0.06] text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                          <tr className="border-b border-white/6 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                             <th className="pb-3 px-3">Student</th>
                             <th className="pb-3 px-3">Attempt</th>
                             <th className="pb-3 px-3">Status</th>
@@ -757,7 +801,7 @@ export default function ExaminerDashboard() {
                             <th className="pb-3 px-3 text-right">Action</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/[0.04] text-xs">
+                        <tbody className="divide-y divide-white/4 text-xs">
                           {sessions.map((session) => {
                             const sStatus = getSessionStatus(session);
                             const isActive = sStatus === "IN_PROGRESS" || sStatus === "ACTIVE";
@@ -765,7 +809,7 @@ export default function ExaminerDashboard() {
                             return (
                               <tr
                                 key={session.id}
-                                className={`hover:bg-white/[0.02] transition ${
+                                className={`hover:bg-white/2 transition ${
                                   selectedSession?.id === session.id ? "bg-violet-500/5" : ""
                                 }`}
                               >
@@ -795,14 +839,23 @@ export default function ExaminerDashboard() {
                                   {formatDate(session.startTime || session.startedAt)}
                                 </td>
                                 <td className="py-3.5 px-3 text-right">
-                                  <button
-                                    type="button"
-                                    onClick={() => openResultPanel(session)}
-                                    className="h-8 px-3 rounded-lg flex items-center justify-end gap-1.5 text-violet-400 bg-violet-500/10 border border-violet-500/20 hover:bg-violet-500/20 transition ml-auto"
-                                  >
-                                    <span>View Results</span>
-                                    <FaChevronRight size={10} />
-                                  </button>
+                                  <div className="flex justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => navigate(`/reports/session/${session.id}`)}
+                                      className="h-8 px-3 rounded-lg text-slate-300 bg-white/4 border border-white/8 hover:bg-white/8 transition"
+                                    >
+                                      Integrity Report
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => openResultPanel(session)}
+                                      className="h-8 px-3 rounded-lg flex items-center justify-end gap-1.5 text-violet-400 bg-violet-500/10 border border-violet-500/20 hover:bg-violet-500/20 transition"
+                                    >
+                                      <span>View Results</span>
+                                      <FaChevronRight size={10} />
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -815,7 +868,7 @@ export default function ExaminerDashboard() {
               )}
 
               {!selectedExamId && !loading && (
-                <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-10 text-center shadow-sm">
+                <div className="bg-[#121520] border border-white/7 rounded-xl p-10 text-center shadow-sm">
                   <FaChalkboardTeacher className="text-4xl text-slate-600 mx-auto mb-3" />
                   <p className="text-sm text-slate-400 font-medium">Select an exam above to view its sessions.</p>
                   <p className="text-xs text-slate-600 mt-1">You can then review student results and grade answers.</p>
@@ -825,9 +878,9 @@ export default function ExaminerDashboard() {
 
             {/* ── Result Side Panel ── */}
             {resultPanelOpen && (
-              <div className="w-[45%] shrink-0 bg-[#121520] border border-white/[0.07] rounded-xl shadow-lg flex flex-col h-fit sticky top-6">
+              <div className="w-[45%] shrink-0 bg-[#121520] border border-white/7 rounded-xl shadow-lg flex flex-col h-fit sticky top-6">
                 {/* Panel Header */}
-                <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.07]">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-white/7">
                   <div>
                     <h3 className="text-sm font-bold text-white">Result Breakdown</h3>
                     {selectedSession && (
@@ -867,13 +920,13 @@ export default function ExaminerDashboard() {
                     <>
                       {/* Score Summary */}
                       <div className="grid grid-cols-3 gap-3 mb-5">
-                        <div className="bg-[#090a0f] border border-white/[0.07] rounded-lg p-3 text-center">
+                        <div className="bg-[#090a0f] border border-white/7 rounded-lg p-3 text-center">
                           <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Score</p>
                           <p className="text-lg font-bold text-white font-mono">
                             {result.score ?? "—"}<span className="text-slate-500 text-xs">/{result.totalMarks ?? "?"}</span>
                           </p>
                         </div>
-                        <div className="bg-[#090a0f] border border-white/[0.07] rounded-lg p-3 text-center">
+                        <div className="bg-[#090a0f] border border-white/7 rounded-lg p-3 text-center">
                           <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Percentage</p>
                           <p className="text-lg font-bold text-violet-400 font-mono">
                             {result.percentage !== undefined && result.percentage !== null
@@ -881,7 +934,7 @@ export default function ExaminerDashboard() {
                               : "—"}
                           </p>
                         </div>
-                        <div className="bg-[#090a0f] border border-white/[0.07] rounded-lg p-3 text-center">
+                        <div className="bg-[#090a0f] border border-white/7 rounded-lg p-3 text-center">
                           <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Grade</p>
                           <p className="text-lg font-bold text-emerald-400">
                             {result.grade ?? "—"}
@@ -902,7 +955,7 @@ export default function ExaminerDashboard() {
                             return (
                               <div
                                 key={answerId ?? idx}
-                                className="bg-[#090a0f] border border-white/[0.07] rounded-lg p-3.5 space-y-2"
+                                className="bg-[#090a0f] border border-white/7 rounded-lg p-3.5 space-y-2"
                               >
                                 {/* Question header */}
                                 <div className="flex items-start justify-between gap-2">
@@ -922,11 +975,11 @@ export default function ExaminerDashboard() {
 
                                 {/* Student Answer */}
                                 {(row.selectedOption || row.textAnswer) && (
-                                  <div className="bg-white/[0.03] border border-white/[0.05] rounded px-3 py-2">
+                                  <div className="bg-white/3 border border-white/5 rounded px-3 py-2">
                                     <p className="text-[10px] text-slate-500 mb-0.5 uppercase tracking-wider">
                                       Student Answer
                                     </p>
-                                    <p className="text-xs text-slate-300 whitespace-pre-wrap break-words">
+                                    <p className="text-xs text-slate-300 whitespace-pre-wrap wrap-break-word">
                                       {row.selectedOption || row.textAnswer}
                                     </p>
                                   </div>
@@ -978,7 +1031,7 @@ export default function ExaminerDashboard() {
                                           type="button"
                                           disabled={!!inFlight}
                                           onClick={() => handleGrade(answerId, !row.isCorrect)}
-                                          className="h-7 px-2.5 rounded-md text-[10px] font-medium text-slate-400 border border-white/[0.08] hover:bg-white/[0.04] disabled:opacity-50 disabled:cursor-not-allowed transition"
+                                          className="h-7 px-2.5 rounded-md text-[10px] font-medium text-slate-400 border border-white/8 hover:bg-white/4 disabled:opacity-50 disabled:cursor-not-allowed transition"
                                         >
                                           {inFlight ? "Saving..." : "Change Grade"}
                                         </button>
@@ -994,7 +1047,7 @@ export default function ExaminerDashboard() {
                       )}
 
                       {/* Recalculate Score Button */}
-                      <div className="mt-5 pt-4 border-t border-white/[0.07]">
+                      <div className="mt-5 pt-4 border-t border-white/7">
                         <button
                           type="button"
                           onClick={handleRecalculate}
@@ -1024,8 +1077,8 @@ export default function ExaminerDashboard() {
       {/* ── Create / Edit Exam Modal ── */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-[#121520] border border-white/[0.1] rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200 my-8">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.06]">
+          <div className="bg-[#121520] border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200 my-8">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/6">
               <h3 className="text-base font-bold text-white tracking-tight">
                 {editingExam ? "Edit Exam Paper" : "Create New Exam Paper"}
               </h3>
@@ -1048,7 +1101,7 @@ export default function ExaminerDashboard() {
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   required
-                  className="w-full px-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
+                  className="w-full px-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
                 />
               </div>
 
@@ -1060,7 +1113,7 @@ export default function ExaminerDashboard() {
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
                   rows="3"
-                  className="w-full px-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition resize-none"
+                  className="w-full px-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition resize-none"
                 />
               </div>
 
@@ -1074,7 +1127,7 @@ export default function ExaminerDashboard() {
                   value={newDuration}
                   onChange={(e) => setNewDuration(e.target.value)}
                   required
-                  className="w-full px-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
+                  className="w-full px-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
                 />
               </div>
 
@@ -1086,7 +1139,7 @@ export default function ExaminerDashboard() {
                   value={newStartTime}
                   onChange={(e) => setNewStartTime(e.target.value)}
                   required
-                  className="w-full px-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-blue-500 transition"
+                  className="w-full px-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-white focus:outline-none focus:border-blue-500 transition"
                 />
               </div>
 
@@ -1098,16 +1151,18 @@ export default function ExaminerDashboard() {
                   value={newEndTime}
                   onChange={(e) => setNewEndTime(e.target.value)}
                   required
-                  className="w-full px-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-blue-500 transition"
+                  className="w-full px-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-white focus:outline-none focus:border-blue-500 transition"
                 />
               </div>
 
+              <ProctoringRulesFields value={newRules} onChange={setNewRules} />
+
               {/* Buttons */}
-              <div className="flex justify-end gap-2.5 pt-4 border-t border-white/[0.06]">
+              <div className="flex justify-end gap-2.5 pt-4 border-t border-white/6">
                 <button
                   type="button"
                   onClick={() => { setIsModalOpen(false); resetForm(); }}
-                  className="px-4 py-2 bg-[#090a0f] hover:bg-white/[0.04] text-slate-300 rounded-lg font-medium border border-white/[0.08] transition"
+                  className="px-4 py-2 bg-[#090a0f] hover:bg-white/4 text-slate-300 rounded-lg font-medium border border-white/8 transition"
                 >
                   Cancel
                 </button>
@@ -1128,8 +1183,8 @@ export default function ExaminerDashboard() {
 
       {/* ── Delete Confirmation Modal ── */}
       {deleteExam && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[60]">
-          <div className="bg-[#121520] border border-white/[0.1] rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-60">
+          <div className="bg-[#121520] border border-white/10 rounded-2xl max-w-sm w-full p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-base font-bold text-white">Delete Exam?</h3>
@@ -1155,7 +1210,7 @@ export default function ExaminerDashboard() {
                 type="button"
                 onClick={() => setDeleteExam(null)}
                 disabled={deleting}
-                className="px-4 py-2 bg-[#090a0f] hover:bg-white/[0.04] text-slate-300 rounded-lg font-medium border border-white/[0.08] transition"
+                className="px-4 py-2 bg-[#090a0f] hover:bg-white/4 text-slate-300 rounded-lg font-medium border border-white/8 transition"
               >
                 Cancel
               </button>

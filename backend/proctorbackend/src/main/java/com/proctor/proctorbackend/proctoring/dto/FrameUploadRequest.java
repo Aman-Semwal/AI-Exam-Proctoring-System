@@ -1,10 +1,8 @@
 package com.proctor.proctorbackend.proctoring.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
-
-import java.util.List;
 
 @Data
 public class FrameUploadRequest {
@@ -14,15 +12,10 @@ public class FrameUploadRequest {
 
     /** Base64-encoded JPEG/PNG webcam frame (required). */
     @NotNull(message = "Frame data is required")
+    @Size(max = 2_000_000, message = "Frame is too large")
     private String frameBase64;
 
-    /**
-     * ArcFace 512-dim embedding captured at enrollment time.
-     * Optional — when provided, the AI service performs identity verification
-     * for this frame. The backend enforces that identity verification is
-     * performed at least every {@code proctoring.identity.check-interval-frames}
-     * frames regardless of whether the client sends this field.
-     */
-    @JsonProperty("reference_embedding")
-    private List<Double> referenceEmbedding;
+    /** Optional 16-bit PCM mono 16 kHz WAV (base64) covering the last frame interval. */
+    @Size(max = 1_000_000, message = "Audio chunk is too large")
+    private String audioBase64;
 }

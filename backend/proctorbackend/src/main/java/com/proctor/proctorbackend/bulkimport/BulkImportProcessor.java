@@ -52,7 +52,7 @@ public class BulkImportProcessor {
         } catch (Exception e) {
             log.error("File parse error for job {}: {}", jobId, e.getMessage());
             job.setStatus(BulkImportStatus.FAILED);
-            job.setCompletedAt(LocalDateTime.now());
+            job.setCompletedAt(LocalDateTime.now(java.time.ZoneOffset.UTC));
             jobRepository.save(job);
             return;
         }
@@ -63,11 +63,24 @@ public class BulkImportProcessor {
         List<User> usersToSave = new ArrayList<>();
         List<String[]> welcomeMails = new ArrayList<>(); // [email, name, password, orgName, role]
 
+        // 1. Batch Email Lookup & Local Duplicate Detection
+        Set<String> allEmailsInFile = new HashSet<>();
+        for (Map<String, String> row : rows) {
+            String email = getMappedValue(row, "email");
+            if (!isBlank(email)) allEmailsInFile.add(email.trim().toLowerCase());
+        }
+        
+        Set<String> existingEmails = allEmailsInFile.isEmpty() ? new HashSet<>() 
+                : userRepository.findExistingEmails(allEmailsInFile);
+        Set<String> seenInFile = new HashSet<>();
+
+        // 2. Process Rows
         for (int i = 0; i < rows.size(); i++) {
             int rowNum = i + 2;
             Map<String, String> row = rows.get(i);
-            String email = row.get("email");
-            String name  = row.get("name");
+            
+            String email = getMappedValue(row, "email");
+            String name  = getMappedValue(row, "name");
 
             if (isBlank(name)) {
                 errors.add(error(job, rowNum, email, "Missing required field: name"));
@@ -77,31 +90,42 @@ public class BulkImportProcessor {
                 errors.add(error(job, rowNum, null, "Missing required field: email"));
                 failed++; continue;
             }
+            
+            email = email.trim().toLowerCase();
+            
             if (!email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
                 errors.add(error(job, rowNum, email, "Invalid email format"));
                 failed++; continue;
             }
-            if (userRepository.existsByEmail(email)) {
+            
+            if (existingEmails.contains(email)) {
                 errors.add(error(job, rowNum, email, "Email already registered"));
                 failed++; continue;
             }
+            
+            if (seenInFile.contains(email)) {
+                errors.add(error(job, rowNum, email, "Duplicate email in the uploaded file"));
+                failed++; continue;
+            }
+            
+            seenInFile.add(email);
 
             try {
-                Role role = parseRole(row.get("role"));
+                Role role = parseRole(getMappedValue(row, "role"));
                 String plainPassword = generatePassword();
 
                 User user = User.builder()
                         .name(name.trim())
-                        .email(email.trim().toLowerCase())
+                        .email(email)
                         .password(passwordEncoder.encode(plainPassword))
                         .role(role)
                         .organization(org)
-                        .rollNo(row.get("rollno"))
-                        .semester(row.get("semester"))
-                        .batch(row.get("batch"))
-                        .course(row.get("course"))
-                        .stream(row.get("stream"))
-                        .appliedRole(row.get("appliedrole"))
+                        .rollNo(getMappedValue(row, "rollno"))
+                        .semester(getMappedValue(row, "semester"))
+                        .batch(getMappedValue(row, "batch"))
+                        .course(getMappedValue(row, "course"))
+                        .stream(getMappedValue(row, "stream"))
+                        .appliedRole(getMappedValue(row, "appliedrole"))
                         .build();
 
                 usersToSave.add(user);
@@ -115,22 +139,27 @@ public class BulkImportProcessor {
         }
 
         if (!usersToSave.isEmpty()) userRepository.saveAll(usersToSave);
-        for (String[] m : welcomeMails) {
-            try {
-                mailService.sendWelcome(m[0], m[1], m[2], m[3], m[4]);
-            } catch (Exception mailEx) {
-                log.warn("Welcome mail could not be delivered for {}: {}", m[0], mailEx.getClass().getSimpleName());
-            }
-        }
-
         if (!errors.isEmpty()) errorRepository.saveAll(errors);
 
         job.setSuccessCount(success);
         job.setFailedCount(failed);
         job.setStatus(BulkImportStatus.COMPLETED);
-        job.setCompletedAt(LocalDateTime.now());
+        job.setCompletedAt(LocalDateTime.now(java.time.ZoneOffset.UTC));
         jobRepository.save(job);
         log.info("Bulk import job {} completed: {} success, {} failed", jobId, success, failed);
+        
+        // 3. Async Email Dispatch
+        if (!welcomeMails.isEmpty()) {
+            new Thread(() -> {
+                for (String[] m : welcomeMails) {
+                    try {
+                        mailService.sendWelcome(m[0], m[1], m[2], m[3], m[4]);
+                    } catch (Exception mailEx) {
+                        log.warn("Welcome mail could not be delivered for {}: {}", m[0], mailEx.getClass().getSimpleName());
+                    }
+                }
+            }).start();
+        }
     }
 
     private List<Map<String, String>> parseCsv(byte[] bytes) throws Exception {
@@ -210,5 +239,35 @@ public class BulkImportProcessor {
 
     private BulkImportError error(BulkImportJob job, int row, String email, String reason) {
         return BulkImportError.builder().job(job).rowNumber(row).email(email).reason(reason).build();
+    }
+
+    // Flexible Alias Mapping Dictionary
+    private static final Map<String, List<String>> ALIASES = Map.of(
+        "email", List.of("email", "emailid", "emailaddress", "mail", "emaild"),
+        "name", List.of("name", "studentname", "fullname", "firstname", "candidate"),
+        "rollno", List.of("rollno", "rollnumber", "registrationno", "id", "studentid")
+    );
+
+    private String getMappedValue(Map<String, String> row, String standardKey) {
+        // 1. Direct match first
+        if (row.containsKey(standardKey)) {
+            return row.get(standardKey);
+        }
+        
+        // 2. Check aliases
+        List<String> aliases = ALIASES.getOrDefault(standardKey, List.of());
+        for (String alias : aliases) {
+            if (row.containsKey(alias)) {
+                return row.get(alias);
+            }
+            // 3. Fallback: Check if any row key *contains* the alias (more aggressive matching)
+            for (String key : row.keySet()) {
+                if (key.contains(alias) || alias.contains(key)) {
+                    return row.get(key);
+                }
+            }
+        }
+        
+        return row.get(standardKey); // Returns null if not found
     }
 }

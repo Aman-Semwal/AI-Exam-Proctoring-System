@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * JPA entity representing an active or completed exam sitting by a student.
@@ -60,6 +61,11 @@ public class ExamSession {
 
     /** Total score calculated when the session is completed. */
     private Integer score;
+
+    /** Face embedding from the live photo taken before the exam; set once per session. */
+    @Convert(converter = EmbeddingConverter.class)
+    @Column(name = "reference_embedding", columnDefinition = "TEXT")
+    private List<Double> referenceEmbedding;
 
     @Column(updatable = false)
     private LocalDateTime createdAt;

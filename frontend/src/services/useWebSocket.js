@@ -9,19 +9,26 @@ import SockJS from "sockjs-client/dist/sockjs";
  * @param {Object}   opts
  * @param {number[]} opts.examIds    — active exam IDs to subscribe to
  * @param {Function} opts.onAlert    — called with (alertMessage, examId) on each push
+ * @param {string}   [opts.userQueue] — a per-user queue to subscribe to, e.g. "/user/queue/session-events"
+ * @param {Function} [opts.onUserMessage] — called with (message) for each message on userQueue
  * @param {boolean}  [opts.enabled]  — set false to skip connection entirely (default: true)
  *
  * @returns {{ status: 'connected'|'connecting'|'disconnected' }}
  */
-export default function useWebSocket({ examIds = [], onAlert, enabled = true }) {
+export default function useWebSocket({ examIds = [], onAlert, userQueue, onUserMessage, enabled = true }) {
   const [status, setStatus] = useState("disconnected");
   const clientRef = useRef(null);
   const onAlertRef = useRef(onAlert);
+  const onUserMessageRef = useRef(onUserMessage);
 
-  // Keep callback ref fresh without re-triggering effect
+  // Keep callback refs fresh without re-triggering effect
   useEffect(() => {
     onAlertRef.current = onAlert;
-  }, [onAlert]);
+    onUserMessageRef.current = onUserMessage;
+  }, [onAlert, onUserMessage]);
+
+  // Stable key so a new-but-equal examIds array doesn't reconnect
+  const examKey = examIds.join(",");
 
   const connect = useCallback(() => {
     const token = localStorage.getItem("token");
@@ -62,6 +69,16 @@ export default function useWebSocket({ examIds = [], onAlert, enabled = true }) 
             }
           });
         });
+
+        if (userQueue) {
+          client.subscribe(userQueue, (message) => {
+            try {
+              onUserMessageRef.current?.(JSON.parse(message.body));
+            } catch {
+              // non-JSON message — ignore
+            }
+          });
+        }
       },
 
       onStompError: (frame) => {
@@ -81,11 +98,11 @@ export default function useWebSocket({ examIds = [], onAlert, enabled = true }) 
     clientRef.current = client;
     setStatus("connecting");
     client.activate();
-  }, [examIds.join(","), enabled]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [examKey, userQueue, enabled]);
 
   // Connect/reconnect when examIds or enabled changes
   useEffect(() => {
-    if (!enabled || examIds.length === 0) {
+    if (!enabled || (examIds.length === 0 && !userQueue)) {
       if (clientRef.current?.active) {
         clientRef.current.deactivate();
       }
@@ -101,7 +118,7 @@ export default function useWebSocket({ examIds = [], onAlert, enabled = true }) 
       }
       setStatus("disconnected");
     };
-  }, [connect]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [connect]);
 
   return { status };
 }

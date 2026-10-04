@@ -8,7 +8,6 @@ import {
   FaCheckCircle,
   FaTimes,
   FaExclamationTriangle,
-  FaUser,
   FaPlus,
   FaFilter,
   FaBolt,
@@ -18,6 +17,8 @@ import { useNavigate } from "react-router-dom";
 import Toast from "../../components/common/Toast";
 import api from "../../services/api";
 import useWebSocket from "../../services/useWebSocket";
+import EvidenceImage from "../../components/common/EvidenceImage";
+import LiveSessionsPanel from "../../components/proctor/LiveSessionsPanel";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -91,7 +92,7 @@ export default function ProctorDashboard() {
   const [toast, setToast] = useState(null);
 
   // ── new state ───────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState("violations"); // 'violations' | 'events'
+  const [activeTab, setActiveTab] = useState("violations"); // 'violations' | 'events' | 'sessions'
   const [showUnreviewedOnly, setShowUnreviewedOnly] = useState(false);
   const [liveSessions, setLiveSessions] = useState([]); // kept for dropdowns
 
@@ -363,6 +364,8 @@ export default function ProctorDashboard() {
         severity: normalizeSeverity(v.severity || prev.severity),
         time: formatTime(v.createdAt || prev.time),
         reviewed: Boolean(v.reviewed ?? prev.reviewed),
+        reviewOutcome: v.reviewOutcome || null,
+        hasEvidence: Boolean(v.hasEvidence),
         details: v.details || "",
       }));
     } catch (err) {
@@ -390,23 +393,27 @@ export default function ProctorDashboard() {
   ).length;
 
   // ── mark reviewed ────────────────────────────────────────────────────────────
-  const handleMarkReviewed = async () => {
+  // outcome: "CONFIRMED" or "DISMISSED" (false positive — no longer lowers the trust score)
+  const handleMarkReviewed = async (outcome) => {
     if (!reviewingIncident) return;
     try {
       setReviewing(true);
       if (reviewingIncident.rawId) {
-        await api.patch(`/violations/${reviewingIncident.rawId}/review`);
+        await api.patch(`/violations/${reviewingIncident.rawId}/review`, { outcome });
       }
       setIncidents((prev) =>
         prev.map((item) =>
           item.id === reviewingIncident.id
-            ? { ...item, reviewed: true }
+            ? { ...item, reviewed: true, reviewOutcome: outcome }
             : item
         )
       );
       setToast({
         type: "success",
-        message: `Incident for ${reviewingIncident.student} marked as reviewed.`,
+        message:
+          outcome === "DISMISSED"
+            ? `Incident for ${reviewingIncident.student} dismissed as a false positive.`
+            : `Incident for ${reviewingIncident.student} confirmed.`,
       });
       setReviewingIncident(null);
     } catch (err) {
@@ -480,7 +487,7 @@ export default function ProctorDashboard() {
   return (
     <div className="min-h-screen bg-[#090a0f] text-slate-100 flex">
       {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
-      <aside className="w-64 min-h-screen bg-[#0d0f17] border-r border-white/[0.07] flex flex-col justify-between p-4 shrink-0 sticky top-0 h-screen">
+      <aside className="w-64 min-h-screen bg-[#0d0f17] border-r border-white/7 flex flex-col justify-between p-4 shrink-0 sticky top-0 h-screen">
         <div>
           <div
             className="p-3 mb-4 cursor-pointer flex items-center gap-3 group"
@@ -510,8 +517,8 @@ export default function ProctorDashboard() {
           </nav>
         </div>
 
-        <div className="space-y-2 pt-3 border-t border-white/[0.07]">
-          <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+        <div className="space-y-2 pt-3 border-t border-white/7">
+          <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/3 border border-white/6">
             <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-blue-400 font-bold text-xs">
               {(currentUser?.name || "PR").slice(0, 2).toUpperCase()}
             </div>
@@ -539,7 +546,7 @@ export default function ProctorDashboard() {
       {/* ── Main ────────────────────────────────────────────────────────────── */}
       <main className="flex-1 p-6 lg:p-8 overflow-y-auto max-w-7xl mx-auto w-full">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/[0.06]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/6">
           <div>
             <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
               Surveillance Room
@@ -598,7 +605,7 @@ export default function ProctorDashboard() {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-[#121520] p-5 rounded-xl border border-white/[0.07] shadow-sm">
+          <div className="bg-[#121520] p-5 rounded-xl border border-white/7 shadow-sm">
             <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
               Live Exams
             </p>
@@ -607,7 +614,7 @@ export default function ProctorDashboard() {
             </p>
           </div>
 
-          <div className="bg-[#121520] p-5 rounded-xl border border-white/[0.07] shadow-sm">
+          <div className="bg-[#121520] p-5 rounded-xl border border-white/7 shadow-sm">
             <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
               Active Students
             </p>
@@ -616,7 +623,7 @@ export default function ProctorDashboard() {
             </p>
           </div>
 
-          <div className="bg-[#121520] p-5 rounded-xl border border-white/[0.07] shadow-sm">
+          <div className="bg-[#121520] p-5 rounded-xl border border-white/7 shadow-sm">
             <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
               Pending Alerts
             </p>
@@ -625,7 +632,7 @@ export default function ProctorDashboard() {
             </p>
           </div>
 
-          <div className="bg-[#121520] p-5 rounded-xl border border-white/[0.07] shadow-sm">
+          <div className="bg-[#121520] p-5 rounded-xl border border-white/7 shadow-sm">
             <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
               Violations Flagged
             </p>
@@ -636,7 +643,7 @@ export default function ProctorDashboard() {
         </div>
 
         {/* ── Tab Bar ───────────────────────────────────────────────────────── */}
-        <div className="flex items-center gap-1 mb-5 border-b border-white/[0.06] pb-0">
+        <div className="flex items-center gap-1 mb-5 border-b border-white/6 pb-0">
           <button
             type="button"
             onClick={() => setActiveTab("violations")}
@@ -661,17 +668,37 @@ export default function ProctorDashboard() {
             <FaBolt size={10} />
             Proctoring Events
           </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("sessions")}
+            className={`px-4 py-2.5 text-xs font-semibold rounded-t-lg transition border-b-2 -mb-px ${
+              activeTab === "sessions"
+                ? "text-white border-blue-500 bg-blue-500/5"
+                : "text-slate-400 hover:text-slate-200 border-transparent"
+            }`}
+          >
+            Live Sessions ({liveSessions.length})
+          </button>
         </div>
+
+        {activeTab === "sessions" && (
+          <LiveSessionsPanel
+            sessions={liveSessions}
+            onChanged={() => fetchDashboardData(showUnreviewedOnly)}
+            onToast={setToast}
+          />
+        )}
 
         {/* ════════════════════════════════════════════════════════════════════
             TAB: Violations
         ════════════════════════════════════════════════════════════════════ */}
         {activeTab === "violations" && (
-          <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+          <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
             {/* Toolbar */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               {/* Search */}
-              <div className="flex items-center bg-[#090a0f] border border-white/[0.08] rounded-lg px-3 py-2 w-full sm:w-80">
+              <div className="flex items-center bg-[#090a0f] border border-white/8 rounded-lg px-3 py-2 w-full sm:w-80">
                 <FaSearch className="text-slate-500 text-xs mr-2.5 shrink-0" />
                 <input
                   type="text"
@@ -718,7 +745,7 @@ export default function ProctorDashboard() {
                 <button
                   type="button"
                   onClick={() => fetchDashboardData(showUnreviewedOnly)}
-                  className="p-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white transition"
+                  className="p-2 rounded-lg bg-white/4 hover:bg-white/8 text-slate-400 hover:text-white transition"
                   title="Refresh feed"
                 >
                   <FaRedo size={11} />
@@ -728,9 +755,9 @@ export default function ProctorDashboard() {
 
             {/* Violations Table */}
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[750px]">
+              <table className="w-full text-left border-collapse min-w-187.5">
                 <thead>
-                  <tr className="border-b border-white/[0.06] text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  <tr className="border-b border-white/6 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                     <th className="pb-3 px-3">Student Name</th>
                     <th className="pb-3 px-3">Exam Context</th>
                     <th className="pb-3 px-3">Violation / Issue</th>
@@ -740,7 +767,7 @@ export default function ProctorDashboard() {
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-white/[0.04] text-xs">
+                <tbody className="divide-y divide-white/4 text-xs">
                   {loading ? (
                     <tr>
                       <td colSpan="6" className="py-10 text-center text-slate-500">
@@ -751,7 +778,7 @@ export default function ProctorDashboard() {
                     filteredIncidents.map((item) => (
                       <tr
                         key={item.id}
-                        className={`hover:bg-white/[0.02] transition ${
+                        className={`hover:bg-white/2 transition ${
                           item.reviewed ? "opacity-60" : ""
                         }`}
                       >
@@ -785,7 +812,7 @@ export default function ProctorDashboard() {
                             onClick={() => handleOpenReview(item)}
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
                               item.reviewed
-                                ? "bg-white/[0.04] text-slate-400 border border-white/[0.07] hover:bg-white/[0.08]"
+                                ? "bg-white/4 text-slate-400 border border-white/7 hover:bg-white/8"
                                 : "bg-blue-600/15 text-blue-400 border border-blue-500/30 hover:bg-blue-600/25"
                             }`}
                           >
@@ -817,7 +844,7 @@ export default function ProctorDashboard() {
             TAB: Proctoring Events (Feature 1)
         ════════════════════════════════════════════════════════════════════ */}
         {activeTab === "events" && (
-          <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+          <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
             {/* Toolbar */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
               {/* Session selector */}
@@ -832,7 +859,7 @@ export default function ProctorDashboard() {
                   id="event-session-select"
                   value={selectedEventSession}
                   onChange={(e) => setSelectedEventSession(e.target.value)}
-                  className="bg-[#090a0f] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500/50 min-w-[220px]"
+                  className="bg-[#090a0f] border border-white/8 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500/50 min-w-55"
                 >
                   <option value="">— Choose a live session —</option>
                   {liveSessions.map((s) => (
@@ -863,7 +890,7 @@ export default function ProctorDashboard() {
                   <button
                     type="button"
                     onClick={() => fetchEvents(selectedEventSession)}
-                    className="p-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white transition"
+                    className="p-2 rounded-lg bg-white/4 hover:bg-white/8 text-slate-400 hover:text-white transition"
                     title="Refresh events"
                   >
                     <FaRedo size={11} />
@@ -883,9 +910,9 @@ export default function ProctorDashboard() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[640px]">
+                <table className="w-full text-left border-collapse min-w-160">
                   <thead>
-                    <tr className="border-b border-white/[0.06] text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    <tr className="border-b border-white/6 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                       <th className="pb-3 px-3">Detected At</th>
                       <th className="pb-3 px-3">Event Type</th>
                       <th className="pb-3 px-3">Face Count</th>
@@ -893,12 +920,12 @@ export default function ProctorDashboard() {
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-white/[0.04] text-xs">
+                  <tbody className="divide-y divide-white/4 text-xs">
                     {sessionEvents.length > 0 ? (
                       sessionEvents.map((ev) => (
                         <tr
                           key={ev.id}
-                          className="hover:bg-white/[0.02] transition"
+                          className="hover:bg-white/2 transition"
                         >
                           <td className="py-3 px-3 font-mono text-slate-400 whitespace-nowrap">
                             {formatDateTime(ev.detectedAt)}
@@ -943,8 +970,8 @@ export default function ProctorDashboard() {
       ════════════════════════════════════════════════════════════════════════ */}
       {reviewingIncident && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-[#121520] border border-white/[0.1] rounded-xl shadow-2xl p-6">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.07]">
+          <div className="w-full max-w-md bg-[#121520] border border-white/10 rounded-xl shadow-2xl p-6">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/7">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <FaExclamationTriangle className="text-amber-400" size={14} />
                 Violation Incident Review
@@ -964,7 +991,7 @@ export default function ProctorDashboard() {
               </div>
             ) : (
               <div className="space-y-3.5 text-xs">
-                <div className="bg-[#090a0f] p-3 rounded-lg border border-white/[0.05] space-y-2">
+                <div className="bg-[#090a0f] p-3 rounded-lg border border-white/5 space-y-2">
                   <div className="flex justify-between">
                     <span className="text-slate-500">Student Candidate:</span>
                     <span className="font-semibold text-white">
@@ -1002,7 +1029,7 @@ export default function ProctorDashboard() {
                   <span className="text-slate-400 block mb-1 font-medium">
                     Violation Type
                   </span>
-                  <div className="bg-[#090a0f] p-3 rounded-lg border border-white/[0.06] text-slate-200 leading-relaxed">
+                  <div className="bg-[#090a0f] p-3 rounded-lg border border-white/6 text-slate-200 leading-relaxed">
                     {reviewingIncident.issue}
                   </div>
                 </div>
@@ -1012,9 +1039,16 @@ export default function ProctorDashboard() {
                     <span className="text-slate-400 block mb-1 font-medium">
                       Details
                     </span>
-                    <div className="bg-[#090a0f] p-3 rounded-lg border border-white/[0.06] text-slate-300 leading-relaxed">
+                    <div className="bg-[#090a0f] p-3 rounded-lg border border-white/6 text-slate-300 leading-relaxed">
                       {reviewingIncident.details}
                     </div>
+                  </div>
+                )}
+
+                {reviewingIncident.hasEvidence && (
+                  <div>
+                    <p className="text-[11px] text-slate-500 mb-1.5">Evidence snapshot</p>
+                    <EvidenceImage violationId={reviewingIncident.rawId} className="w-full max-h-64 object-contain bg-black" />
                   </div>
                 )}
 
@@ -1022,32 +1056,44 @@ export default function ProctorDashboard() {
                   <div className="flex items-center gap-2 text-emerald-400 text-xs bg-emerald-500/10 border border-emerald-500/20 p-2.5 rounded-lg">
                     <FaCheckCircle size={12} />
                     <span>
-                      This violation has already been reviewed by an invigilator.
+                      {reviewingIncident.reviewOutcome === "DISMISSED"
+                        ? "Reviewed — dismissed as a false positive (does not affect the trust score)."
+                        : "Reviewed — confirmed by an invigilator."}
                     </span>
                   </div>
                 )}
               </div>
             )}
 
-            <div className="mt-6 pt-3 border-t border-white/[0.07] flex justify-end gap-2">
+            <div className="mt-6 pt-3 border-t border-white/7 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setReviewingIncident(null)}
-                className="px-4 py-2 rounded-lg border border-white/[0.08] text-xs text-slate-300 hover:text-white"
+                className="px-4 py-2 rounded-lg border border-white/8 text-xs text-slate-300 hover:text-white"
               >
                 Close
               </button>
 
               {!reviewingIncident.reviewed && !modalLoading && (
-                <button
-                  type="button"
-                  onClick={handleMarkReviewed}
-                  disabled={reviewing}
-                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm"
-                >
-                  <FaCheckCircle size={12} />
-                  {reviewing ? "Saving…" : "Mark as Reviewed"}
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleMarkReviewed("DISMISSED")}
+                    disabled={reviewing}
+                    className="px-4 py-2 rounded-lg border border-white/12 hover:bg-white/5 disabled:opacity-50 text-slate-200 text-xs font-semibold"
+                  >
+                    Dismiss (false positive)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMarkReviewed("CONFIRMED")}
+                    disabled={reviewing}
+                    className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                  >
+                    <FaCheckCircle size={12} />
+                    {reviewing ? "Saving…" : "Confirm violation"}
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -1059,8 +1105,8 @@ export default function ProctorDashboard() {
       ════════════════════════════════════════════════════════════════════════ */}
       {showReportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-[#121520] border border-white/[0.1] rounded-xl shadow-2xl p-6">
-            <div className="flex items-center justify-between pb-3 mb-5 border-b border-white/[0.07]">
+          <div className="w-full max-w-md bg-[#121520] border border-white/10 rounded-xl shadow-2xl p-6">
+            <div className="flex items-center justify-between pb-3 mb-5 border-b border-white/7">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <FaPlus className="text-blue-400" size={13} />
                 Report Violation
@@ -1097,7 +1143,7 @@ export default function ProctorDashboard() {
                       sessionId: e.target.value,
                     }))
                   }
-                  className="w-full bg-[#090a0f] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500/50"
+                  className="w-full bg-[#090a0f] border border-white/8 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500/50"
                 >
                   <option value="">— Select a live session —</option>
                   {liveSessions.map((s) => (
@@ -1122,7 +1168,7 @@ export default function ProctorDashboard() {
                       type: e.target.value,
                     }))
                   }
-                  className="w-full bg-[#090a0f] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500/50"
+                  className="w-full bg-[#090a0f] border border-white/8 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500/50"
                 >
                   <option value="">— Select type —</option>
                   <option value="NO_FACE_DETECTED">NO_FACE_DETECTED</option>
@@ -1149,7 +1195,7 @@ export default function ProctorDashboard() {
                       severity: e.target.value,
                     }))
                   }
-                  className="w-full bg-[#090a0f] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500/50"
+                  className="w-full bg-[#090a0f] border border-white/8 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500/50"
                 >
                   <option value="">— Select severity —</option>
                   <option value="LOW">LOW</option>
@@ -1175,7 +1221,7 @@ export default function ProctorDashboard() {
                     }))
                   }
                   placeholder="Additional context or observations…"
-                  className="w-full bg-[#090a0f] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-blue-500/50 resize-none"
+                  className="w-full bg-[#090a0f] border border-white/8 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-blue-500/50 resize-none"
                 />
               </div>
 
@@ -1192,7 +1238,7 @@ export default function ProctorDashboard() {
                       details: "",
                     });
                   }}
-                  className="px-4 py-2 rounded-lg border border-white/[0.08] text-xs text-slate-300 hover:text-white transition"
+                  className="px-4 py-2 rounded-lg border border-white/8 text-xs text-slate-300 hover:text-white transition"
                 >
                   Cancel
                 </button>

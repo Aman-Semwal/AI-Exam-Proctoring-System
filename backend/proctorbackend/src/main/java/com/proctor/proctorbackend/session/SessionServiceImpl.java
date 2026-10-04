@@ -3,6 +3,8 @@ package com.proctor.proctorbackend.session;
 import com.proctor.proctorbackend.answer.Answer;
 import com.proctor.proctorbackend.answer.AnswerRepository;
 import com.proctor.proctorbackend.assignment.ExamAssignmentRepository;
+import com.proctor.proctorbackend.violation.TrustScore;
+import com.proctor.proctorbackend.violation.TrustScoreService;
 import com.proctor.proctorbackend.violation.ViolationRepository;
 import com.proctor.proctorbackend.violation.ViolationSeverity;
 import com.proctor.proctorbackend.common.enums.Role;
@@ -58,6 +60,7 @@ public class SessionServiceImpl implements SessionService {
     private final ExamProctorService       examProctorService;
     private final ViolationRepository      violationRepository;
     private final ScoreCalculationService  scoreCalculationService;
+    private final TrustScoreService        trustScoreService;
 
     // -----------------------------------------------------------------------
     // startSession
@@ -152,6 +155,7 @@ public class SessionServiceImpl implements SessionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<SessionResponse> getMySessionsAsStudent(String studentEmail) {
         User student = getUserByEmail(studentEmail);
         if (student.getRole() == Role.SUPER_ADMIN) {
@@ -220,12 +224,19 @@ public class SessionServiceImpl implements SessionService {
     // -----------------------------------------------------------------------
 
     @Override
+    @Transactional(readOnly = true)
     public ExamResultResponse getExamResult(Long sessionId, String requesterEmail) {
         User        requester = getUserByEmail(requesterEmail);
         ExamSession session   = findSessionById(sessionId);
         validateSameOrganization(requester, session);
 
-        if (requester.getRole() != Role.SUPER_ADMIN
+        if (requester.getRole() == Role.STUDENT) {
+            // A student sees only their own result, and only after the session has ended
+            if (!session.getStudent().getId().equals(requester.getId())
+                    || session.getStatus() == SessionStatus.ACTIVE) {
+                throw new UnauthorizedException("You are not authorized to view this result");
+            }
+        } else if (requester.getRole() != Role.SUPER_ADMIN
                 && requester.getRole() != Role.ORG_ADMIN
                 && requester.getRole() != Role.EXAM_CREATOR) {
             throw new UnauthorizedException("You are not authorized to view this result");
@@ -283,6 +294,7 @@ public class SessionServiceImpl implements SessionService {
                 ? java.time.Duration.between(session.getStartTime(), session.getEndTime()).toMinutes()
                 : 0L;
 
+        TrustScore trust = trustScoreService.calculate(session.getId());
         return ExamResultResponse.builder()
                 .sessionId(session.getId())
                 .examId(session.getExam().getId())
@@ -291,6 +303,8 @@ public class SessionServiceImpl implements SessionService {
                 .studentEmail(session.getStudent().getEmail())
                 .appliedRole(appliedRole)
                 .sessionStatus(session.getStatus().name())
+                .trustScore(trust != null ? trust.score() : null)
+                .trustLevel(trust != null ? trust.level() : null)
                 .score(score)
                 .totalMarks(totalMarks)
                 .percentage(provisional ? null : Math.round(percentage * 100.0) / 100.0)
@@ -365,6 +379,7 @@ public class SessionServiceImpl implements SessionService {
     }
 
     private SessionResponse toResponse(ExamSession session) {
+        TrustScore trust = trustScoreService.calculate(session.getId());
         return SessionResponse.builder()
                 .id(session.getId())
                 .examId(session.getExam().getId())
@@ -379,6 +394,9 @@ public class SessionServiceImpl implements SessionService {
                 .endTime(session.getEndTime())
                 .score(session.getScore())
                 .createdAt(session.getCreatedAt())
+                .referenceEnrolled(session.getReferenceEmbedding() != null)
+                .trustScore(trust != null ? trust.score() : null)
+                .trustLevel(trust != null ? trust.level() : null)
                 .build();
     }
 }

@@ -248,7 +248,7 @@ const SuperAdminUsers = () => {
 
         <main className="p-6 lg:p-8 flex-1 overflow-y-auto max-w-7xl mx-auto w-full">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/[0.06]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/6">
             <div>
               <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">
                 Directory
@@ -287,7 +287,7 @@ const SuperAdminUsers = () => {
           )}
 
           {/* Table */}
-          <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+          <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div className="relative flex-1 max-w-sm">
                 <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs" />
@@ -296,7 +296,7 @@ const SuperAdminUsers = () => {
                   placeholder="Search by name, email or role..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 transition"
+                  className="w-full pl-9 pr-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 transition"
                 />
               </div>
 
@@ -306,9 +306,9 @@ const SuperAdminUsers = () => {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[750px] text-left border-collapse">
+              <table className="w-full min-w-187.5 text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-white/[0.06] text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+                  <tr className="border-b border-white/6 text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
                     <th className="pb-3 px-3">Full Name</th>
                     <th className="pb-3 px-3">Email Address</th>
                     <th className="pb-3 px-3">Role</th>
@@ -318,7 +318,7 @@ const SuperAdminUsers = () => {
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-white/[0.04] text-xs">
+                <tbody className="divide-y divide-white/4 text-xs">
                   {loading ? (
                     <tr>
                       <td
@@ -341,7 +341,7 @@ const SuperAdminUsers = () => {
                     filtered.map((u) => (
                       <tr
                         key={u.id}
-                        className="hover:bg-white/[0.02] transition"
+                        className="hover:bg-white/2 transition"
                       >
                         <td className="py-3 px-3 font-semibold text-white">
                           <div className="flex items-center gap-2.5">
@@ -426,8 +426,8 @@ const SuperAdminUsers = () => {
             if (e.target === e.currentTarget) closeAddModal();
           }}
         >
-          <div className="w-full max-w-md bg-[#121520] border border-white/[0.08] rounded-xl shadow-2xl animate-scale-in">
-            <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
+          <div className="w-full max-w-md bg-[#121520] border border-white/8 rounded-xl shadow-2xl animate-scale-in">
+            <div className="flex items-center justify-between p-5 border-b border-white/6">
               <div>
                 <h2 className="text-lg font-bold text-white">
                   Invite New User
@@ -440,7 +440,7 @@ const SuperAdminUsers = () => {
               <button
                 onClick={closeAddModal}
                 disabled={addLoading}
-                className="p-2 rounded-lg hover:bg-white/[0.05] text-slate-400 hover:text-white disabled:opacity-50"
+                className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white disabled:opacity-50"
               >
                 <FaTimes size={13} />
               </button>
@@ -478,7 +478,7 @@ const SuperAdminUsers = () => {
                     className={`w-full bg-[#090a0f] border rounded-lg px-3.5 py-2.5 text-xs text-white focus:outline-none transition disabled:opacity-50 ${
                       addErrors.orgId
                         ? "border-rose-500/40 focus:border-rose-500"
-                        : "border-white/[0.08] focus:border-purple-500"
+                        : "border-white/8 focus:border-purple-500"
                     }`}
                   >
                     <option value="">Select an organization</option>
@@ -514,7 +514,7 @@ const SuperAdminUsers = () => {
                   className={`w-full bg-[#090a0f] border rounded-lg px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition disabled:opacity-50 ${
                     addErrors.name
                       ? "border-rose-500/40 focus:border-rose-500"
-                      : "border-white/[0.08] focus:border-purple-500"
+                      : "border-white/8 focus:border-purple-500"
                   }`}
                 />
 
@@ -542,7 +542,7 @@ const SuperAdminUsers = () => {
                   className={`w-full bg-[#090a0f] border rounded-lg px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition disabled:opacity-50 ${
                     addErrors.email
                       ? "border-rose-500/40 focus:border-rose-500"
-                      : "border-white/[0.08] focus:border-purple-500"
+                      : "border-white/8 focus:border-purple-500"
                   }`}
                 />
 
@@ -568,7 +568,7 @@ const SuperAdminUsers = () => {
                   className={`w-full bg-[#090a0f] border rounded-lg px-3.5 py-2.5 text-xs text-white focus:outline-none transition disabled:opacity-50 ${
                     addErrors.role
                       ? "border-rose-500/40 focus:border-rose-500"
-                      : "border-white/[0.08] focus:border-purple-500"
+                      : "border-white/8 focus:border-purple-500"
                   }`}
                 >
                   <option value="STUDENT">Student</option>
@@ -613,8 +613,8 @@ const SuperAdminUsers = () => {
             if (e.target === e.currentTarget) setDetailUser(null);
           }}
         >
-          <div className="w-full max-w-md bg-[#121520] border border-white/[0.08] rounded-xl shadow-2xl animate-scale-in">
-            <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
+          <div className="w-full max-w-md bg-[#121520] border border-white/8 rounded-xl shadow-2xl animate-scale-in">
+            <div className="flex items-center justify-between p-5 border-b border-white/6">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center font-bold text-sm">
                   {detailUser.name?.[0]?.toUpperCase() || "U"}
@@ -632,7 +632,7 @@ const SuperAdminUsers = () => {
 
               <button
                 onClick={() => setDetailUser(null)}
-                className="p-2 rounded-lg hover:bg-white/[0.05] text-slate-400 hover:text-white"
+                className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white"
               >
                 <FaTimes size={13} />
               </button>
@@ -650,7 +650,7 @@ const SuperAdminUsers = () => {
             <div className="px-5 pb-5">
               <button
                 onClick={() => setDetailUser(null)}
-                className="w-full py-2.5 rounded-lg border border-white/[0.08] bg-[#090a0f] text-xs text-slate-300 font-semibold hover:text-white hover:bg-white/[0.05] transition"
+                className="w-full py-2.5 rounded-lg border border-white/8 bg-[#090a0f] text-xs text-slate-300 font-semibold hover:text-white hover:bg-white/5 transition"
               >
                 Close
               </button>
@@ -685,7 +685,7 @@ const SuperAdminUsers = () => {
 /* ===================== Detail Row Subcomponent ===================== */
 
 const DetailRow = ({ label, value, badge, status }) => (
-  <div className="flex items-center justify-between gap-4 py-2 border-b border-white/[0.04] last:border-none">
+  <div className="flex items-center justify-between gap-4 py-2 border-b border-white/4 last:border-none">
     <span className="text-[11px] text-slate-400 font-medium uppercase tracking-wider">
       {label}
     </span>

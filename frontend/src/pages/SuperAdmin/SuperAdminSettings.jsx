@@ -62,7 +62,7 @@ const SuperAdminSettings = () => {
         <SuperAdminTopbar />
 
         <main className="p-6 lg:p-8 flex-1 overflow-y-auto max-w-4xl mx-auto w-full">
-          <div className="pb-4 mb-6 border-b border-white/[0.06]">
+          <div className="pb-4 mb-6 border-b border-white/6">
             <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">
               Configuration
             </span>
@@ -77,8 +77,8 @@ const SuperAdminSettings = () => {
             </p>
           </div>
 
-          <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-6 shadow-sm">
-            <h3 className="text-sm font-semibold text-white mb-4 pb-3 border-b border-white/[0.06]">
+          <div className="bg-[#121520] border border-white/7 rounded-xl p-6 shadow-sm">
+            <h3 className="text-sm font-semibold text-white mb-4 pb-3 border-b border-white/6">
               Security Parameters
             </h3>
 
@@ -98,7 +98,7 @@ const SuperAdminSettings = () => {
                       e.target.value
                     )
                   }
-                  className="w-full bg-[#090a0f] border border-white/[0.08] rounded-lg px-3.5 py-2.5 text-white focus:border-purple-500 outline-none transition text-xs"
+                  className="w-full bg-[#090a0f] border border-white/8 rounded-lg px-3.5 py-2.5 text-white focus:border-purple-500 outline-none transition text-xs"
                 />
 
                 <p className="text-[10px] text-slate-500 mt-1.5">
@@ -119,7 +119,7 @@ const SuperAdminSettings = () => {
                       e.target.value
                     )
                   }
-                  className="w-full bg-[#090a0f] border border-white/[0.08] rounded-lg px-3.5 py-2.5 text-white focus:border-purple-500 outline-none transition text-xs"
+                  className="w-full bg-[#090a0f] border border-white/8 rounded-lg px-3.5 py-2.5 text-white focus:border-purple-500 outline-none transition text-xs"
                 >
                   <option value="High">
                     High (Strict Enforcement)

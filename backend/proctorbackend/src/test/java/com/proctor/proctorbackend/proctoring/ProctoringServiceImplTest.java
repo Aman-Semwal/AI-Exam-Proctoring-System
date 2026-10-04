@@ -1,16 +1,19 @@
 package com.proctor.proctorbackend.proctoring;
 
+import com.proctor.proctorbackend.common.exception.BadRequestException;
 import com.proctor.proctorbackend.common.exception.ResourceNotFoundException;
 import com.proctor.proctorbackend.common.exception.UnauthorizedException;
 import com.proctor.proctorbackend.exam.Exam;
 import com.proctor.proctorbackend.examproctor.ExamProctorService;
 import com.proctor.proctorbackend.organization.Organization;
 import com.proctor.proctorbackend.proctoring.dto.AnalyzeResponse;
+import com.proctor.proctorbackend.proctoring.dto.BrowserEventResponse;
 import com.proctor.proctorbackend.proctoring.dto.FaceInferenceResult;
 import com.proctor.proctorbackend.proctoring.dto.FrameUploadRequest;
 import com.proctor.proctorbackend.proctoring.dto.GazeResult;
 import com.proctor.proctorbackend.proctoring.dto.ObjectDetectionResult;
 import com.proctor.proctorbackend.proctoring.dto.ProctoringEventResponse;
+import com.proctor.proctorbackend.proctoring.dto.VoiceActivityResult;
 import com.proctor.proctorbackend.session.ExamSession;
 import com.proctor.proctorbackend.session.ExamSessionRepository;
 import com.proctor.proctorbackend.session.ScoreCalculationService;
@@ -18,6 +21,8 @@ import com.proctor.proctorbackend.session.SessionStatus;
 import com.proctor.proctorbackend.user.User;
 import com.proctor.proctorbackend.user.UserRepository;
 import com.proctor.proctorbackend.violation.Violation;
+import com.proctor.proctorbackend.violation.ViolationEvidence;
+import com.proctor.proctorbackend.violation.ViolationEvidenceRepository;
 import com.proctor.proctorbackend.violation.ViolationRepository;
 import com.proctor.proctorbackend.violation.ViolationSeverity;
 import com.proctor.proctorbackend.violation.ViolationType;
@@ -64,6 +69,7 @@ class ProctoringServiceImplTest {
     @Mock ScoreCalculationService scoreCalculationService;
     @Mock StringRedisTemplate stringRedisTemplate;
     @Mock ValueOperations<String, String> valueOps;
+    @Mock ViolationEvidenceRepository evidenceRepository;
 
     @InjectMocks
     ProctoringServiceImpl service;
@@ -81,6 +87,7 @@ class ProctoringServiceImplTest {
         ReflectionTestUtils.setField(service, "criticalThreshold", 5);
         ReflectionTestUtils.setField(service, "dedupIntervalSeconds", 30L);
         ReflectionTestUtils.setField(service, "identityCheckIntervalFrames", 10);
+        ReflectionTestUtils.setField(service, "speechFractionThreshold", 0.3);
 
         org = Organization.builder().id(1L).name("TestOrg").slug("testorg").isActive(true).build();
         exam = Exam.builder().id(10L).title("Java Exam").organization(org).durationMinutes(60).build();
@@ -339,46 +346,462 @@ class ProctoringServiceImplTest {
     // -----------------------------------------------------------------------
 
     @Test
-    @DisplayName("processFrame — referenceEmbedding is forwarded to AI client when provided")
-    void processFrame_withEmbedding_forwardsEmbeddingToAiClient() {
+    @DisplayName("processFrame — stored session embedding is sent on identity-check frames")
+    void processFrame_identityDue_sendsStoredEmbedding() {
+        List<Double> stored = List.of(0.1, 0.2, 0.3);
+        activeSession.setReferenceEmbedding(stored);
         when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(valueOps.increment(anyString())).thenReturn(10L);
 
-        AnalyzeResponse aiResp = buildCleanAnalyzeResponse();
-        List<Double> embedding = List.of(0.1, 0.2, 0.3);
-        when(aiServiceClient.analyze(eq("frame=="), eq(embedding), isNull())).thenReturn(aiResp);
+        when(aiServiceClient.analyze(eq("frame=="), eq(stored), isNull()))
+                .thenReturn(buildCleanAnalyzeResponse());
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1));
 
-        ProctoringEvent savedEvent = buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1);
-        when(eventRepository.save(any())).thenReturn(savedEvent);
+        service.processFrame(buildRequest(55L, "frame=="), "student@test.com");
 
-        FrameUploadRequest req = buildRequest(55L, "frame==");
-        req.setReferenceEmbedding(embedding);
-
-        service.processFrame(req, "student@test.com");
-
-        // Verify AI client received the embedding
-        verify(aiServiceClient, times(1)).analyze("frame==", embedding, null);
+        verify(aiServiceClient, times(1)).analyze("frame==", stored, null);
     }
 
     @Test
-    @DisplayName("processFrame — null embedding is forwarded when client omits it (identity check deferred)")
-    void processFrame_withoutEmbedding_passesNullEmbeddingToAiClient() {
+    @DisplayName("processFrame — no embedding is sent on frames between identity checks")
+    void processFrame_identityNotDue_sendsNoEmbedding() {
+        activeSession.setReferenceEmbedding(List.of(0.1, 0.2, 0.3));
         when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(valueOps.increment(anyString())).thenReturn(3L);
 
-        AnalyzeResponse aiResp = buildCleanAnalyzeResponse();
-        when(aiServiceClient.analyze(eq("frame=="), isNull(), isNull())).thenReturn(aiResp);
+        when(aiServiceClient.analyze(eq("frame=="), isNull(), isNull()))
+                .thenReturn(buildCleanAnalyzeResponse());
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1));
 
-        ProctoringEvent savedEvent = buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1);
-        when(eventRepository.save(any())).thenReturn(savedEvent);
+        service.processFrame(buildRequest(55L, "frame=="), "student@test.com");
 
-        // Frame counter at identity-check boundary (frame 10) but NO embedding supplied
+        verify(aiServiceClient, times(1)).analyze("frame==", null, null);
+    }
+
+    @Test
+    @DisplayName("processFrame — identity check due but session not enrolled: null embedding, no throw")
+    void processFrame_identityDue_noStoredEmbedding_passesNull() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
         when(valueOps.increment(anyString())).thenReturn(10L);
 
-        FrameUploadRequest req = buildRequest(55L, "frame==");
-        // No referenceEmbedding set
+        when(aiServiceClient.analyze(eq("frame=="), isNull(), isNull()))
+                .thenReturn(buildCleanAnalyzeResponse());
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1));
 
-        // Should not throw — policy is warn+continue, not reject
-        assertDoesNotThrow(() -> service.processFrame(req, "student@test.com"));
+        assertDoesNotThrow(() -> service.processFrame(buildRequest(55L, "frame=="), "student@test.com"));
         verify(aiServiceClient, times(1)).analyze("frame==", null, null);
+    }
+
+    // -----------------------------------------------------------------------
+    // recordBrowserEvent — tab switch / fullscreen exit
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("recordBrowserEvent — TAB_SWITCH persisted as HIGH and alert broadcast")
+    void recordBrowserEvent_tabSwitch_persistsHighAndAlerts() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+
+        service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, "student@test.com");
+
+        verify(violationRepository).save(argThat(v ->
+                v.getType() == ViolationType.TAB_SWITCH
+                        && v.getSeverity() == ViolationSeverity.HIGH
+                        && v.getOrganization() == org
+                        && Boolean.FALSE.equals(v.getReviewed())));
+        verify(messagingTemplate).convertAndSend(
+                eq("/topic/alerts/" + exam.getId()),
+                argThat((AlertMessage m) -> "TAB_SWITCH".equals(m.getEventType())));
+    }
+
+    @Test
+    @DisplayName("recordBrowserEvent — first TAB_SWITCH does not auto-submit")
+    void recordBrowserEvent_firstTabSwitch_doesNotSubmit() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(violationRepository.countBySessionIdAndType(55L, ViolationType.TAB_SWITCH)).thenReturn(1L);
+
+        BrowserEventResponse resp =
+                service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, "student@test.com");
+
+        assertFalse(resp.isAutoSubmitted());
+        assertEquals(1L, resp.getTabSwitchCount());
+        assertEquals(SessionStatus.ACTIVE, activeSession.getStatus());
+        verify(scoreCalculationService, never()).calculate(any());
+    }
+
+    @Test
+    @DisplayName("recordBrowserEvent — TAB_SWITCH at threshold auto-submits the session (COMPLETED + score)")
+    void recordBrowserEvent_tabSwitchThreshold_autoSubmits() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(violationRepository.countBySessionIdAndType(55L, ViolationType.TAB_SWITCH)).thenReturn(2L);
+        when(scoreCalculationService.calculate(activeSession)).thenReturn(42);
+
+        BrowserEventResponse resp =
+                service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, "student@test.com");
+
+        assertTrue(resp.isAutoSubmitted());
+        assertEquals(SessionStatus.COMPLETED, activeSession.getStatus());
+        assertEquals(42, activeSession.getScore());
+        assertNotNull(activeSession.getEndTime());
+        verify(sessionRepository).save(activeSession);
+        verify(messagingTemplate).convertAndSend(
+                eq("/topic/alerts/" + exam.getId()),
+                argThat((AlertMessage m) -> "SESSION_AUTO_SUBMITTED".equals(m.getEventType())));
+    }
+
+    @Test
+    @DisplayName("recordBrowserEvent — FULLSCREEN_EXIT persisted as MEDIUM and never auto-submits")
+    void recordBrowserEvent_fullscreenExit_persistsMedium() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+
+        BrowserEventResponse resp =
+                service.recordBrowserEvent(55L, ViolationType.FULLSCREEN_EXIT, "student@test.com");
+
+        verify(violationRepository).save(argThat(v ->
+                v.getType() == ViolationType.FULLSCREEN_EXIT
+                        && v.getSeverity() == ViolationSeverity.MEDIUM));
+        assertFalse(resp.isAutoSubmitted());
+        assertEquals(SessionStatus.ACTIVE, activeSession.getStatus());
+    }
+
+    @Test
+    @DisplayName("recordBrowserEvent — non-browser types (e.g. AI types) are rejected")
+    void recordBrowserEvent_aiType_throwsBadRequest() {
+        assertThrows(BadRequestException.class,
+                () -> service.recordBrowserEvent(55L, ViolationType.IDENTITY_MISMATCH, "student@test.com"));
+        verify(violationRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("recordBrowserEvent — non-owner is rejected")
+    void recordBrowserEvent_notOwner_throwsUnauthorized() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+
+        assertThrows(UnauthorizedException.class,
+                () -> service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, "hacker@evil.com"));
+        verify(violationRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("recordBrowserEvent — inactive session is rejected")
+    void recordBrowserEvent_sessionNotActive_throwsIllegalState() {
+        activeSession.setStatus(SessionStatus.COMPLETED);
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+
+        assertThrows(IllegalStateException.class,
+                () -> service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, "student@test.com"));
+        verify(violationRepository, never()).save(any());
+    }
+
+    // -----------------------------------------------------------------------
+    // Per-exam proctoring rules
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("rules — gaze tracking disabled: LOOKING_AWAY is not recorded")
+    void rules_gazeDisabled_lookingAwayIgnored() {
+        exam.getProctoringRules().setGazeTrackingEnabled(false);
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.analyze(anyString(), any(), any()))
+                .thenReturn(buildAnalyzeResponse(1, List.of("looking_away"), "MEDIUM", 10));
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1));
+
+        service.processFrame(buildRequest(55L, "frame=="), "student@test.com");
+
+        verify(violationRepository, never()).save(any());
+        verify(messagingTemplate, never()).convertAndSend(anyString(), any(AlertMessage.class));
+    }
+
+    @Test
+    @DisplayName("rules — object detection disabled: UNAUTHORIZED_OBJECT is not recorded")
+    void rules_objectDetectionDisabled_objectIgnored() {
+        exam.getProctoringRules().setObjectDetectionEnabled(false);
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.analyze(anyString(), any(), any()))
+                .thenReturn(buildAnalyzeResponse(1, List.of("unauthorized_object"), "CRITICAL", 30));
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1));
+
+        service.processFrame(buildRequest(55L, "frame=="), "student@test.com");
+
+        verify(violationRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("rules — identity check disabled: stored embedding is never sent")
+    void rules_identityDisabled_noEmbeddingSent() {
+        exam.getProctoringRules().setIdentityCheckEnabled(false);
+        activeSession.setReferenceEmbedding(List.of(0.1, 0.2));
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.analyze(eq("frame=="), isNull(), isNull())).thenReturn(buildCleanAnalyzeResponse());
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1));
+
+        service.processFrame(buildRequest(55L, "frame=="), "student@test.com");
+
+        verify(aiServiceClient).analyze("frame==", null, null);
+    }
+
+    @Test
+    @DisplayName("rules — exam tab switch limit is used for auto-submit")
+    void rules_tabSwitchLimitFromExam() {
+        exam.getProctoringRules().setTabSwitchLimit(3);
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(violationRepository.countBySessionIdAndType(55L, ViolationType.TAB_SWITCH)).thenReturn(2L);
+
+        assertFalse(service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, "student@test.com").isAutoSubmitted());
+    }
+
+    @Test
+    @DisplayName("rules — tab switch limit 0 never auto-submits")
+    void rules_tabSwitchLimitZero_neverSubmits() {
+        exam.getProctoringRules().setTabSwitchLimit(0);
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(violationRepository.countBySessionIdAndType(55L, ViolationType.TAB_SWITCH)).thenReturn(10L);
+
+        assertFalse(service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, "student@test.com").isAutoSubmitted());
+        assertEquals(SessionStatus.ACTIVE, activeSession.getStatus());
+    }
+
+    // -----------------------------------------------------------------------
+    // Audio monitoring → SPEECH_DETECTED
+    // -----------------------------------------------------------------------
+
+    private AnalyzeResponse withSpeech(boolean detected, double fraction) {
+        AnalyzeResponse resp = buildCleanAnalyzeResponse();
+        VoiceActivityResult voice = new VoiceActivityResult();
+        voice.setSpeechDetected(detected);
+        voice.setSpeechFraction(fraction);
+        resp.setVoiceActivity(voice);
+        return resp;
+    }
+
+    @Test
+    @DisplayName("audio — audio chunk is forwarded to the AI service when monitoring is on")
+    void audio_forwardedWhenEnabled() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.analyze(eq("frame=="), isNull(), eq("wav=="))).thenReturn(buildCleanAnalyzeResponse());
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1));
+
+        FrameUploadRequest req = buildRequest(55L, "frame==");
+        req.setAudioBase64("wav==");
+        service.processFrame(req, "student@test.com");
+
+        verify(aiServiceClient).analyze("frame==", null, "wav==");
+    }
+
+    @Test
+    @DisplayName("audio — audio chunk is dropped when the exam disables audio monitoring")
+    void audio_droppedWhenDisabled() {
+        exam.getProctoringRules().setAudioMonitoringEnabled(false);
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.analyze(eq("frame=="), isNull(), isNull())).thenReturn(buildCleanAnalyzeResponse());
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1));
+
+        FrameUploadRequest req = buildRequest(55L, "frame==");
+        req.setAudioBase64("wav==");
+        service.processFrame(req, "student@test.com");
+
+        verify(aiServiceClient).analyze("frame==", null, null);
+    }
+
+    @Test
+    @DisplayName("audio — sustained speech records a MEDIUM SPEECH_DETECTED violation and alerts")
+    void audio_speechAboveThreshold_recordsViolation() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.analyze(anyString(), any(), any())).thenReturn(withSpeech(true, 0.6));
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1));
+
+        service.processFrame(buildRequest(55L, "frame=="), "student@test.com");
+
+        verify(violationRepository).save(argThat(v ->
+                v.getType() == ViolationType.SPEECH_DETECTED && v.getSeverity() == ViolationSeverity.MEDIUM));
+        verify(messagingTemplate).convertAndSend(eq("/topic/alerts/" + exam.getId()), any(AlertMessage.class));
+    }
+
+    @Test
+    @DisplayName("audio — brief speech below the fraction threshold is ignored")
+    void audio_speechBelowThreshold_ignored() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.analyze(anyString(), any(), any())).thenReturn(withSpeech(true, 0.1));
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1));
+
+        service.processFrame(buildRequest(55L, "frame=="), "student@test.com");
+
+        verify(violationRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("audio — SPEECH_DETECTED is deduplicated within the Redis window")
+    void audio_speechDeduplicated() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.analyze(anyString(), any(), any())).thenReturn(withSpeech(true, 0.9));
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1));
+        when(stringRedisTemplate.hasKey("proctor:dedupe:speech_detected:55")).thenReturn(true);
+
+        service.processFrame(buildRequest(55L, "frame=="), "student@test.com");
+
+        verify(violationRepository, never()).save(any());
+    }
+
+    // -----------------------------------------------------------------------
+    // Frame response tells the student's client what was just detected
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("processFrame — response lists the violations detected in this frame")
+    void processFrame_responseListsViolations() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.analyze(anyString(), any(), any()))
+                .thenReturn(buildAnalyzeResponse(1, List.of("looking_away"), "MEDIUM", 10));
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1));
+
+        ProctoringEventResponse resp = service.processFrame(buildRequest(55L, "frame=="), "student@test.com");
+
+        assertEquals(List.of("looking_away"), resp.getViolationsDetected());
+        assertEquals(SessionStatus.ACTIVE, resp.getSessionStatus());
+    }
+
+    @Test
+    @DisplayName("processFrame — clean frame returns an empty violation list")
+    void processFrame_cleanFrame_emptyViolations() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.analyze(anyString(), any(), any())).thenReturn(buildCleanAnalyzeResponse());
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1));
+
+        ProctoringEventResponse resp = service.processFrame(buildRequest(55L, "frame=="), "student@test.com");
+
+        assertTrue(resp.getViolationsDetected().isEmpty());
+    }
+
+    // -----------------------------------------------------------------------
+    // Evidence snapshots
+    // -----------------------------------------------------------------------
+
+    private static final String JPEG_B64 = java.util.Base64.getEncoder().encodeToString(new byte[]{1, 2, 3});
+
+    @Test
+    @DisplayName("evidence — the frame is stored as evidence for each recorded AI violation")
+    void evidence_savedForRecordedViolation() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.analyze(anyString(), any(), any()))
+                .thenReturn(buildAnalyzeResponse(0, List.of("no_face"), "HIGH", 15));
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.NO_FACE_DETECTED, 0));
+
+        service.processFrame(buildRequest(55L, JPEG_B64), "student@test.com");
+
+        verify(evidenceRepository).save(argThat((ViolationEvidence e) ->
+                java.util.Arrays.equals(new byte[]{1, 2, 3}, e.getData())
+                        && "image/jpeg".equals(e.getContentType())
+                        && e.getViolation().getType() == ViolationType.NO_FACE_DETECTED));
+    }
+
+    @Test
+    @DisplayName("evidence — nothing is stored when the violation was deduplicated")
+    void evidence_notSavedWhenDeduplicated() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.analyze(anyString(), any(), any()))
+                .thenReturn(buildAnalyzeResponse(1, List.of("looking_away"), "MEDIUM", 10));
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1));
+        when(stringRedisTemplate.hasKey("proctor:dedupe:looking_away:55")).thenReturn(true);
+
+        service.processFrame(buildRequest(55L, JPEG_B64), "student@test.com");
+
+        verify(evidenceRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("evidence — an undecodable frame skips evidence but still records the violation")
+    void evidence_badBase64_skippedViolationKept() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.analyze(anyString(), any(), any()))
+                .thenReturn(buildAnalyzeResponse(0, List.of("no_face"), "HIGH", 15));
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.NO_FACE_DETECTED, 0));
+
+        service.processFrame(buildRequest(55L, "not base64 !!"), "student@test.com");
+
+        verify(violationRepository).save(any());
+        verify(evidenceRepository, never()).save(any());
+    }
+
+    // -----------------------------------------------------------------------
+    // getMyViolationCount — student's own live warning count
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("getMyViolationCount — owner gets the session's violation count")
+    void getMyViolationCount_owner_returnsCount() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(violationRepository.countBySessionId(55L)).thenReturn(4L);
+
+        assertEquals(4L, service.getMyViolationCount(55L, "student@test.com"));
+    }
+
+    @Test
+    @DisplayName("getMyViolationCount — another student is rejected")
+    void getMyViolationCount_notOwner_throws() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+
+        assertThrows(UnauthorizedException.class,
+                () -> service.getMyViolationCount(55L, "hacker@evil.com"));
+    }
+
+    // -----------------------------------------------------------------------
+    // enrollReference — per-session live reference photo
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("enrollReference — stores the AI embedding on the session")
+    void enrollReference_success_storesEmbedding() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        List<Double> embedding = List.of(0.5, 0.6);
+        when(aiServiceClient.embed("photo==")).thenReturn(embedding);
+
+        service.enrollReference(55L, "photo==", "student@test.com");
+
+        assertEquals(embedding, activeSession.getReferenceEmbedding());
+        verify(sessionRepository).save(activeSession);
+    }
+
+    @Test
+    @DisplayName("enrollReference — no face in photo throws BadRequestException and stores nothing")
+    void enrollReference_noFace_throwsBadRequest() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.embed("photo==")).thenReturn(null);
+
+        assertThrows(BadRequestException.class,
+                () -> service.enrollReference(55L, "photo==", "student@test.com"));
+        assertNull(activeSession.getReferenceEmbedding());
+        verify(sessionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("enrollReference — already-enrolled session cannot be re-enrolled")
+    void enrollReference_alreadyEnrolled_throwsIllegalState() {
+        activeSession.setReferenceEmbedding(List.of(0.1));
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+
+        assertThrows(IllegalStateException.class,
+                () -> service.enrollReference(55L, "photo==", "student@test.com"));
+        verify(aiServiceClient, never()).embed(anyString());
+    }
+
+    @Test
+    @DisplayName("enrollReference — non-owner is rejected")
+    void enrollReference_notOwner_throwsUnauthorized() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+
+        assertThrows(UnauthorizedException.class,
+                () -> service.enrollReference(55L, "photo==", "hacker@evil.com"));
+        verify(aiServiceClient, never()).embed(anyString());
+    }
+
+    @Test
+    @DisplayName("enrollReference — inactive session is rejected")
+    void enrollReference_sessionNotActive_throwsIllegalState() {
+        activeSession.setStatus(SessionStatus.COMPLETED);
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+
+        assertThrows(IllegalStateException.class,
+                () -> service.enrollReference(55L, "photo==", "student@test.com"));
+        verify(aiServiceClient, never()).embed(anyString());
     }
 
     @Test

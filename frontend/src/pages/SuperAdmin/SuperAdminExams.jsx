@@ -235,7 +235,7 @@ const SuperAdminExams = () => {
         <SuperAdminTopbar />
 
         <main className="p-6 lg:p-8 flex-1 overflow-y-auto max-w-7xl mx-auto w-full">
-          <div className="pb-4 mb-6 border-b border-white/[0.06]">
+          <div className="pb-4 mb-6 border-b border-white/6">
             <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">
               Examinations
             </span>
@@ -250,7 +250,7 @@ const SuperAdminExams = () => {
             </p>
           </div>
 
-          <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+          <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div className="relative flex-1 max-w-sm">
                 <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs" />
@@ -260,7 +260,7 @@ const SuperAdminExams = () => {
                   placeholder="Search exams by title, code or org..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 transition"
+                  className="w-full pl-9 pr-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 transition"
                 />
               </div>
 
@@ -272,7 +272,7 @@ const SuperAdminExams = () => {
                 <button
                   onClick={fetchExams}
                   disabled={loading}
-                  className="p-2 rounded-lg border border-white/[0.08] text-slate-400 hover:text-white hover:bg-white/[0.05] transition disabled:opacity-50"
+                  className="p-2 rounded-lg border border-white/8 text-slate-400 hover:text-white hover:bg-white/5 transition disabled:opacity-50"
                   title="Refresh"
                 >
                   <FaRedo
@@ -318,9 +318,9 @@ const SuperAdminExams = () => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[750px] text-left border-collapse">
+                <table className="w-full min-w-187.5 text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-white/[0.06] text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+                    <tr className="border-b border-white/6 text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
                       <th className="pb-3 px-3">
                         Exam Title
                       </th>
@@ -347,11 +347,11 @@ const SuperAdminExams = () => {
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-white/[0.04] text-xs">
+                  <tbody className="divide-y divide-white/4 text-xs">
                     {filtered.map((exam) => (
                       <tr
                         key={exam.id}
-                        className="hover:bg-white/[0.02] transition"
+                        className="hover:bg-white/2 transition"
                       >
                         <td className="py-3 px-3 font-semibold text-white">
                           <div className="flex items-center gap-2.5">
@@ -428,8 +428,8 @@ const SuperAdminExams = () => {
             if (e.target === e.currentTarget) setDetailExam(null);
           }}
         >
-          <div className="w-full max-w-md bg-[#121520] border border-white/[0.08] rounded-xl shadow-2xl animate-scale-in">
-            <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
+          <div className="w-full max-w-md bg-[#121520] border border-white/8 rounded-xl shadow-2xl animate-scale-in">
+            <div className="flex items-center justify-between p-5 border-b border-white/6">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-400 flex items-center justify-center">
                   <FaFileAlt size={14} />
@@ -447,7 +447,7 @@ const SuperAdminExams = () => {
 
               <button
                 onClick={() => setDetailExam(null)}
-                className="p-2 rounded-lg hover:bg-white/[0.05] text-slate-400 hover:text-white"
+                className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white"
               >
                 <FaTimes size={13} />
               </button>
@@ -481,7 +481,7 @@ const SuperAdminExams = () => {
                   <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wider mb-1.5">
                     Description
                   </p>
-                  <p className="text-xs text-slate-300 leading-relaxed bg-[#090a0f] border border-white/[0.06] rounded-lg p-3">
+                  <p className="text-xs text-slate-300 leading-relaxed bg-[#090a0f] border border-white/6 rounded-lg p-3">
                     {detailExam.description}
                   </p>
                 </div>
@@ -491,7 +491,7 @@ const SuperAdminExams = () => {
             <div className="px-5 pb-5">
               <button
                 onClick={() => setDetailExam(null)}
-                className="w-full py-2.5 rounded-lg border border-white/[0.08] bg-[#090a0f] text-xs text-slate-300 font-semibold hover:text-white hover:bg-white/[0.05] transition"
+                className="w-full py-2.5 rounded-lg border border-white/8 bg-[#090a0f] text-xs text-slate-300 font-semibold hover:text-white hover:bg-white/5 transition"
               >
                 Close
               </button>
@@ -526,7 +526,7 @@ const SuperAdminExams = () => {
 /* ===================== Detail Row Subcomponent ===================== */
 
 const DetailRow = ({ label, value, mono, status }) => (
-  <div className="flex items-center justify-between gap-4 py-2 border-b border-white/[0.04] last:border-none">
+  <div className="flex items-center justify-between gap-4 py-2 border-b border-white/4 last:border-none">
     <span className="text-[11px] text-slate-400 font-medium uppercase tracking-wider">
       {label}
     </span>

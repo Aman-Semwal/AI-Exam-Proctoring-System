@@ -20,6 +20,9 @@ public class ExamServiceImpl implements ExamService {
 
     private final ExamRepository examRepository;
     private final UserRepository userRepository;
+    private final com.proctor.proctorbackend.examexaminer.ExamExaminerAssignmentRepository examinerAssignmentRepo;
+    private final com.proctor.proctorbackend.examproctor.ExamProctorAssignmentRepository proctorAssignmentRepo;
+    private final com.proctor.proctorbackend.assignment.ExamAssignmentRepository assignmentRepo;
 
     @Override
     @Transactional
@@ -35,6 +38,9 @@ public class ExamServiceImpl implements ExamService {
                 .endTime(request.getEndTime())
                 .createdBy(creator)
                 .organization(requireOrganization(creator))
+                .status(ExamStatus.DRAFT)
+                .proctoringRules(request.getProctoringRules() != null
+                        ? request.getProctoringRules() : new ProctoringRules())
                 .build();
         return toResponse(examRepository.save(exam));
     }
@@ -71,8 +77,8 @@ public class ExamServiceImpl implements ExamService {
                     .map(this::toResponse)
                     .toList();
         }
-        return examRepository.findByCreatedByIdAndOrganizationIdOrderByStartTimeDesc(
-                        creator.getId(), requireOrganization(creator).getId())
+        return examRepository.findExamsForExaminer(
+                        requireOrganization(creator).getId(), creator.getId())
                 .stream()
                 .map(this::toResponse)
                 .toList();
@@ -87,6 +93,9 @@ public class ExamServiceImpl implements ExamService {
         validateExamWindow(request);
 
         exam.setTitle(request.getTitle());
+        if (request.getProctoringRules() != null) {
+            exam.setProctoringRules(request.getProctoringRules());
+        }
         exam.setDescription(request.getDescription());
         exam.setDurationMinutes(request.getDurationMinutes());
         exam.setStartTime(request.getStartTime());
@@ -102,6 +111,21 @@ public class ExamServiceImpl implements ExamService {
         validateOwnership(exam, creatorEmail);
         validateSameOrganization(getUserByEmail(creatorEmail), exam);
         examRepository.delete(exam);
+    }
+
+    @Override
+    @Transactional
+    public ExamResponse publishExam(Long id, String creatorEmail) {
+        Exam exam = findExamById(id);
+        validateOwnership(exam, creatorEmail);
+        validateSameOrganization(getUserByEmail(creatorEmail), exam);
+
+        if (exam.getStatus() == ExamStatus.PUBLISHED) {
+            throw new BadRequestException("Exam is already published");
+        }
+
+        exam.setStatus(ExamStatus.PUBLISHED);
+        return toResponse(examRepository.save(exam));
     }
 
     private void validateExamWindow(ExamRequest request) {
@@ -149,17 +173,34 @@ public class ExamServiceImpl implements ExamService {
     }
 
     private ExamResponse toResponse(Exam exam) {
+        String examinerName = examinerAssignmentRepo.findByExamId(exam.getId()).stream()
+                .findFirst()
+                .map(a -> a.getExaminer().getName())
+                .orElse(null);
+                
+        String proctorName = proctorAssignmentRepo.findByExamId(exam.getId()).stream()
+                .findFirst()
+                .map(a -> a.getExaminer().getName())
+                .orElse(null);
+                
+        long totalRegistered = assignmentRepo.countByExamId(exam.getId());
+
         return ExamResponse.builder()
                 .id(exam.getId())
                 .title(exam.getTitle())
+                .proctoringRules(exam.getProctoringRules())
                 .description(exam.getDescription())
                 .durationMinutes(exam.getDurationMinutes())
                 .startTime(exam.getStartTime())
                 .endTime(exam.getEndTime())
                 .createdByName(exam.getCreatedBy().getName())
+                .status(exam.getStatus() != null ? exam.getStatus().name() : ExamStatus.DRAFT.name())
                 .orgId(exam.getOrganization() != null ? exam.getOrganization().getId() : null)
                 .orgSlug(exam.getOrganization() != null ? exam.getOrganization().getSlug() : null)
                 .createdAt(exam.getCreatedAt())
+                .examinerName(examinerName)
+                .proctorName(proctorName)
+                .totalRegistered(totalRegistered)
                 .build();
     }
 }

@@ -101,7 +101,7 @@ const ExamTimer = ({ sessionId, onTimeExpired }) => {
   const isExpired = remainingSeconds === 0;
 
   return (
-    <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+    <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
           <FaClock
@@ -129,7 +129,7 @@ const ExamTimer = ({ sessionId, onTimeExpired }) => {
             ? "bg-rose-500/10 border-rose-500/30"
             : isLowTime
             ? "bg-amber-500/10 border-amber-500/30"
-            : "bg-[#090a0f] border-white/[0.06]"
+            : "bg-[#090a0f] border-white/6"
         }`}
       >
         <h1

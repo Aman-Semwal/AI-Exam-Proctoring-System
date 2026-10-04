@@ -1,6 +1,7 @@
 package com.proctor.proctorbackend.common.exception;
 
 import com.proctor.proctorbackend.common.response.ApiResponse;
+import com.proctor.proctorbackend.proctoring.AiServiceUnavailableException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -64,6 +65,12 @@ public class GlobalExceptionHandler {
         log.debug("Illegal state: {}", sanitize(ex.getMessage()));
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(AiServiceUnavailableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAiUnavailable(AiServiceUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiResponse.error("Proctoring service is temporarily unavailable. Please try again."));
     }
 
     /** Handles @Valid / @Validated bean validation failures — collects all field errors. */

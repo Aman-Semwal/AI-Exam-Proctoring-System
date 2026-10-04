@@ -213,6 +213,46 @@ class AiServiceClientTest {
     }
 
     // -----------------------------------------------------------------------
+    // embed(image) — reference photo enrollment
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("embed() — returns the embedding and posts the image to /infer/identity/embed")
+    void embed_faceDetected_returnsEmbedding() throws InterruptedException {
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .setBody("{ \"face_detected\": true, \"embedding\": [0.25, -0.5] }"));
+
+        List<Double> embedding = client.embed("photo==");
+
+        assertEquals(List.of(0.25, -0.5), embedding);
+        RecordedRequest recorded = mockServer.takeRequest();
+        assertEquals("POST", recorded.getMethod());
+        assertEquals("/infer/identity/embed", recorded.getPath());
+        assertTrue(recorded.getBody().readUtf8().contains("\"image\":\"photo==\""));
+    }
+
+    @Test
+    @DisplayName("embed() — returns null when no face is detected")
+    void embed_noFace_returnsNull() {
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .setBody("{ \"face_detected\": false, \"embedding\": null }"));
+
+        assertNull(client.embed("photo=="));
+    }
+
+    @Test
+    @DisplayName("embed() — AI service error throws AiServiceUnavailableException (no silent fallback)")
+    void embed_serverError_throws() {
+        mockServer.enqueue(new MockResponse().setResponseCode(500));
+
+        assertThrows(AiServiceUnavailableException.class, () -> client.embed("photo=="));
+    }
+
+    // -----------------------------------------------------------------------
     // Deprecated method removed (Fix #1)
     // -----------------------------------------------------------------------
 

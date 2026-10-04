@@ -1,7 +1,7 @@
 const ProfileCard = () => {
   return (
-    <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-6 shadow-sm">
-      <div className="flex items-center gap-4 pb-6 border-b border-white/[0.06]">
+    <div className="bg-[#121520] border border-white/7 rounded-xl p-6 shadow-sm">
+      <div className="flex items-center gap-4 pb-6 border-b border-white/6">
         <div className="w-14 h-14 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-lg font-bold text-blue-400">
           AS
         </div>

@@ -2,7 +2,7 @@ import { FaCalendarAlt, FaClock } from "react-icons/fa";
 
 const ExamCard = ({ subject, date, time, status }) => {
   return (
-    <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 hover:border-blue-500/30 transition-all duration-200 shadow-sm">
+    <div className="bg-[#121520] border border-white/7 rounded-xl p-5 hover:border-blue-500/30 transition-all duration-200 shadow-sm">
       <div className="flex justify-between items-start gap-3">
         <h3 className="text-sm font-semibold text-white tracking-tight leading-snug">
           {subject}

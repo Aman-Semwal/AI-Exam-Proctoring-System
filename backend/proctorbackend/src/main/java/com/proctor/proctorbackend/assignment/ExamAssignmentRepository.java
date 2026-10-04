@@ -22,4 +22,6 @@ public interface ExamAssignmentRepository extends JpaRepository<ExamAssignment, 
     Optional<ExamAssignment> findByExamIdAndStudentId(Long examId, Long studentId);
 
     boolean existsByExamIdAndStudentId(Long examId, Long studentId);
+    
+    long countByExamId(Long examId);
 }

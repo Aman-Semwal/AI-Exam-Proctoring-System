@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import OrganizationSidebar from "../../components/layout/OrganizationSidebar";
-import { FaSearch, FaEye, FaVideo, FaTimes, FaCalendarAlt, FaClock, FaUserGraduate, FaArrowLeft, FaExclamationTriangle, FaShieldAlt } from "react-icons/fa";
+import { FaSearch, FaEye, FaVideo, FaTimes, FaCalendarAlt, FaClock, FaUserGraduate, FaArrowLeft } from "react-icons/fa";
 import ActionDropdown from "../../components/common/ActionDropdown";
 import Toast from "../../components/common/Toast";
 import api from "../../services/api";
@@ -217,7 +217,7 @@ export default function ActiveExams() {
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="h-16 bg-[#090a0f]/80 backdrop-blur-xl border-b border-white/[0.07] flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30">
+        <header className="h-16 bg-[#090a0f]/80 backdrop-blur-xl border-b border-white/7 flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30">
           <div>
             <h1 className="text-base font-semibold text-white tracking-tight">
               Active Exams Monitoring
@@ -248,7 +248,7 @@ export default function ActiveExams() {
         {/* Main */}
         <main className="p-6 lg:p-8 flex-1 overflow-y-auto max-w-7xl mx-auto w-full">
           {/* Action Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/[0.06]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/6">
             <div>
               <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
                 Live Streams
@@ -270,7 +270,7 @@ export default function ActiveExams() {
           </div>
 
           {/* Search & Stats */}
-          <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+          <div className="bg-[#121520] border border-white/7 rounded-xl p-5 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div className="relative flex-1 max-w-sm">
                 <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs" />
@@ -280,7 +280,7 @@ export default function ActiveExams() {
                   placeholder="Search active exams by title, course, or proctor..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-[#090a0f] border border-white/[0.08] rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
+                  className="w-full pl-9 pr-3 py-2 bg-[#090a0f] border border-white/8 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
                 />
               </div>
 
@@ -314,9 +314,9 @@ export default function ActiveExams() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[750px]">
+                <table className="w-full text-left border-collapse min-w-187.5">
                   <thead>
-                    <tr className="border-b border-white/[0.06] text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    <tr className="border-b border-white/6 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                       <th className="pb-3 px-3">Exam Details</th>
                       <th className="pb-3 px-3">Live Candidates</th>
                       <th className="pb-3 px-3">Assigned Proctor</th>
@@ -325,7 +325,7 @@ export default function ActiveExams() {
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-white/[0.04] text-xs">
+                  <tbody className="divide-y divide-white/4 text-xs">
                     {filteredExams.length > 0 ? (
                       filteredExams.map((exam) => (
                         <ActiveExamRow
@@ -356,8 +356,8 @@ export default function ActiveExams() {
       {/* Exam Details Modal */}
       {detailExam && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-[#121520] border border-white/[0.1] rounded-xl shadow-2xl p-6">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.07]">
+          <div className="w-full max-w-md bg-[#121520] border border-white/10 rounded-xl shadow-2xl p-6">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/7">
               <h3 className="text-base font-bold text-white">Active Exam Details</h3>
               <button
                 type="button"
@@ -382,14 +382,14 @@ export default function ActiveExams() {
               )}
 
               <div className="grid grid-cols-2 gap-3 pt-2">
-                <div className="bg-[#090a0f] p-3 rounded-lg border border-white/[0.05]">
+                <div className="bg-[#090a0f] p-3 rounded-lg border border-white/5">
                   <span className="text-slate-500 block">Duration</span>
                   <p className="font-mono font-semibold text-blue-400 mt-1">
                     {detailExam.durationMinutes || detailExam.duration || 60} mins
                   </p>
                 </div>
 
-                <div className="bg-[#090a0f] p-3 rounded-lg border border-white/[0.05]">
+                <div className="bg-[#090a0f] p-3 rounded-lg border border-white/5">
                   <span className="text-slate-500 block">Status</span>
                   <p className="font-mono font-semibold text-emerald-400 mt-1">
                     {detailExam.status || "ACTIVE"}
@@ -397,7 +397,7 @@ export default function ActiveExams() {
                 </div>
               </div>
 
-              <div className="bg-[#090a0f] p-3 rounded-lg border border-white/[0.05] space-y-1.5">
+              <div className="bg-[#090a0f] p-3 rounded-lg border border-white/5 space-y-1.5">
                 <div className="flex items-center gap-2 text-slate-300">
                   <FaCalendarAlt className="text-blue-400" size={11} />
                   <span>Start: {detailExam.startTime ? new Date(detailExam.startTime).toLocaleString() : "Live Now"}</span>
@@ -413,7 +413,7 @@ export default function ActiveExams() {
               <button
                 type="button"
                 onClick={() => setDetailExam(null)}
-                className="px-4 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-xs text-white"
+                className="px-4 py-2 rounded-lg bg-white/6 hover:bg-white/10 text-xs text-white"
               >
                 Close
               </button>
@@ -425,8 +425,8 @@ export default function ActiveExams() {
       {/* Live Sessions Telemetry Modal */}
       {telemetryExam && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="w-full max-w-2xl bg-[#121520] border border-white/[0.1] rounded-xl shadow-2xl p-6 my-8">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.07]">
+          <div className="w-full max-w-2xl bg-[#121520] border border-white/10 rounded-xl shadow-2xl p-6 my-8">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/7">
               <div>
                 <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
                   <FaVideo className="text-emerald-400 text-sm" />
@@ -448,12 +448,12 @@ export default function ActiveExams() {
             {selectedCandidateSession ? (
               /* Candidate Violation Inspection Drilldown */
               <div className="space-y-4 text-xs">
-                <div className="flex items-center justify-between bg-[#090a0f] p-3 rounded-lg border border-white/[0.06]">
+                <div className="flex items-center justify-between bg-[#090a0f] p-3 rounded-lg border border-white/6">
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
                       onClick={() => setSelectedCandidateSession(null)}
-                      className="p-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 hover:text-white transition"
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition"
                       title="Back to Candidate List"
                     >
                       <FaArrowLeft size={11} />
@@ -478,7 +478,7 @@ export default function ActiveExams() {
                     Loading candidate violation stream...
                   </div>
                 ) : candidateViolations.length === 0 ? (
-                  <div className="py-8 text-center text-slate-500 border border-white/[0.05] rounded-lg">
+                  <div className="py-8 text-center text-slate-500 border border-white/5 rounded-lg">
                     No proctoring violation incidents recorded for this candidate.
                   </div>
                 ) : (
@@ -486,7 +486,7 @@ export default function ActiveExams() {
                     {candidateViolations.map((v) => (
                       <div
                         key={v.id}
-                        className="p-3 rounded-lg border border-white/[0.06] bg-[#090a0f] flex items-start justify-between gap-3"
+                        className="p-3 rounded-lg border border-white/6 bg-[#090a0f] flex items-start justify-between gap-3"
                       >
                         <div>
                           <div className="flex items-center gap-2 mb-1">
@@ -522,14 +522,14 @@ export default function ActiveExams() {
                 Loading candidate sessions...
               </div>
             ) : telemetrySessions.length === 0 ? (
-              <div className="py-10 text-center text-xs text-slate-500 border border-white/[0.05] rounded-lg">
+              <div className="py-10 text-center text-xs text-slate-500 border border-white/5 rounded-lg">
                 No active student sessions currently running for this exam.
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-white/[0.06] text-[10px] text-slate-400 uppercase tracking-wider">
+                    <tr className="border-b border-white/6 text-[10px] text-slate-400 uppercase tracking-wider">
                       <th className="pb-2">Student</th>
                       <th className="pb-2">Started At</th>
                       <th className="pb-2">Violations</th>
@@ -537,9 +537,9 @@ export default function ActiveExams() {
                       <th className="pb-2 text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/[0.04]">
+                  <tbody className="divide-y divide-white/4">
                     {telemetrySessions.map((session, idx) => (
-                      <tr key={session.id || idx} className="hover:bg-white/[0.02]">
+                      <tr key={session.id || idx} className="hover:bg-white/2">
                         <td className="py-2.5 font-medium text-white flex items-center gap-2">
                           <FaUserGraduate className="text-blue-400" size={11} />
                           {session.studentName || session.studentEmail || `Student #${session.studentId || idx + 1}`}
@@ -578,14 +578,14 @@ export default function ActiveExams() {
               </div>
             )}
 
-            <div className="mt-5 pt-3 border-t border-white/[0.07] flex justify-end">
+            <div className="mt-5 pt-3 border-t border-white/7 flex justify-end">
               <button
                 type="button"
                 onClick={() => {
                   setTelemetryExam(null);
                   setSelectedCandidateSession(null);
                 }}
-                className="px-4 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-xs text-white"
+                className="px-4 py-2 rounded-lg bg-white/6 hover:bg-white/10 text-xs text-white"
               >
                 Close Telemetry
               </button>
@@ -657,7 +657,7 @@ const ActiveExamRow = ({ exam, onViewDetails, onViewTelemetry }) => {
   ];
 
   return (
-    <tr className="hover:bg-white/[0.02] transition">
+    <tr className="hover:bg-white/2 transition">
       <td className="py-3 px-3">
         <div>
           <p className="font-semibold text-white">

@@ -1,5 +1,6 @@
 package com.proctor.proctorbackend.violation.dto;
 
+import com.proctor.proctorbackend.violation.ReviewOutcome;
 import com.proctor.proctorbackend.violation.ViolationSeverity;
 import com.proctor.proctorbackend.violation.ViolationType;
 import lombok.AllArgsConstructor;
@@ -23,5 +24,8 @@ public class ViolationResponse {
     private ViolationSeverity severity;
     private String details;
     private Boolean reviewed;
+    private ReviewOutcome reviewOutcome;
+    /** True when a webcam snapshot is stored (GET /api/violations/{id}/evidence). */
+    private boolean hasEvidence;
     private LocalDateTime createdAt;
 }

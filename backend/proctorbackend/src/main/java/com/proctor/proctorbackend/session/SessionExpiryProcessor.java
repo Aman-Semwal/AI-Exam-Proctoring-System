@@ -43,7 +43,8 @@ public class SessionExpiryProcessor {
                 .plusMinutes(session.getExam().getDurationMinutes());
         if (now.isAfter(deadline)) {
             session.setScore(scoreCalculationService.calculate(session));
-            session.setStatus(SessionStatus.TERMINATED);
+            // Running out of time is a normal submission; TERMINATED is reserved for violations
+            session.setStatus(SessionStatus.COMPLETED);
             session.setEndTime(now);
             sessionRepository.save(session);
         }

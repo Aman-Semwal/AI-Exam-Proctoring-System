@@ -56,7 +56,7 @@ const Hero = () => {
         />
 
         <div
-          className={`absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] rounded-full blur-[150px] pointer-events-none z-0 ${
+          className={`absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-175 h-125 rounded-full blur-[150px] pointer-events-none z-0 ${
             isDark ? "bg-blue-600/15" : "bg-blue-400/20"
           }`}
         />
@@ -109,7 +109,7 @@ const Hero = () => {
           <div className="relative mt-12 w-full max-w-4xl px-4 flex justify-center mx-auto">
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div
-                className={`w-[320px] sm:w-[460px] h-[320px] sm:h-[460px] rounded-full border bg-blue-500/5 blur-[2px] animate-pulse ${
+                className={`w-80 sm:w-115 h-80 sm:h-115 rounded-full border bg-blue-500/5 blur-[2px] animate-pulse ${
                   isDark ? "border-blue-500/30" : "border-blue-300"
                 }`}
               />
@@ -118,14 +118,14 @@ const Hero = () => {
             <div
               className={`relative rounded-3xl overflow-hidden border shadow-2xl max-w-2xl ${
                 isDark
-                  ? "border-white/[0.12] shadow-blue-950/40 bg-[#090a10]"
+                  ? "border-white/12 shadow-blue-950/40 bg-[#090a10]"
                   : "border-slate-200 shadow-slate-300/50 bg-white"
               }`}
             >
               <img
                 src={heroCandidateImg}
                 alt="AI Proctoring Candidate Telemetry"
-                className="w-full h-auto object-cover max-h-[520px]"
+                className="w-full h-auto object-cover max-h-130"
               />
               <div
                 className={`absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t pointer-events-none ${
@@ -172,7 +172,7 @@ const Hero = () => {
               onClick={() => setShowDemo(true)}
               className={`font-medium px-6 py-3 rounded-full text-xs uppercase tracking-wider transition flex items-center gap-2 border cursor-pointer ${
                 isDark
-                  ? "bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border-white/[0.12]"
+                  ? "bg-white/4 hover:bg-white/8 text-slate-300 hover:text-white border-white/12"
                   : "bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-300 shadow-sm"
               }`}
             >
@@ -188,7 +188,7 @@ const Hero = () => {
         {/* Logos Strip Row */}
         <div
           className={`w-full max-w-6xl mx-auto px-6 mt-16 pt-8 border-t relative z-10 ${
-            isDark ? "border-white/[0.06]" : "border-slate-200"
+            isDark ? "border-white/6" : "border-slate-200"
           }`}
         >
           <div
@@ -249,7 +249,7 @@ const Hero = () => {
           <div
             className={`relative w-full max-w-3xl border rounded-3xl p-6 sm:p-8 shadow-2xl transition-all ${
               isDark
-                ? "bg-[#0e1118] border-white/[0.12] text-white"
+                ? "bg-[#0e1118] border-white/12 text-white"
                 : "bg-white border-slate-200 text-slate-900"
             }`}
           >
@@ -257,7 +257,7 @@ const Hero = () => {
               onClick={() => setShowDemo(false)}
               className={`absolute top-5 right-5 p-2 rounded-lg transition cursor-pointer ${
                 isDark
-                  ? "text-slate-400 hover:text-white hover:bg-white/[0.05]"
+                  ? "text-slate-400 hover:text-white hover:bg-white/5"
                   : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
               }`}
             >
@@ -289,7 +289,7 @@ const Hero = () => {
               <div
                 className={`rounded-2xl border p-5 text-center ${
                   isDark
-                    ? "bg-[#07090e] border-white/[0.07]"
+                    ? "bg-[#07090e] border-white/7"
                     : "bg-slate-50 border-slate-200"
                 }`}
               >
@@ -313,7 +313,7 @@ const Hero = () => {
               <div
                 className={`rounded-2xl border p-5 text-center ${
                   isDark
-                    ? "bg-[#07090e] border-white/[0.07]"
+                    ? "bg-[#07090e] border-white/7"
                     : "bg-slate-50 border-slate-200"
                 }`}
               >
@@ -337,7 +337,7 @@ const Hero = () => {
               <div
                 className={`rounded-2xl border p-5 text-center ${
                   isDark
-                    ? "bg-[#07090e] border-white/[0.07]"
+                    ? "bg-[#07090e] border-white/7"
                     : "bg-slate-50 border-slate-200"
                 }`}
               >

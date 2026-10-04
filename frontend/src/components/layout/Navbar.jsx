@@ -21,7 +21,7 @@ const Navbar = () => {
     <header
       className={`fixed top-0 inset-x-0 z-50 backdrop-blur-xl border-b transition-colors duration-300 ${
         isDark
-          ? "bg-[#050508]/80 border-white/[0.08]"
+          ? "bg-[#050508]/80 border-white/8"
           : "bg-white/80 border-slate-200 shadow-sm"
       }`}
     >
@@ -68,7 +68,7 @@ const Navbar = () => {
             aria-label="Toggle theme"
             className={`w-8 h-8 rounded-full flex items-center justify-center border transition cursor-pointer ${
               isDark
-                ? "bg-white/[0.05] border-white/[0.1] text-slate-300 hover:text-white"
+                ? "bg-white/5 border-white/10 text-slate-300 hover:text-white"
                 : "bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200"
             }`}
           >
@@ -116,7 +116,7 @@ const Navbar = () => {
         <div
           className={`md:hidden border-b px-6 py-4 space-y-3 ${
             isDark
-              ? "bg-[#0a0c14] border-white/[0.08]"
+              ? "bg-[#0a0c14] border-white/8"
               : "bg-white border-slate-200 shadow-lg"
           }`}
         >
@@ -134,7 +134,7 @@ const Navbar = () => {
               {link.label}
             </a>
           ))}
-          <div className={`pt-2 border-t ${isDark ? "border-white/[0.08]" : "border-slate-200"} flex items-center gap-3`}>
+          <div className={`pt-2 border-t ${isDark ? "border-white/8" : "border-slate-200"} flex items-center gap-3`}>
             <button
               onClick={() => navigate("/login")}
               className="w-full bg-blue-600 text-white py-2 rounded-lg text-xs font-semibold cursor-pointer"

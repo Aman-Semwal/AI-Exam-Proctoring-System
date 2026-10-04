@@ -1,6 +1,6 @@
 const ResultCard = ({ subject, marks, grade, status }) => {
   return (
-    <div className="bg-[#121520] border border-white/[0.07] rounded-xl p-5 hover:border-white/[0.15] transition-all duration-200 shadow-sm">
+    <div className="bg-[#121520] border border-white/7 rounded-xl p-5 hover:border-white/15 transition-all duration-200 shadow-sm">
       <div className="flex justify-between items-start gap-3">
         <h3 className="text-sm font-semibold text-white tracking-tight leading-snug">
           {subject}
@@ -11,7 +11,7 @@ const ResultCard = ({ subject, marks, grade, status }) => {
         </span>
       </div>
 
-      <div className="mt-4 pt-3 border-t border-white/[0.05] grid grid-cols-2 gap-4 text-xs">
+      <div className="mt-4 pt-3 border-t border-white/5 grid grid-cols-2 gap-4 text-xs">
         <div>
           <span className="text-slate-400 block text-[11px]">Score</span>
           <span className="text-white font-semibold text-sm mt-0.5 block">{marks}</span>
