@@ -25,6 +25,7 @@ the session gets a trust score and an evidence-backed report.
 
 | # | Item | Depends on |
 |---|------|-----------|
+| 0 | Core exam-flow correctness fixes (§2a) | — |
 | 3 | Per-exam proctoring rules | — |
 | 4 | Audio monitoring (`SPEECH_DETECTED`) | 3 |
 | 5 | Trust score + review outcome | — |
@@ -33,7 +34,23 @@ the session gets a trust score and an evidence-backed report.
 | 8 | Session report + CSV/PDF export | 5, 6 |
 | 9 | Hardening + demo readiness | all |
 
-Rules come first because they control whether audio and identity checks run, and how many tab switches are allowed.
+Item 0 comes first: these bugs stop the basic exam from working correctly, whatever proctoring features are added.
+Rules come next because they control whether audio and identity checks run, and how many tab switches are allowed.
+
+## 2a. Core exam-flow correctness fixes (found in code review, 2026-10-04)
+
+| # | Bug (verified in code) | Effect | Fix |
+|---|---|---|---|
+| 0.1 | **Timezone mismatch.** The backend stores and compares times as UTC `LocalDateTime` but serializes them with no offset. Browsers parse them as local time (IST), and `datetime-local` inputs send IST values that are stored as if they were UTC. | The exam timer is off by 5h30m, so it can show 00:00:00 straight away. Exams open 5h30m late, and all displayed times are wrong. | Use one rule: **the API speaks UTC with an explicit `Z`.** Set Jackson to write `LocalDateTime` with a `Z` suffix and read incoming times as UTC. Add a frontend `toApiDateTime()` (local input → UTC ISO) for exam create/edit, and parse server times with `new Date()`, which respects the `Z`. |
+| 0.2 | **Answers are only saved on "Save & Next".** Saving fails silently (`console.warn`). | An answer to the last question, or one left by clicking Previous, submitting, a time-out or an auto-submit, is **lost**. Scores come out wrong. | **Autosave:** MCQ saves on select, text and code after a 1.5 s debounce. Show per-question saved/saving/failed status and retry failed saves. Flush pending saves before submit and before auto-submit navigation. The synopsis Step 5 requires this. |
+| 0.3 | **A hardcoded fake question set** (`defaultQuestions`, ids 1, 2…) is shown when loading questions fails. | The student answers a fake exam and every answer is rejected. | Remove the fallback. Show an error with a Retry button. |
+| 0.4 | **Time-up does nothing on the client.** `ExamTimer` has an `onTimeExpired` hook, but `LiveExam` doesn't pass it. | At 00:00 the student can keep working. The server expires the session up to 30 s later, and saves start failing. | Pass `onTimeExpired`: flush answers, call `PUT /sessions/{id}/end`, then go to Results. |
+| 0.5 | **A timed-out session is marked `TERMINATED`** (`SessionExpiryProcessor`), the same status used for cheating terminations. Results only lists `COMPLETED`. | A student who simply runs out of time **never sees their result**. | Time-up → `COMPLETED`. `TERMINATED` is only for proctor or violation terminations. Results also lists `TERMINATED` sessions, with a "Terminated" badge. |
+| 0.6 | **No size limit** on `frameBase64` and `imageBase64`. | Oversized requests reach the backend before the AI service's own limit rejects them. | `@Size(max = 2_000_000)` on both fields (≈1.5 MB image). |
+
+Fixed already (same review): a resumed session skipped the reference photo (an identity bypass). `SessionResponse` now has
+`referenceEnrolled`, and `LiveExam` sends un-enrolled sessions back to the photo step. Also fixed: the full-screen overlay
+showed while already in full screen, because the state wasn't synced during start.
 
 ## 3. Per-exam proctoring rules
 
