@@ -47,4 +47,11 @@ public class ProctoringRules {
     @Max(20)
     @Column(name = "tab_switch_limit", nullable = false)
     private int tabSwitchLimit = 2;
+
+    /** Attempts a student may make (submitted, auto-submitted and terminated all count). */
+    @Builder.Default
+    @Min(1)
+    @Max(10)
+    @Column(name = "max_attempts", nullable = false)
+    private int maxAttempts = 1;
 }

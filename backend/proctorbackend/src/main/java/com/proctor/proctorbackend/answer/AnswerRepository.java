@@ -16,4 +16,7 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
     boolean existsBySessionIdAndQuestionId(Long sessionId, Long questionId);
 
     long countBySessionIdAndIsCorrect(Long sessionId, boolean isCorrect);
+
+    /** Answers still awaiting manual grading (descriptive / coding). */
+    long countBySessionIdAndIsCorrectIsNull(Long sessionId);
 }

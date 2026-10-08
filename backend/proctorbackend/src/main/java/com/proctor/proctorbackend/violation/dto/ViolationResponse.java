@@ -1,5 +1,6 @@
 package com.proctor.proctorbackend.violation.dto;
 
+import com.proctor.proctorbackend.violation.BrowserSignal;
 import com.proctor.proctorbackend.violation.ReviewOutcome;
 import com.proctor.proctorbackend.violation.ViolationSeverity;
 import com.proctor.proctorbackend.violation.ViolationType;
@@ -27,5 +28,7 @@ public class ViolationResponse {
     private ReviewOutcome reviewOutcome;
     /** True when a webcam snapshot is stored (GET /api/violations/{id}/evidence). */
     private boolean hasEvidence;
+    private BrowserSignal browserSignal;
+    private Integer awaySeconds;
     private LocalDateTime createdAt;
 }

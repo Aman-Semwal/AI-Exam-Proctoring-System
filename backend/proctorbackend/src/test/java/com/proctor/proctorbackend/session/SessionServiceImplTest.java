@@ -111,6 +111,40 @@ class SessionServiceImplTest {
     }
 
     @Test
+    void startSession_refusesOnceAttemptsAreUsedUp() {
+        // default rule: 1 attempt — an auto-submitted student must not simply start over
+        SessionRequest req = new SessionRequest();
+        req.setExamId(10L);
+
+        when(userRepository.findByEmail("rahul@gmail.com")).thenReturn(Optional.of(student));
+        when(examRepository.findById(10L)).thenReturn(Optional.of(exam));
+        when(assignmentRepository.existsByExamIdAndStudentId(10L, 2L)).thenReturn(true);
+        when(sessionRepository.existsByExamIdAndStudentIdAndStatus(10L, 2L, SessionStatus.ACTIVE)).thenReturn(false);
+        when(sessionRepository.countByExamIdAndStudentId(10L, 2L)).thenReturn(1L);
+
+        BadRequestException ex = assertThrows(BadRequestException.class,
+                () -> service.startSession(req, "rahul@gmail.com"));
+        assertTrue(ex.getMessage().contains("already attempted"), ex.getMessage());
+        verify(sessionRepository, never()).save(any());
+    }
+
+    @Test
+    void startSession_allowsAnotherAttemptWhenTheExamPermitsIt() {
+        exam.getProctoringRules().setMaxAttempts(2);
+        SessionRequest req = new SessionRequest();
+        req.setExamId(10L);
+
+        when(userRepository.findByEmail("rahul@gmail.com")).thenReturn(Optional.of(student));
+        when(examRepository.findById(10L)).thenReturn(Optional.of(exam));
+        when(assignmentRepository.existsByExamIdAndStudentId(10L, 2L)).thenReturn(true);
+        when(sessionRepository.existsByExamIdAndStudentIdAndStatus(10L, 2L, SessionStatus.ACTIVE)).thenReturn(false);
+        when(sessionRepository.countByExamIdAndStudentId(10L, 2L)).thenReturn(1L);
+        when(sessionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        assertEquals(2, service.startSession(req, "rahul@gmail.com").getAttemptNumber());
+    }
+
+    @Test
     void startSession_throwsWhenNotAssigned() {
         SessionRequest req = new SessionRequest();
         req.setExamId(10L);
@@ -198,6 +232,45 @@ class SessionServiceImplTest {
         when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
 
         assertTrue(service.getSessionById(55L, "rahul@gmail.com").isReferenceEnrolled());
+    }
+
+    @Test
+    void getSessionById_includesTotalMarks() {
+        activeSession.setStatus(SessionStatus.COMPLETED);
+        when(userRepository.findByEmail("rahul@gmail.com")).thenReturn(Optional.of(student));
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(scoreCalculationService.totalMarks(activeSession)).thenReturn(10);
+
+        assertEquals(10, service.getSessionById(55L, "rahul@gmail.com").getTotalMarks());
+    }
+
+    @Test
+    void getSessionById_finishedWithUngradedAnswers_isProvisional() {
+        activeSession.setStatus(SessionStatus.COMPLETED);
+        when(userRepository.findByEmail("rahul@gmail.com")).thenReturn(Optional.of(student));
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(answerRepository.countBySessionIdAndIsCorrectIsNull(55L)).thenReturn(1L);
+
+        assertTrue(service.getSessionById(55L, "rahul@gmail.com").isResultProvisional());
+    }
+
+    @Test
+    void getSessionById_finishedAndFullyGraded_isFinal() {
+        activeSession.setStatus(SessionStatus.COMPLETED);
+        when(userRepository.findByEmail("rahul@gmail.com")).thenReturn(Optional.of(student));
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(answerRepository.countBySessionIdAndIsCorrectIsNull(55L)).thenReturn(0L);
+
+        assertFalse(service.getSessionById(55L, "rahul@gmail.com").isResultProvisional());
+    }
+
+    @Test
+    void getSessionById_activeSession_skipsTotalMarksQuery() {
+        when(userRepository.findByEmail("rahul@gmail.com")).thenReturn(Optional.of(student));
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+
+        assertNull(service.getSessionById(55L, "rahul@gmail.com").getTotalMarks());
+        verify(scoreCalculationService, never()).totalMarks(any());
     }
 
     @Test

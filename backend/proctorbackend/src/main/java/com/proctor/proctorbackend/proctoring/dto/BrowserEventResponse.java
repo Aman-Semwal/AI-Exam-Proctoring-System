@@ -12,4 +12,7 @@ public class BrowserEventResponse {
 
     /** True when this event pushed the session over the threshold and it was submitted. */
     private boolean autoSubmitted;
+
+    /** The recorded violation — the client reports the time away against it on return. */
+    private Long violationId;
 }

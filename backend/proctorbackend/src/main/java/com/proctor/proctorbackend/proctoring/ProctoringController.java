@@ -3,6 +3,7 @@ package com.proctor.proctorbackend.proctoring;
 import com.proctor.proctorbackend.common.response.ApiResponse;
 import com.proctor.proctorbackend.proctoring.dto.BrowserEventRequest;
 import com.proctor.proctorbackend.proctoring.dto.BrowserEventResponse;
+import com.proctor.proctorbackend.proctoring.dto.BrowserReturnRequest;
 import com.proctor.proctorbackend.proctoring.dto.FrameUploadRequest;
 import com.proctor.proctorbackend.proctoring.dto.ProctoringEventResponse;
 import com.proctor.proctorbackend.proctoring.dto.ReferencePhotoRequest;
@@ -57,9 +58,22 @@ public class ProctoringController {
             @PathVariable Long sessionId,
             @Valid @RequestBody BrowserEventRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
-        BrowserEventResponse response = proctoringService.recordBrowserEvent(
-                sessionId, request.getType(), userDetails.getUsername());
+        BrowserEventResponse response = proctoringService.recordBrowserEvent(sessionId, request.getType(),
+                request.getSignal(), request.getSnapshotBase64(), userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success("Browser event recorded", response));
+    }
+
+    @PostMapping("/session/{sessionId}/browser-event/{violationId}/return")
+    @Operation(summary = "Report how long the student was away after a tab switch / full-screen exit")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ApiResponse<Void>> recordBrowserReturn(
+            @PathVariable Long sessionId,
+            @PathVariable Long violationId,
+            @Valid @RequestBody BrowserReturnRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        proctoringService.recordBrowserReturn(sessionId, violationId, request.getAwaySeconds(),
+                request.isTabHidden(), userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success("Return recorded", null));
     }
 
     @GetMapping("/session/{sessionId}/my-violation-count")

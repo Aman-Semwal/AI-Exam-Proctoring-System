@@ -56,6 +56,18 @@ public class ScoreCalculationService {
                 .sum();
     }
 
+    /** Maximum score of the session: marks of every question on the student's track(s). */
+    public int totalMarks(ExamSession session) {
+        if (session.getExam() == null || session.getExam().getId() == null) {
+            return 0;
+        }
+        return questionRepository
+                .findByExamIdAndTrackIn(session.getExam().getId(), resolveTracks(session))
+                .stream()
+                .mapToInt(q -> q.getMarks() != null ? q.getMarks() : 0)
+                .sum();
+    }
+
     // -----------------------------------------------------------------------
     // Private helpers
     // -----------------------------------------------------------------------

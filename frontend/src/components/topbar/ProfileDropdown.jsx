@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { getCurrentUser } from "../../utils/currentUser";
 import {
   FaUser,
   FaCog,
@@ -7,6 +8,7 @@ import {
 } from "react-icons/fa";
 
 const ProfileDropdown = () => {
+  const currentUser = getCurrentUser();
   const navigate = useNavigate();
 
   const logout = () => {
@@ -22,11 +24,11 @@ const ProfileDropdown = () => {
     <div className="w-56 bg-[#121520] border border-white/8 rounded-xl shadow-2xl overflow-hidden animate-in fade-in duration-150">
       <div className="p-3.5 border-b border-white/6 bg-white/1">
         <h3 className="text-xs font-semibold text-white truncate">
-          Anchal Saini
+          {currentUser.name}
         </h3>
 
         <p className="text-[11px] text-slate-400 truncate mt-0.5">
-          anchal@gmail.com
+          {currentUser.email}
         </p>
       </div>
 

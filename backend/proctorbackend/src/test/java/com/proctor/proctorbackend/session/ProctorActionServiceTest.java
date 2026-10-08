@@ -72,6 +72,20 @@ class ProctorActionServiceTest {
     }
 
     @Test
+    void terminate_proctorAlert_carriesTheRecordedViolationId() {
+        when(violationRepository.save(any())).thenAnswer(inv -> {
+            Violation v = inv.getArgument(0);
+            v.setId(321L);
+            return v;
+        });
+
+        service.terminate(55L, "Phone in hand", "p@a.com");
+
+        verify(messagingTemplate).convertAndSend(eq("/topic/alerts/10"),
+                argThat((AlertMessage m) -> Long.valueOf(321L).equals(m.getViolationId())));
+    }
+
+    @Test
     void terminate_unassignedProctor_rejected() {
         when(examProctorService.isProctorAssignedToExam(5L, 10L)).thenReturn(false);
 

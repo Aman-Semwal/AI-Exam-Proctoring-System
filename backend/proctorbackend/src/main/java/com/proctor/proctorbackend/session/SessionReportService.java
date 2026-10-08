@@ -79,6 +79,8 @@ public class SessionReportService {
                         .details(v.getDetails())
                         .reviewOutcome(v.getReviewOutcome())
                         .hasEvidence(withEvidence.contains(v.getId()))
+                        .browserSignal(v.getBrowserSignal())
+                        .awaySeconds(v.getAwaySeconds())
                         .build()).toList())
                 .build();
     }

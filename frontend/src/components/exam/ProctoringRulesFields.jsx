@@ -44,6 +44,20 @@ const ProctoringRulesFields = ({ value, onChange }) => {
           className="w-16 px-2 py-1 bg-[#090a0f] border border-white/8 rounded-lg text-white text-xs focus:outline-none focus:border-blue-500"
         />
       </label>
+      <label className="flex items-center justify-between gap-3">
+        <span>
+          <span className="block text-slate-200 text-xs font-medium">Attempts allowed</span>
+          <span className="block text-slate-500 text-[11px]">Submitted, auto-submitted and terminated attempts all count</span>
+        </span>
+        <input
+          type="number"
+          min="1"
+          max="10"
+          value={rules.maxAttempts}
+          onChange={(e) => set("maxAttempts", Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
+          className="w-16 px-2 py-1 bg-[#090a0f] border border-white/8 rounded-lg text-white text-xs focus:outline-none focus:border-blue-500"
+        />
+      </label>
     </fieldset>
   );
 };

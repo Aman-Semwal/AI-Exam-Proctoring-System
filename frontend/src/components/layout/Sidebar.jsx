@@ -11,6 +11,7 @@ import {
   FaMoon,
 } from "react-icons/fa";
 import { useTheme } from "../../context/useTheme";
+import { getCurrentUser } from "../../utils/currentUser";
 
 const navItems = [
   { to: "/student/dashboard", icon: FaTachometerAlt, label: "Dashboard" },
@@ -21,6 +22,7 @@ const navItems = [
 ];
 
 const Sidebar = () => {
+  const currentUser = getCurrentUser();
   const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
 
@@ -118,7 +120,7 @@ const Sidebar = () => {
           }}
         >
           <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-blue-500 font-bold text-xs">
-            AS
+            {currentUser.initials}
           </div>
 
           <div className="min-w-0">
@@ -126,14 +128,14 @@ const Sidebar = () => {
               className="text-xs font-semibold truncate"
               style={{ color: "var(--text-primary)" }}
             >
-              Anchal Saini
+              {currentUser.name}
             </p>
 
             <p
               className="text-[10px] truncate"
               style={{ color: "var(--text-muted)" }}
             >
-              Student
+              {currentUser.roleLabel || "Student"}
             </p>
           </div>
         </div>

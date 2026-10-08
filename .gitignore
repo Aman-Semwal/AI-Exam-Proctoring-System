@@ -6,6 +6,7 @@
 !.env.example
 .vscode
 .junie
+.claude
 classpath.txt
 # Local scratch scripts
 scratch/

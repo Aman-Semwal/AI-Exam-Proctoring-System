@@ -86,6 +86,24 @@ class SessionReportServiceTest {
     }
 
     @Test
+    void report_timelineShowsBrowserSignalAndTimeAway() {
+        actingAs(Role.PROCTOR, org);
+        when(examProctorService.isProctorAssignedToExam(7L, 10L)).thenReturn(true);
+        Violation tab = v(1, ViolationType.TAB_SWITCH, ViolationSeverity.HIGH, 5);
+        tab.setBrowserSignal(BrowserSignal.TAB_HIDDEN);
+        tab.setAwaySeconds(42);
+        when(violationRepository.findBySessionId(55L)).thenReturn(List.of(tab));
+        when(evidenceRepository.findViolationIdsWithEvidence(anyCollection())).thenReturn(List.of(1L));
+        when(trustScoreService.calculate(55L)).thenReturn(new TrustScore(90, TrustLevel.TRUSTED));
+
+        SessionReportResponse.Entry entry = service.getReport(55L, "u@x.com").getTimeline().get(0);
+
+        assertEquals(BrowserSignal.TAB_HIDDEN, entry.getBrowserSignal());
+        assertEquals(42, entry.getAwaySeconds());
+        assertTrue(entry.isHasEvidence());
+    }
+
+    @Test
     void report_otherOrg_rejected() {
         actingAs(Role.ORG_ADMIN, Organization.builder().id(2L).isActive(true).build());
 

@@ -275,7 +275,8 @@ export default function ProctorDashboard() {
     (alert) => {
       const newIncident = {
         id: alert.sessionId ? `ws-${alert.sessionId}-${Date.now()}` : `ws-${Date.now()}`,
-        rawId: null, // will appear on next REST sync
+        // The backend sends the stored violation's id, so the row can be reviewed right away
+        rawId: alert.violationId ?? null,
         sessionId: alert.sessionId,
         student: alert.studentName || "Unknown Student",
         exam: alert.examTitle || "Live Exam",
@@ -287,7 +288,11 @@ export default function ProctorDashboard() {
         reviewed: false,
       };
 
-      setIncidents((prev) => [newIncident, ...prev]);
+      setIncidents((prev) =>
+        newIncident.rawId && prev.some((item) => item.rawId === newIncident.rawId)
+          ? prev
+          : [newIncident, ...prev]
+      );
       setToast({
         type: "warning",
         message: `🚨 ${alert.studentName || "Student"}: ${alert.eventType || "Violation detected"}`,
@@ -396,11 +401,19 @@ export default function ProctorDashboard() {
   // outcome: "CONFIRMED" or "DISMISSED" (false positive — no longer lowers the trust score)
   const handleMarkReviewed = async (outcome) => {
     if (!reviewingIncident) return;
+    if (!reviewingIncident.rawId) {
+      // Every violation alert carries its id, so this is a status notice (e.g. auto-submitted):
+      // acknowledge it locally — there is no violation on the server to review
+      setIncidents((prev) =>
+        prev.map((item) => (item.id === reviewingIncident.id ? { ...item, reviewed: true } : item))
+      );
+      setToast({ type: "success", message: "Notice acknowledged." });
+      setReviewingIncident(null);
+      return;
+    }
     try {
       setReviewing(true);
-      if (reviewingIncident.rawId) {
-        await api.patch(`/violations/${reviewingIncident.rawId}/review`, { outcome });
-      }
+      await api.patch(`/violations/${reviewingIncident.rawId}/review`, { outcome });
       setIncidents((prev) =>
         prev.map((item) =>
           item.id === reviewingIncident.id

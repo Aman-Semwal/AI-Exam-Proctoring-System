@@ -181,10 +181,11 @@ const Results = () => {
 
   // ── Derived values for the selected result ──────────────────────────────
 
-  const resultPct = result?.percentage ?? percentage(result?.score, result?.totalMarks);
-  const resultGrade = result?.grade ?? grade(resultPct);
+  // Answers awaiting manual grading → no verdict yet (the backend also sends percentage: null)
+  const isProvisional = (result?.pendingReview ?? 0) > 0;
+  const resultPct = isProvisional ? null : result?.percentage ?? percentage(result?.score, result?.totalMarks);
+  const resultGrade = isProvisional ? null : result?.grade ?? grade(resultPct);
   const resultPassed = passed(resultPct);
-  const isProvisional = resultPct == null && (result?.pendingReview ?? 0) > 0;
   const resultDur = result?.timeTakenMinutes != null
     ? `${result.timeTakenMinutes}m`
     : duration(result?.startTime, result?.endTime);
@@ -250,7 +251,7 @@ const Results = () => {
               {/* ── Session list ── */}
               <div className="lg:col-span-4 space-y-3">
                 {sessions.map((s) => {
-                  const pct = percentage(s.score, s.totalMarks);
+                  const pct = s.resultProvisional ? null : percentage(s.score, s.totalMarks);
                   const ok = passed(pct);
                   const isActive = selectedId === s.id;
 
@@ -296,6 +297,8 @@ const Results = () => {
                               ? "Passed"
                               : ok === false
                               ? "Failed"
+                              : s.resultProvisional
+                              ? "Awaiting grading"
                               : "Pending"}
                           </p>
                         </div>

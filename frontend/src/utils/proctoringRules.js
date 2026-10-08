@@ -5,4 +5,5 @@ export const DEFAULT_PROCTORING_RULES = {
   gazeTrackingEnabled: true,
   objectDetectionEnabled: true,
   tabSwitchLimit: 2,
+  maxAttempts: 1,
 };

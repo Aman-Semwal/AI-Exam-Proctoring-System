@@ -159,6 +159,8 @@ public class ViolationServiceImpl implements ViolationService {
                 .type(v.getType())
                 .severity(v.getSeverity())
                 .reviewOutcome(v.getReviewOutcome())
+                .browserSignal(v.getBrowserSignal())
+                .awaySeconds(v.getAwaySeconds())
                 .details(v.getDetails())
                 .reviewed(v.getReviewed())
                 .createdAt(v.getCreatedAt())

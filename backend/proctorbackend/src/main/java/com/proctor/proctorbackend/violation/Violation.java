@@ -54,6 +54,15 @@ public class Violation {
     @Column(name = "review_outcome", length = 20)
     private ReviewOutcome reviewOutcome;
 
+    /** Browser events only: which signal fired when the student left. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "browser_signal", length = 30)
+    private BrowserSignal browserSignal;
+
+    /** Browser events only: seconds until the student came back (reported on return). */
+    @Column(name = "away_seconds")
+    private Integer awaySeconds;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

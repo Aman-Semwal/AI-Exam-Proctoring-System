@@ -1,5 +1,6 @@
 package com.proctor.proctorbackend.proctoring;
 
+import com.proctor.proctorbackend.common.AfterCommit;
 import com.proctor.proctorbackend.common.enums.Role;
 import com.proctor.proctorbackend.common.exception.BadRequestException;
 import com.proctor.proctorbackend.common.exception.ResourceNotFoundException;
@@ -17,6 +18,7 @@ import com.proctor.proctorbackend.session.SessionStatus;
 import com.proctor.proctorbackend.user.User;
 import com.proctor.proctorbackend.user.UserRepository;
 import com.proctor.proctorbackend.violation.Violation;
+import com.proctor.proctorbackend.violation.BrowserSignal;
 import com.proctor.proctorbackend.violation.ViolationEvidence;
 import com.proctor.proctorbackend.violation.ViolationEvidenceRepository;
 import com.proctor.proctorbackend.violation.ViolationRepository;
@@ -175,7 +177,7 @@ public class ProctoringServiceImpl implements ProctoringService {
         };
     }
 
-    /** Whether the exam's rules want this AI violation type recorded. */
+        /** Whether the exam's rules want this AI violation type recorded. */
     private static boolean isEnabled(ViolationType type, ProctoringRules rules) {
         if (type == null) return true; // unknown strings are logged and skipped later
         return switch (type) {
@@ -308,6 +310,8 @@ public class ProctoringServiceImpl implements ProctoringService {
 
         // ── Map and persist violations ───────────────────────────────────────
         List<ViolationType> persistedTypes = new ArrayList<>();
+        // Only violations stored by this frame — deduplicated repeats are not news to the proctor
+        List<Violation> newlyRecorded = new ArrayList<>();
 
         for (String aiViolationStr : aiViolations) {
             ViolationType javaType = mapAiViolation(aiViolationStr);
@@ -317,7 +321,7 @@ public class ProctoringServiceImpl implements ProctoringService {
             if (shouldDedup(javaType)) {
                 String dedupKey = DEDUP_PREFIX + javaType.name().toLowerCase() + ":" + session.getId();
                 if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(dedupKey))) {
-                    // Already recorded recently — skip persistence but still alert
+                    // Already recorded recently — skip persistence and the alert
                     persistedTypes.add(javaType);
                     continue;
                 }
@@ -333,7 +337,8 @@ public class ProctoringServiceImpl implements ProctoringService {
                     .details(buildViolationDetail(javaType, ai))
                     .reviewed(false)
                     .build();
-            violationRepository.save(violation);
+            violationRepository.save(violation); // persist() assigns the id to this same instance
+            newlyRecorded.add(violation);
             saveEvidence(violation, request.getFrameBase64());
             persistedTypes.add(javaType);
         }
@@ -351,33 +356,43 @@ public class ProctoringServiceImpl implements ProctoringService {
             log.warn("Session {} auto-terminated after {} CRITICAL violations",
                     session.getId(), criticalCount);
 
-            messagingTemplate.convertAndSendToUser(
-                    session.getStudent().getEmail(),
-                    "/queue/session-events",
-                    AlertMessage.builder()
-                            .sessionId(session.getId())
-                            .studentName(session.getStudent().getName())
-                            .eventType("SESSION_TERMINATED")
-                            .details("Your exam session was terminated due to repeated proctoring violations.")
-                            .build());
+            AlertMessage terminated = AlertMessage.builder()
+                    .sessionId(session.getId())
+                    .studentName(session.getStudent().getName())
+                    .eventType("SESSION_TERMINATED")
+                    .details("Your exam session was terminated due to repeated proctoring violations.")
+                    .build();
+            AfterCommit.run(() -> messagingTemplate.convertAndSendToUser(
+                    session.getStudent().getEmail(), "/queue/session-events", terminated));
 
             // Return early — do NOT also send a regular violation alert (BUG-002 fix)
             return toResponse(saved, aiViolations, session.getStatus());
         }
 
         // ── Broadcast violation alert to examiner(s) ─────────────────────────
-        String alertDetail = String.join(", ", aiViolations) + " | severity=" + ai.getSeverityLevel();
-        messagingTemplate.convertAndSend(
-                "/topic/alerts/" + session.getExam().getId(),
-                AlertMessage.builder()
-                        .sessionId(session.getId())
-                        .studentName(session.getStudent().getName())
-                        .eventType(eventType.name())
-                        .details(alertDetail)
-                        .build());
+        if (newlyRecorded.isEmpty()) {
+            return toResponse(saved, aiViolations, session.getStatus());
+        }
+        // One alert per stored violation, so each row on the proctor's dashboard maps to exactly
+        // one reviewable violation. Severity is the one we recorded — the AI's aggregate level
+        // ignores backend-derived violations such as speech, so it can say NONE for a MEDIUM one.
+        String alertTopic = "/topic/alerts/" + session.getExam().getId();
+        for (Violation recorded : newlyRecorded) {
+            AlertMessage alert = AlertMessage.builder()
+                    .sessionId(session.getId())
+                    .studentName(session.getStudent().getName())
+                    .eventType(recorded.getType().name())
+                    .severity(recorded.getSeverity().name())
+                    .examTitle(session.getExam().getTitle())
+                    .violationId(recorded.getId())
+                    .details(recorded.getDetails() + " | severity=" + recorded.getSeverity())
+                    .build();
+            // After commit: the proctor may open the violation by id immediately
+            AfterCommit.run(() -> messagingTemplate.convertAndSend(alertTopic, alert));
+        }
 
-        log.warn("Proctoring alert: session={} violations={} severity={}",
-                session.getId(), aiViolations, ai.getSeverityLevel());
+        log.warn("Proctoring alert: session={} violations={}",
+                session.getId(), newlyRecorded.stream().map(Violation::getType).toList());
 
         return toResponse(saved, aiViolations, session.getStatus());
     }
@@ -420,7 +435,8 @@ public class ProctoringServiceImpl implements ProctoringService {
 
     @Override
     @Transactional
-    public BrowserEventResponse recordBrowserEvent(Long sessionId, ViolationType type, String studentEmail) {
+    public BrowserEventResponse recordBrowserEvent(Long sessionId, ViolationType type, BrowserSignal signal,
+                                                   String snapshotBase64, String studentEmail) {
         // Severity is fixed server-side so a client cannot downgrade its own violations
         ViolationSeverity severity = switch (type) {
             case TAB_SWITCH      -> ViolationSeverity.HIGH;
@@ -437,27 +453,39 @@ public class ProctoringServiceImpl implements ProctoringService {
             throw new IllegalStateException("Session is not active");
         }
 
-        String detail = type == ViolationType.TAB_SWITCH
-                ? "Student switched tab or left the exam window"
-                : "Student exited full-screen mode";
-        violationRepository.save(Violation.builder()
+        BrowserSignal recordedSignal = signal != null ? signal
+                : type == ViolationType.FULLSCREEN_EXIT ? BrowserSignal.FULLSCREEN_EXIT : BrowserSignal.WINDOW_BLUR;
+        String detail = describe(recordedSignal);
+        Violation stored = Violation.builder()
                 .session(session)
                 .organization(session.getOrganization())
                 .type(type)
                 .severity(severity)
+                .browserSignal(recordedSignal)
                 .details(detail)
                 .reviewed(false)
-                .build());
+                .build();
+        violationRepository.save(stored); // persist() assigns the id to this same instance
+        // The webcam frame at that moment: what was the student doing when they left?
+        if (snapshotBase64 != null && !snapshotBase64.isBlank()) {
+            saveEvidence(stored, snapshotBase64);
+        }
 
         String alertTopic = "/topic/alerts/" + session.getExam().getId();
-        messagingTemplate.convertAndSend(alertTopic, AlertMessage.builder()
+        AlertMessage violationAlert = AlertMessage.builder()
                 .sessionId(session.getId())
                 .studentName(session.getStudent().getName())
                 .eventType(type.name())
+                .severity(severity.name())
+                .examTitle(session.getExam().getTitle())
+                .violationId(stored.getId())
                 .details(detail + " | severity=" + severity)
-                .build());
+                .build();
+        AfterCommit.run(() -> messagingTemplate.convertAndSend(alertTopic, violationAlert));
 
-        long tabSwitchCount = violationRepository.countBySessionIdAndType(session.getId(), ViolationType.TAB_SWITCH);
+        // A tab switch the proctor dismissed as a false positive doesn't count toward auto-submit
+        long tabSwitchCount = violationRepository.countNotDismissedBySessionIdAndType(
+                session.getId(), ViolationType.TAB_SWITCH);
         int tabSwitchLimit = session.getExam().getProctoringRules().getTabSwitchLimit();
         boolean autoSubmit = type == ViolationType.TAB_SWITCH
                 && tabSwitchLimit > 0
@@ -471,18 +499,62 @@ public class ProctoringServiceImpl implements ProctoringService {
             sessionRepository.save(session);
 
             log.warn("Session {} auto-submitted after {} tab switches", session.getId(), tabSwitchCount);
-            messagingTemplate.convertAndSend(alertTopic, AlertMessage.builder()
+            AlertMessage submitted = AlertMessage.builder()
                     .sessionId(session.getId())
                     .studentName(session.getStudent().getName())
                     .eventType("SESSION_AUTO_SUBMITTED")
+                    .examTitle(session.getExam().getTitle())
                     .details("Exam auto-submitted after " + tabSwitchCount + " tab switches")
-                    .build());
+                    .build();
+            AfterCommit.run(() -> messagingTemplate.convertAndSend(alertTopic, submitted));
         }
 
         return BrowserEventResponse.builder()
                 .tabSwitchCount(tabSwitchCount)
                 .autoSubmitted(autoSubmit)
+                .violationId(stored.getId())
                 .build();
+    }
+
+    // -----------------------------------------------------------------------
+    // recordBrowserReturn
+    // -----------------------------------------------------------------------
+
+    @Override
+    @Transactional
+    public void recordBrowserReturn(Long sessionId, Long violationId, int awaySeconds, boolean tabHidden,
+                                    String studentEmail) {
+        Violation violation = violationRepository.findById(violationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Violation", violationId));
+        ExamSession session = violation.getSession();
+        if (!session.getStudent().getEmail().equals(studentEmail)) {
+            throw new UnauthorizedException("You do not own this session");
+        }
+        if (!session.getId().equals(sessionId)) {
+            throw new BadRequestException("Violation does not belong to this session");
+        }
+        if (violation.getType() != ViolationType.TAB_SWITCH && violation.getType() != ViolationType.FULLSCREEN_EXIT) {
+            throw new BadRequestException("Only browser events record a time away");
+        }
+        // Set once — the student must not be able to shorten it afterwards
+        if (violation.getAwaySeconds() != null) {
+            throw new IllegalStateException("Time away already recorded for this violation");
+        }
+        // No ACTIVE check: the 2nd tab switch auto-submits, and the student returns to the results page
+        violation.setAwaySeconds(awaySeconds);
+        if (tabHidden && violation.getBrowserSignal() == BrowserSignal.WINDOW_BLUR) {
+            violation.setBrowserSignal(BrowserSignal.TAB_HIDDEN);
+        }
+        violation.setDetails(describe(violation.getBrowserSignal()) + " (away " + awaySeconds + " s)");
+        violationRepository.save(violation);
+    }
+
+    private static String describe(BrowserSignal signal) {
+        return switch (signal) {
+            case TAB_HIDDEN      -> "Exam tab was hidden — another tab, or the browser was minimised";
+            case WINDOW_BLUR     -> "Exam window lost focus — another app or a system pop-up";
+            case FULLSCREEN_EXIT -> "Student exited full-screen mode";
+        };
     }
 
     // -----------------------------------------------------------------------

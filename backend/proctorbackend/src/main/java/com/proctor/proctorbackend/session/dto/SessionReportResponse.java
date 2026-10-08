@@ -1,6 +1,7 @@
 package com.proctor.proctorbackend.session.dto;
 
 import com.proctor.proctorbackend.session.SessionStatus;
+import com.proctor.proctorbackend.violation.BrowserSignal;
 import com.proctor.proctorbackend.violation.ReviewOutcome;
 import com.proctor.proctorbackend.violation.TrustLevel;
 import com.proctor.proctorbackend.violation.ViolationSeverity;
@@ -48,5 +49,8 @@ public class SessionReportResponse {
         private String details;
         private ReviewOutcome reviewOutcome;
         private boolean hasEvidence;
+        /** Browser events: which signal fired, and seconds until the student came back. */
+        private BrowserSignal browserSignal;
+        private Integer awaySeconds;
     }
 }

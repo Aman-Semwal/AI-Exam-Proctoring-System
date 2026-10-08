@@ -27,6 +27,10 @@ public class SessionResponse {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private Integer score;
+    /** Maximum possible score for this student's question set (track-aware). */
+    private Integer totalMarks;
+    /** True while some answers still await manual grading — the score may still change. */
+    private boolean resultProvisional;
     private LocalDateTime createdAt;
 
     /** Whether the pre-exam reference photo has been enrolled (the embedding itself is never exposed). */

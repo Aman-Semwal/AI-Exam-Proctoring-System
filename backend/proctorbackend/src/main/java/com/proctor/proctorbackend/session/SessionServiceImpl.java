@@ -93,6 +93,10 @@ public class SessionServiceImpl implements SessionService {
         }
 
         long priorAttempts = sessionRepository.countByExamIdAndStudentId(exam.getId(), student.getId());
+        // Every finished attempt counts — otherwise an auto-submitted student could just start over
+        if (priorAttempts >= exam.getProctoringRules().getMaxAttempts()) {
+            throw new BadRequestException("You have already attempted this exam");
+        }
 
         ExamSession session = ExamSession.builder()
                 .exam(exam)
@@ -393,6 +397,11 @@ public class SessionServiceImpl implements SessionService {
                 .startTime(session.getStartTime())
                 .endTime(session.getEndTime())
                 .score(session.getScore())
+                // Only needed once the session has a result; skips 2 queries per live session
+                .totalMarks(session.getStatus() != SessionStatus.ACTIVE
+                        ? scoreCalculationService.totalMarks(session) : null)
+                .resultProvisional(session.getStatus() != SessionStatus.ACTIVE
+                        && answerRepository.countBySessionIdAndIsCorrectIsNull(session.getId()) > 0)
                 .createdAt(session.getCreatedAt())
                 .referenceEnrolled(session.getReferenceEmbedding() != null)
                 .trustScore(trust != null ? trust.score() : null)

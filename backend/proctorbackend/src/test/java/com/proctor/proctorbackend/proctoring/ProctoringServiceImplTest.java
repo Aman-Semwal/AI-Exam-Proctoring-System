@@ -21,6 +21,7 @@ import com.proctor.proctorbackend.session.SessionStatus;
 import com.proctor.proctorbackend.user.User;
 import com.proctor.proctorbackend.user.UserRepository;
 import com.proctor.proctorbackend.violation.Violation;
+import com.proctor.proctorbackend.violation.BrowserSignal;
 import com.proctor.proctorbackend.violation.ViolationEvidence;
 import com.proctor.proctorbackend.violation.ViolationEvidenceRepository;
 import com.proctor.proctorbackend.violation.ViolationRepository;
@@ -38,6 +39,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -401,7 +404,7 @@ class ProctoringServiceImplTest {
     void recordBrowserEvent_tabSwitch_persistsHighAndAlerts() {
         when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
 
-        service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, "student@test.com");
+        service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, null, null, "student@test.com");
 
         verify(violationRepository).save(argThat(v ->
                 v.getType() == ViolationType.TAB_SWITCH
@@ -417,10 +420,10 @@ class ProctoringServiceImplTest {
     @DisplayName("recordBrowserEvent — first TAB_SWITCH does not auto-submit")
     void recordBrowserEvent_firstTabSwitch_doesNotSubmit() {
         when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
-        when(violationRepository.countBySessionIdAndType(55L, ViolationType.TAB_SWITCH)).thenReturn(1L);
+        when(violationRepository.countNotDismissedBySessionIdAndType(55L, ViolationType.TAB_SWITCH)).thenReturn(1L);
 
         BrowserEventResponse resp =
-                service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, "student@test.com");
+                service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, null, null, "student@test.com");
 
         assertFalse(resp.isAutoSubmitted());
         assertEquals(1L, resp.getTabSwitchCount());
@@ -432,11 +435,11 @@ class ProctoringServiceImplTest {
     @DisplayName("recordBrowserEvent — TAB_SWITCH at threshold auto-submits the session (COMPLETED + score)")
     void recordBrowserEvent_tabSwitchThreshold_autoSubmits() {
         when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
-        when(violationRepository.countBySessionIdAndType(55L, ViolationType.TAB_SWITCH)).thenReturn(2L);
+        when(violationRepository.countNotDismissedBySessionIdAndType(55L, ViolationType.TAB_SWITCH)).thenReturn(2L);
         when(scoreCalculationService.calculate(activeSession)).thenReturn(42);
 
         BrowserEventResponse resp =
-                service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, "student@test.com");
+                service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, null, null, "student@test.com");
 
         assertTrue(resp.isAutoSubmitted());
         assertEquals(SessionStatus.COMPLETED, activeSession.getStatus());
@@ -454,7 +457,7 @@ class ProctoringServiceImplTest {
         when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
 
         BrowserEventResponse resp =
-                service.recordBrowserEvent(55L, ViolationType.FULLSCREEN_EXIT, "student@test.com");
+                service.recordBrowserEvent(55L, ViolationType.FULLSCREEN_EXIT, null, null, "student@test.com");
 
         verify(violationRepository).save(argThat(v ->
                 v.getType() == ViolationType.FULLSCREEN_EXIT
@@ -467,7 +470,7 @@ class ProctoringServiceImplTest {
     @DisplayName("recordBrowserEvent — non-browser types (e.g. AI types) are rejected")
     void recordBrowserEvent_aiType_throwsBadRequest() {
         assertThrows(BadRequestException.class,
-                () -> service.recordBrowserEvent(55L, ViolationType.IDENTITY_MISMATCH, "student@test.com"));
+                () -> service.recordBrowserEvent(55L, ViolationType.IDENTITY_MISMATCH, null, null, "student@test.com"));
         verify(violationRepository, never()).save(any());
     }
 
@@ -477,7 +480,7 @@ class ProctoringServiceImplTest {
         when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
 
         assertThrows(UnauthorizedException.class,
-                () -> service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, "hacker@evil.com"));
+                () -> service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, null, null, "hacker@evil.com"));
         verify(violationRepository, never()).save(any());
     }
 
@@ -488,7 +491,7 @@ class ProctoringServiceImplTest {
         when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
 
         assertThrows(IllegalStateException.class,
-                () -> service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, "student@test.com"));
+                () -> service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, null, null, "student@test.com"));
         verify(violationRepository, never()).save(any());
     }
 
@@ -544,9 +547,22 @@ class ProctoringServiceImplTest {
     void rules_tabSwitchLimitFromExam() {
         exam.getProctoringRules().setTabSwitchLimit(3);
         when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
-        when(violationRepository.countBySessionIdAndType(55L, ViolationType.TAB_SWITCH)).thenReturn(2L);
+        when(violationRepository.countNotDismissedBySessionIdAndType(55L, ViolationType.TAB_SWITCH)).thenReturn(2L);
 
-        assertFalse(service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, "student@test.com").isAutoSubmitted());
+        assertFalse(service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, null, null, "student@test.com").isAutoSubmitted());
+    }
+
+    @Test
+    @DisplayName("tab switches a proctor dismissed as false positives don't count toward auto-submit")
+    void recordBrowserEvent_dismissedTabSwitchesDontCount() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        // 2 tab switches on record, but the proctor dismissed one → only 1 counts
+        when(violationRepository.countNotDismissedBySessionIdAndType(55L, ViolationType.TAB_SWITCH)).thenReturn(1L);
+
+        BrowserEventResponse resp = service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, null, null, "student@test.com");
+
+        assertFalse(resp.isAutoSubmitted());
+        assertEquals(SessionStatus.ACTIVE, activeSession.getStatus());
     }
 
     @Test
@@ -554,9 +570,9 @@ class ProctoringServiceImplTest {
     void rules_tabSwitchLimitZero_neverSubmits() {
         exam.getProctoringRules().setTabSwitchLimit(0);
         when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
-        when(violationRepository.countBySessionIdAndType(55L, ViolationType.TAB_SWITCH)).thenReturn(10L);
+        when(violationRepository.countNotDismissedBySessionIdAndType(55L, ViolationType.TAB_SWITCH)).thenReturn(10L);
 
-        assertFalse(service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, "student@test.com").isAutoSubmitted());
+        assertFalse(service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, null, null, "student@test.com").isAutoSubmitted());
         assertEquals(SessionStatus.ACTIVE, activeSession.getStatus());
     }
 
@@ -614,6 +630,112 @@ class ProctoringServiceImplTest {
         verify(violationRepository).save(argThat(v ->
                 v.getType() == ViolationType.SPEECH_DETECTED && v.getSeverity() == ViolationSeverity.MEDIUM));
         verify(messagingTemplate).convertAndSend(eq("/topic/alerts/" + exam.getId()), any(AlertMessage.class));
+    }
+
+    @Test
+    @DisplayName("audio — the proctor alert shows the backend severity, not the AI's NONE")
+    void audio_alertShowsRecordedSeverity() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        // AI scores speech as 0 points → severityLevel NONE, but we record it as MEDIUM
+        AnalyzeResponse resp = withSpeech(true, 0.6);
+        resp.setSeverityLevel("NONE");
+        when(aiServiceClient.analyze(anyString(), any(), any())).thenReturn(resp);
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1));
+
+        service.processFrame(buildRequest(55L, "frame=="), "student@test.com");
+
+        verify(messagingTemplate).convertAndSend(eq("/topic/alerts/" + exam.getId()),
+                argThat((AlertMessage m) -> m.getDetails().contains("severity=MEDIUM")
+                        && "MEDIUM".equals(m.getSeverity())
+                        // the violation, not the frame's face-count event (was FACE_DETECTED)
+                        && "SPEECH_DETECTED".equals(m.getEventType())
+                        && "Java Exam".equals(m.getExamTitle())));
+    }
+
+    @Test
+    @DisplayName("alerts — a deduplicated frame sends no alert (nothing new for the proctor)")
+    void alert_notSentWhenAllViolationsDeduplicated() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.analyze(anyString(), any(), any())).thenReturn(withSpeech(true, 0.9));
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1));
+        when(stringRedisTemplate.hasKey("proctor:dedupe:speech_detected:55")).thenReturn(true);
+
+        service.processFrame(buildRequest(55L, "frame=="), "student@test.com");
+
+        verify(messagingTemplate, never()).convertAndSend(anyString(), any(AlertMessage.class));
+    }
+
+    @Test
+    @DisplayName("alerts — carry the id of the recorded violation so the proctor can review it")
+    void alert_carriesViolationId() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.analyze(anyString(), any(), any())).thenReturn(withSpeech(true, 0.9));
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1));
+        when(violationRepository.save(any())).thenAnswer(inv -> {
+            Violation v = inv.getArgument(0);
+            v.setId(777L);
+            return v;
+        });
+
+        service.processFrame(buildRequest(55L, "frame=="), "student@test.com");
+
+        verify(messagingTemplate).convertAndSend(eq("/topic/alerts/" + exam.getId()),
+                argThat((AlertMessage m) -> Long.valueOf(777L).equals(m.getViolationId())));
+    }
+
+    @Test
+    @DisplayName("alerts — inside a transaction, sent only after commit (the violation id must exist)")
+    void alert_deferredUntilAfterCommit() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.analyze(anyString(), any(), any())).thenReturn(withSpeech(true, 0.9));
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1));
+
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            service.processFrame(buildRequest(55L, "frame=="), "student@test.com");
+            verify(messagingTemplate, never()).convertAndSend(anyString(), any(AlertMessage.class));
+
+            TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(TransactionSynchronization::afterCommit);
+            verify(messagingTemplate).convertAndSend(eq("/topic/alerts/" + exam.getId()), any(AlertMessage.class));
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    @DisplayName("alerts — one alert per recorded violation, each with its own id")
+    void alert_onePerRecordedViolation() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.analyze(anyString(), any(), any()))
+                .thenReturn(buildAnalyzeResponse(2, List.of("multiple_faces", "unauthorized_object"), "CRITICAL", 55));
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.MULTIPLE_FACES_DETECTED, 2));
+        java.util.concurrent.atomic.AtomicLong ids = new java.util.concurrent.atomic.AtomicLong(100);
+        when(violationRepository.save(any())).thenAnswer(inv -> {
+            Violation v = inv.getArgument(0);
+            v.setId(ids.incrementAndGet());
+            return v;
+        });
+
+        service.processFrame(buildRequest(55L, "frame=="), "student@test.com");
+
+        verify(messagingTemplate).convertAndSend(eq("/topic/alerts/" + exam.getId()),
+                argThat((AlertMessage m) -> Long.valueOf(101L).equals(m.getViolationId())
+                        && "MULTIPLE_FACES_DETECTED".equals(m.getEventType())));
+        verify(messagingTemplate).convertAndSend(eq("/topic/alerts/" + exam.getId()),
+                argThat((AlertMessage m) -> Long.valueOf(102L).equals(m.getViolationId())
+                        && "UNAUTHORIZED_OBJECT".equals(m.getEventType())));
+    }
+
+    @Test
+    @DisplayName("browser event alert carries severity and exam title")
+    void recordBrowserEvent_alertCarriesSeverityAndExam() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+
+        service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, null, null, "student@test.com");
+
+        verify(messagingTemplate).convertAndSend(eq("/topic/alerts/" + exam.getId()),
+                argThat((AlertMessage m) -> "HIGH".equals(m.getSeverity()) && "Java Exam".equals(m.getExamTitle())));
     }
 
     @Test
@@ -719,6 +841,115 @@ class ProctoringServiceImplTest {
 
         verify(violationRepository).save(any());
         verify(evidenceRepository, never()).save(any());
+    }
+
+    // -----------------------------------------------------------------------
+    // Browser-event evidence: snapshot, signal, time away
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("browser event — webcam snapshot is stored as evidence and the signal recorded")
+    void browserEvent_snapshotStoredAsEvidence() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(violationRepository.save(any())).thenAnswer(inv -> {
+            Violation v = inv.getArgument(0);
+            v.setId(901L);
+            return v;
+        });
+
+        BrowserEventResponse resp = service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH,
+                BrowserSignal.WINDOW_BLUR, JPEG_B64, "student@test.com");
+
+        assertEquals(901L, resp.getViolationId());
+        verify(violationRepository).save(argThat(v -> v.getBrowserSignal() == BrowserSignal.WINDOW_BLUR
+                && v.getDetails().contains("lost focus")));
+        verify(evidenceRepository).save(argThat((ViolationEvidence e) ->
+                java.util.Arrays.equals(new byte[]{1, 2, 3}, e.getData())));
+    }
+
+    @Test
+    @DisplayName("browser event — no snapshot sent: violation recorded without evidence")
+    void browserEvent_withoutSnapshot_noEvidence() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+
+        service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, BrowserSignal.TAB_HIDDEN, null, "student@test.com");
+
+        verify(violationRepository).save(any());
+        verify(evidenceRepository, never()).save(any());
+    }
+
+    private Violation browserViolation(ExamSession session, Long id) {
+        Violation v = Violation.builder().id(id).session(session).organization(org)
+                .type(ViolationType.TAB_SWITCH).severity(ViolationSeverity.HIGH)
+                .browserSignal(BrowserSignal.WINDOW_BLUR)
+                .details("Student switched to another window or app").reviewed(false).build();
+        when(violationRepository.findById(id)).thenReturn(Optional.of(v));
+        return v;
+    }
+
+    @Test
+    @DisplayName("return — time away is stored, and a hidden tab upgrades the signal")
+    void browserReturn_recordsTimeAway() {
+        Violation v = browserViolation(activeSession, 901L);
+
+        service.recordBrowserReturn(55L, 901L, 12, true, "student@test.com");
+
+        assertEquals(12, v.getAwaySeconds());
+        assertEquals(BrowserSignal.TAB_HIDDEN, v.getBrowserSignal());
+        assertTrue(v.getDetails().contains("away 12 s"), v.getDetails());
+        verify(violationRepository).save(v);
+    }
+
+    @Test
+    @DisplayName("return — works after the exam was auto-submitted (the student is back on results)")
+    void browserReturn_allowedAfterAutoSubmit() {
+        activeSession.setStatus(SessionStatus.COMPLETED);
+        Violation v = browserViolation(activeSession, 901L);
+
+        service.recordBrowserReturn(55L, 901L, 5, false, "student@test.com");
+
+        assertEquals(5, v.getAwaySeconds());
+    }
+
+    @Test
+    @DisplayName("return — only the session's own student can report it")
+    void browserReturn_notOwner_rejected() {
+        browserViolation(activeSession, 901L);
+
+        assertThrows(UnauthorizedException.class,
+                () -> service.recordBrowserReturn(55L, 901L, 12, true, "hacker@evil.com"));
+    }
+
+    @Test
+    @DisplayName("return — a violation from another session is rejected")
+    void browserReturn_otherSession_rejected() {
+        ExamSession other = ExamSession.builder().id(77L).exam(exam).student(student)
+                .organization(org).status(SessionStatus.ACTIVE).build();
+        browserViolation(other, 901L);
+
+        assertThrows(BadRequestException.class,
+                () -> service.recordBrowserReturn(55L, 901L, 12, true, "student@test.com"));
+    }
+
+    @Test
+    @DisplayName("return — AI violations can't be edited this way")
+    void browserReturn_aiViolation_rejected() {
+        Violation v = browserViolation(activeSession, 901L);
+        v.setType(ViolationType.IDENTITY_MISMATCH);
+
+        assertThrows(BadRequestException.class,
+                () -> service.recordBrowserReturn(55L, 901L, 12, true, "student@test.com"));
+    }
+
+    @Test
+    @DisplayName("return — time away can be set only once")
+    void browserReturn_onlyOnce() {
+        Violation v = browserViolation(activeSession, 901L);
+        v.setAwaySeconds(3);
+
+        assertThrows(IllegalStateException.class,
+                () -> service.recordBrowserReturn(55L, 901L, 300, false, "student@test.com"));
+        assertEquals(3, v.getAwaySeconds());
     }
 
     // -----------------------------------------------------------------------

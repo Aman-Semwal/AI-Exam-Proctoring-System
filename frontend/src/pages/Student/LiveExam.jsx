@@ -54,6 +54,8 @@ const LiveExam = () => {
   const [isFullscreen, setIsFullscreen] = useState(() => !!document.fullscreenElement);
   // Live messages from the proctor (warnings) or the system (termination)
   const [proctorWarning, setProctorWarning] = useState("");
+  // The student's own recorded browser events — nothing is hidden from them
+  const [myEvents, setMyEvents] = useState([]);
   const [terminatedNotice, setTerminatedNotice] = useState("");
 
   // Pending answers live in QuestionPanel; flush them before anything ends the session
@@ -145,9 +147,22 @@ const LiveExam = () => {
   const ensureSession = async () => {
     if (sessionId) return sessionId;
 
-    const response = await api.post("/sessions/start", {
-      examId: Number(examId),
-    });
+    let response;
+    try {
+      response = await api.post("/sessions/start", { examId: Number(examId) });
+    } catch (err) {
+      // Left mid-exam and came back from the dashboard: continue that session
+      if (err.response?.data?.message?.includes("active session already exists")) {
+        const mine = (await api.get("/sessions/my")).data?.data || [];
+        const running = mine.find((s) => String(s.examId) === String(examId) && s.status === "ACTIVE");
+        if (running) {
+          setSessionId(String(running.id));
+          if (running.examTitle) setExamTitle(running.examTitle);
+          return String(running.id);
+        }
+      }
+      throw err;
+    }
 
     const sessionData = response.data?.data;
     if (!sessionData?.id) throw new Error("Session ID was not returned by the server.");
@@ -161,22 +176,68 @@ const LiveExam = () => {
   // 3. Browser lockdown: tab switches / leaving the window / exiting fullscreen.
   // Each is recorded server-side; the server decides when to auto-submit.
   const lastEventAt = useRef({});
+  const snapshotRef = useRef(null);
+  // type → { violationId, leftAt, returnedAt, hidden, done } for the absence in progress
+  const awayRef = useRef({});
 
   useEffect(() => {
     if (step !== "active_exam" || !sessionId) return;
 
-    const reportEvent = async (type) => {
+    const sendReturn = (entry) => {
+      if (entry.done || !entry.violationId || !entry.returnedAt) return;
+      entry.done = true;
+      const awaySeconds = Math.max(0, Math.round((entry.returnedAt - entry.leftAt) / 1000));
+      setMyEvents((prev) => prev.map((e) => (e.violationId === entry.violationId ? { ...e, awaySeconds } : e)));
+      api
+        .post(`/proctor/session/${sessionId}/browser-event/${entry.violationId}/return`, {
+          awaySeconds,
+          tabHidden: entry.hidden,
+        })
+        .catch((err) => console.warn("Failed to record return:", err?.response?.data?.message || err.message));
+    };
+
+    const finishAway = (type) => {
+      const entry = awayRef.current[type];
+      if (!entry || entry.returnedAt) return;
+      entry.returnedAt = Date.now();
+      sendReturn(entry); // waits for the violation id if the report is still in flight
+    };
+
+    const reportEvent = async (type, signal) => {
+      const pending = awayRef.current[type];
+      if (pending && !pending.returnedAt) {
+        // Same absence, another signal (blur then tab hidden) — remember it, don't count twice
+        if (signal === "TAB_HIDDEN") pending.hidden = true;
+        return;
+      }
       // visibilitychange + blur both fire for a single switch — count it once
       const now = Date.now();
       if (now - (lastEventAt.current[type] || 0) < EVENT_DEBOUNCE_MS) return;
       lastEventAt.current[type] = now;
 
+      // Grab the frame now, before any await: it shows the moment the student left
+      const snapshotBase64 = snapshotRef.current?.capture() ?? undefined;
+      const entry = { violationId: null, leftAt: now, returnedAt: null, hidden: signal === "TAB_HIDDEN", done: false };
+      awayRef.current[type] = entry;
+
       try {
         if (type === "TAB_SWITCH") await flushAnswers();
-        const res = await api.post(`/proctor/session/${sessionId}/browser-event`, { type });
+        const res = await api.post(`/proctor/session/${sessionId}/browser-event`, { type, signal, snapshotBase64 });
         const result = res.data?.data;
+        entry.violationId = result?.violationId ?? null;
+        setMyEvents((prev) => [...prev, { violationId: entry.violationId, type, at: now, awaySeconds: null }]);
+        sendReturn(entry); // the student may already be back
         if (type === "TAB_SWITCH" && result) setTabWarnings(result.tabSwitchCount);
         if (result?.autoSubmitted) {
+          // This page unmounts; still record the time away when the student comes back
+          const onBack = () => {
+            if (document.hidden) return;
+            window.removeEventListener("focus", onBack);
+            document.removeEventListener("visibilitychange", onBack);
+            finishAway(type);
+          };
+          window.addEventListener("focus", onBack);
+          document.addEventListener("visibilitychange", onBack);
           if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
           navigate(`/student/results?sessionId=${sessionId}`);
         }
@@ -191,19 +252,24 @@ const LiveExam = () => {
     };
 
     const handleVisibilityChange = () => {
-      if (document.hidden) reportEvent("TAB_SWITCH");
+      if (document.hidden) reportEvent("TAB_SWITCH", "TAB_HIDDEN");
+      else finishAway("TAB_SWITCH");
     };
-    const handleBlur = () => reportEvent("TAB_SWITCH");
+    const handleBlur = () => reportEvent("TAB_SWITCH", "WINDOW_BLUR");
+    const handleFocus = () => finishAway("TAB_SWITCH");
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) reportEvent("FULLSCREEN_EXIT");
+      if (!document.fullscreenElement) reportEvent("FULLSCREEN_EXIT", "FULLSCREEN_EXIT");
+      else finishAway("FULLSCREEN_EXIT");
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
     };
   }, [step, sessionId, navigate, flushAnswers]);
@@ -479,6 +545,21 @@ const LiveExam = () => {
             </div>
           )}
 
+          {myEvents.length > 0 && (
+            <div className="bg-white/2 border border-white/6 rounded-xl px-4 py-3 mb-6 text-xs text-slate-400">
+              <p className="font-semibold text-slate-300 mb-1">Recorded on your exam (visible to your proctor):</p>
+              <ul className="space-y-0.5">
+                {myEvents.map((e, i) => (
+                  <li key={e.violationId ?? i}>
+                    • {e.type === "TAB_SWITCH" ? "Left the exam window" : "Exited full screen"} at{" "}
+                    {new Date(e.at).toLocaleTimeString()}
+                    {e.awaySeconds != null ? ` — away ${e.awaySeconds} s` : " — away…"}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Exam Workspace */}
           <div className="grid lg:grid-cols-12 gap-6">
             {/* Questions */}
@@ -494,6 +575,7 @@ const LiveExam = () => {
                 sessionId={sessionId}
                 audioEnabled={rules.audioMonitoringEnabled}
                 onSessionEnded={handleSessionEnded}
+                snapshotRef={snapshotRef}
               />
 
               <AIStatus sessionId={sessionId} tabSwitches={tabWarnings} />

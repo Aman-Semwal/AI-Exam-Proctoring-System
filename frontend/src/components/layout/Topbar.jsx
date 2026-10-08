@@ -1,7 +1,9 @@
 import { FaBell, FaSearch, FaSun, FaMoon } from "react-icons/fa";
 import { useTheme } from "../../context/useTheme";
+import { getCurrentUser } from "../../utils/currentUser";
 
 const Topbar = ({ title = "Dashboard", breadcrumb = "Student Portal" }) => {
+  const currentUser = getCurrentUser();
   const { isDark, toggleTheme } = useTheme();
 
   return (
@@ -74,7 +76,7 @@ const Topbar = ({ title = "Dashboard", breadcrumb = "Student Portal" }) => {
 
         {/* Avatar */}
         <div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-blue-500 font-bold text-xs">
-          AS
+          {currentUser.initials}
         </div>
       </div>
     </header>

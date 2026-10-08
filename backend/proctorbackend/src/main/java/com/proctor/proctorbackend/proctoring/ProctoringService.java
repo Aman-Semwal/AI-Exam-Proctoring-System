@@ -3,6 +3,7 @@ package com.proctor.proctorbackend.proctoring;
 import com.proctor.proctorbackend.proctoring.dto.BrowserEventResponse;
 import com.proctor.proctorbackend.proctoring.dto.FrameUploadRequest;
 import com.proctor.proctorbackend.proctoring.dto.ProctoringEventResponse;
+import com.proctor.proctorbackend.violation.BrowserSignal;
 import com.proctor.proctorbackend.violation.ViolationType;
 
 import java.util.List;
@@ -22,7 +23,12 @@ public interface ProctoringService {
      * the student's client, and auto-submits the session once tab switches reach the
      * configured threshold.
      */
-    BrowserEventResponse recordBrowserEvent(Long sessionId, ViolationType type, String studentEmail);
+    BrowserEventResponse recordBrowserEvent(Long sessionId, ViolationType type, BrowserSignal signal,
+                                            String snapshotBase64, String studentEmail);
+
+    /** The student is back: record how long they were away (once; owner only). */
+    void recordBrowserReturn(Long sessionId, Long violationId, int awaySeconds, boolean tabHidden,
+                             String studentEmail);
 
     /** Number of violations recorded for the caller's own session (no details exposed). */
     long getMyViolationCount(Long sessionId, String studentEmail);

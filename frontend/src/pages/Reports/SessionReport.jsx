@@ -18,12 +18,14 @@ const SEVERITY_COLORS = {
 const csvCell = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
 
 const downloadCsv = (report) => {
-  const header = ["Time", "Type", "Severity", "Details", "Review outcome", "Evidence"];
+  const header = ["Time", "Type", "Severity", "Details", "Browser signal", "Away (s)", "Review outcome", "Evidence"];
   const rows = report.timeline.map((e) => [
     fmt(e.time),
     e.type,
     e.severity,
     e.details,
+    e.browserSignal || "",
+    e.awaySeconds ?? "",
     e.reviewOutcome || "Not reviewed",
     e.hasEvidence ? "Yes" : "No",
   ]);
@@ -182,7 +184,7 @@ const SessionReport = () => {
                     {e.hasEvidence ? (
                       <EvidenceImage violationId={e.violationId} className="w-full h-28 object-cover" />
                     ) : (
-                      <p className="text-[11px] text-slate-600 print:text-black/50">No image (browser event)</p>
+                      <p className="text-[11px] text-slate-600 print:text-black/50">No snapshot</p>
                     )}
                   </div>
                 </li>

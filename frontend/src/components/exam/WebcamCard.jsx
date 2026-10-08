@@ -29,8 +29,10 @@ const MAX_FRAME_WIDTH = 640;
  *   audioEnabled {boolean} — also record the mic and send each interval's audio with the frame.
  *   onSessionEnded {() => void} — called when the server reports the session is no longer active
  *                                  (auto-terminated, submitted elsewhere, or expired).
+ *   snapshotRef {Ref} — receives { capture() } → base64 JPEG of the current frame (or null),
+ *                       used as evidence when the student leaves the exam window.
  */
-const WebcamCard = ({ sessionId, audioEnabled = false, onSessionEnded }) => {
+const WebcamCard = ({ sessionId, audioEnabled = false, onSessionEnded, snapshotRef }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -139,6 +141,23 @@ const WebcamCard = ({ sessionId, audioEnabled = false, onSessionEnded }) => {
       console.warn("Frame POST failed:", err?.response?.data?.message || err.message);
     }
   }, [sessionId, onSessionEnded]);
+
+  // ─── Snapshot on demand (evidence for tab switches / full-screen exits) ────
+  useEffect(() => {
+    if (!snapshotRef) return;
+    snapshotRef.current = {
+      capture: () => {
+        const video = videoRef.current;
+        if (!video || video.readyState < video.HAVE_CURRENT_DATA || video.videoWidth === 0) return null;
+        const canvas = document.createElement("canvas");
+        const scale = Math.min(1, MAX_FRAME_WIDTH / video.videoWidth);
+        canvas.width = Math.round(video.videoWidth * scale);
+        canvas.height = Math.round(video.videoHeight * scale);
+        canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL("image/jpeg", JPEG_QUALITY).replace(/^data:image\/jpeg;base64,/, "");
+      },
+    };
+  }, [snapshotRef]);
 
   // ─── Lifecycle: mount → start camera; unmount → stop ──────────────────────
   useEffect(() => {

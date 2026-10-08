@@ -1,5 +1,6 @@
 package com.proctor.proctorbackend.session;
 
+import com.proctor.proctorbackend.common.AfterCommit;
 import com.proctor.proctorbackend.common.enums.Role;
 import com.proctor.proctorbackend.common.exception.ResourceNotFoundException;
 import com.proctor.proctorbackend.common.exception.UnauthorizedException;
@@ -49,23 +50,28 @@ public class ProctorActionService {
         session.setEndTime(LocalDateTime.now(ZoneOffset.UTC));
         sessionRepository.save(session);
 
-        violationRepository.save(Violation.builder()
+        Violation termination = Violation.builder()
                 .session(session)
                 .organization(session.getOrganization())
                 .type(ViolationType.OTHER)
                 .severity(ViolationSeverity.CRITICAL)
                 .details("Terminated by proctor: " + reason)
                 .reviewed(true)
-                .build());
+                .build();
+        violationRepository.save(termination); // persist() assigns the id to this same instance
 
         log.warn("Session {} terminated by {}: {}", sessionId, actorEmail, reason);
         notifyStudent(session, "SESSION_TERMINATED", "Your exam was ended by the proctor: " + reason);
-        messagingTemplate.convertAndSend("/topic/alerts/" + session.getExam().getId(), AlertMessage.builder()
+        AlertMessage alert = AlertMessage.builder()
                 .sessionId(session.getId())
                 .studentName(session.getStudent().getName())
                 .eventType("SESSION_TERMINATED")
+                .severity(ViolationSeverity.CRITICAL.name())
+                .examTitle(session.getExam().getTitle())
+                .violationId(termination.getId())
                 .details("Terminated by " + actorEmail + ": " + reason)
-                .build());
+                .build();
+        AfterCommit.run(() -> messagingTemplate.convertAndSend("/topic/alerts/" + session.getExam().getId(), alert));
     }
 
     /** Shows a message on the student's exam screen. Nothing is stored. */
@@ -77,13 +83,14 @@ public class ProctorActionService {
     }
 
     private void notifyStudent(ExamSession session, String eventType, String details) {
-        messagingTemplate.convertAndSendToUser(session.getStudent().getEmail(), STUDENT_QUEUE,
-                AlertMessage.builder()
-                        .sessionId(session.getId())
-                        .studentName(session.getStudent().getName())
-                        .eventType(eventType)
-                        .details(details)
-                        .build());
+        AlertMessage message = AlertMessage.builder()
+                .sessionId(session.getId())
+                .studentName(session.getStudent().getName())
+                .eventType(eventType)
+                .details(details)
+                .build();
+        AfterCommit.run(() -> messagingTemplate.convertAndSendToUser(
+                session.getStudent().getEmail(), STUDENT_QUEUE, message));
     }
 
     private ExamSession getActiveSession(Long sessionId, User actor) {
