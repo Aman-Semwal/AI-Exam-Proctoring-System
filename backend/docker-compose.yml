@@ -1,0 +1,46 @@
+services:
+
+  spring-backend:
+    build:
+      context: ./proctorbackend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      SPRING_DATA_REDIS_REPOSITORIES_ENABLED: "false"
+      AI_SERVICE_URL: http://ai-service:8000
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=1
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+      target: runtime
+    ports:
+      - "8001:8000"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+
+  # Same image as ai-service, plus pytest/httpx on top (Dockerfile
+  # 'test' stage) -- not something that runs standalone, just a way to
+  # get a container with the test tooling in it. Run with:
+  #   docker-compose run --rm ai-service-test pytest tests/ -v
+  ai-service-test:
+    profiles:
+      - test
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+      target: test
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .header { background: #0f766e; padding: 32px; text-align: center; }
+    .header h1 { color: #fff; margin: 0; font-size: 24px; }
+    .body { padding: 32px; color: #333; }
+    .body p { line-height: 1.6; }
+    .credentials { background: #F3F4F6; border-radius: 6px; padding: 16px 24px; margin: 24px 0; }
+    .credentials table { width: 100%; border-collapse: collapse; }
+    .credentials td { padding: 6px 0; font-size: 15px; }
+    .credentials td:first-child { color: #6B7280; width: 120px; }
+    .credentials td:last-child { font-weight: bold; color: #111; word-break: break-all; }
+    .footer { background: #F9FAFB; padding: 16px 32px; text-align: center; font-size: 12px; color: #9CA3AF; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Welcome to <span th:text="${orgName}">Your Organization</span></h1>
+  </div>
+  <div class="body">
+    <p>Hi <strong th:text="${name}">Member</strong>,</p>
+    <p>Your organization admin account has been created. Use the credentials below to log in and manage your team.</p>
+    <div class="credentials">
+      <table>
+        <tr>
+          <td>Email</td>
+          <td th:text="${email}">admin@example.com</td>
+        </tr>
+        <tr>
+          <td>Password</td>
+          <td th:text="${password}">tempPassword</td>
+        </tr>
+      </table>
+    </div>
+    <p>You can update your password after signing in.</p>
+  </div>
+  <div class="footer">
+    &copy; <span th:text="${orgName}">Organization</span> &mdash; Powered by ProctorApp
+  </div>
+</div>
+</body>
+</html>

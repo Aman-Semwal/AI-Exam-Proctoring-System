@@ -1,0 +1,101 @@
+package com.proctor.proctorbackend.violation;
+
+import com.proctor.proctorbackend.common.response.ApiResponse;
+import com.proctor.proctorbackend.violation.dto.ViolationRequest;
+import com.proctor.proctorbackend.violation.dto.ReviewRequest;
+import com.proctor.proctorbackend.violation.dto.ViolationResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/violations")
+@RequiredArgsConstructor
+@Tag(name = "Violations", description = "Proctoring violation management")
+@SecurityRequirement(name = "bearerAuth")
+public class ViolationController {
+
+    private final ViolationService violationService;
+
+    @PostMapping
+    @Operation(summary = "Record a new violation for a session")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<ViolationResponse>> recordViolation(
+            @Valid @RequestBody ViolationRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        ViolationResponse response = violationService.recordViolation(request, userDetails.getUsername());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Violation recorded", response));
+    }
+
+    @GetMapping("/{id}")
+    @Operation(summary = "Get a violation by ID")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<ViolationResponse>> getViolation(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(
+                ApiResponse.success("Violation fetched",
+                        violationService.getViolationById(id, userDetails.getUsername())));
+    }
+
+    @GetMapping("/session/{sessionId}")
+    @Operation(summary = "Get all violations for a session")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<List<ViolationResponse>>> getBySession(
+            @PathVariable Long sessionId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(
+                ApiResponse.success("Violations fetched",
+                        violationService.getViolationsBySession(sessionId, userDetails.getUsername())));
+    }
+
+    @GetMapping("/session/{sessionId}/unreviewed")
+    @Operation(summary = "Get unreviewed violations for a session")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<List<ViolationResponse>>> getUnreviewed(
+            @PathVariable Long sessionId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(
+                ApiResponse.success("Unreviewed violations fetched",
+                        violationService.getUnreviewedBySession(sessionId, userDetails.getUsername())));
+    }
+
+    @GetMapping("/{id}/evidence")
+    @Operation(summary = "Webcam snapshot (kind=CAMERA, default) or screenshot (kind=SCREEN) behind the violation")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<byte[]> getEvidence(
+            @PathVariable Long id,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "CAMERA") EvidenceKind kind,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        ViolationEvidence evidence = violationService.getEvidence(id, kind, userDetails.getUsername());
+        return ResponseEntity.ok()
+                .contentType(org.springframework.http.MediaType.parseMediaType(evidence.getContentType()))
+                .header("Cache-Control", "private, max-age=3600")
+                .body(evidence.getData());
+    }
+
+    @PatchMapping("/{id}/review")
+    @Operation(summary = "Review a violation: confirm it, or dismiss it as a false positive")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<ViolationResponse>> markReviewed(
+            @PathVariable Long id,
+            @RequestBody(required = false) ReviewRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(
+                ApiResponse.success("Violation marked as reviewed",
+                        violationService.markReviewed(id,
+                                request != null ? request.getOutcome() : null,
+                                userDetails.getUsername())));
+    }
+}

@@ -1,0 +1,99 @@
+package com.proctor.proctorbackend.proctoring;
+
+import com.proctor.proctorbackend.common.response.ApiResponse;
+import com.proctor.proctorbackend.proctoring.dto.BrowserEventRequest;
+import com.proctor.proctorbackend.proctoring.dto.BrowserEventResponse;
+import com.proctor.proctorbackend.proctoring.dto.BrowserReturnRequest;
+import com.proctor.proctorbackend.proctoring.dto.FrameUploadRequest;
+import com.proctor.proctorbackend.proctoring.dto.ProctoringEventResponse;
+import com.proctor.proctorbackend.proctoring.dto.ReferencePhotoRequest;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/proctor")
+@RequiredArgsConstructor
+@Tag(name = "Proctoring", description = "AI-powered exam proctoring")
+@SecurityRequirement(name = "bearerAuth")
+public class ProctoringController {
+
+    private final ProctoringService proctoringService;
+
+    @PostMapping("/frame")
+    @Operation(summary = "Submit a webcam frame for face detection analysis")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ApiResponse<ProctoringEventResponse>> submitFrame(
+            @Valid @RequestBody FrameUploadRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        ProctoringEventResponse response = proctoringService.processFrame(
+                request, userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success("Frame processed", response));
+    }
+
+    @PostMapping("/session/{sessionId}/reference")
+    @Operation(summary = "Enroll the live reference photo used for identity checks during the session")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ApiResponse<Void>> enrollReference(
+            @PathVariable Long sessionId,
+            @Valid @RequestBody ReferencePhotoRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        proctoringService.enrollReference(sessionId, request.getImageBase64(), userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success("Reference photo enrolled", null));
+    }
+
+    @PostMapping("/session/{sessionId}/browser-event")
+    @Operation(summary = "Report a tab switch or full-screen exit; may auto-submit the exam")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ApiResponse<BrowserEventResponse>> recordBrowserEvent(
+            @PathVariable Long sessionId,
+            @Valid @RequestBody BrowserEventRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        BrowserEventResponse response = proctoringService.recordBrowserEvent(sessionId, request.getType(),
+                request.getSignal(), request.getSnapshotBase64(), request.getScreenBase64(),
+                userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success("Browser event recorded", response));
+    }
+
+    @PostMapping("/session/{sessionId}/browser-event/{violationId}/return")
+    @Operation(summary = "Report how long the student was away after a tab switch / full-screen exit")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ApiResponse<Void>> recordBrowserReturn(
+            @PathVariable Long sessionId,
+            @PathVariable Long violationId,
+            @Valid @RequestBody BrowserReturnRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        proctoringService.recordBrowserReturn(sessionId, violationId, request.getAwaySeconds(),
+                request.isTabHidden(), userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success("Return recorded", null));
+    }
+
+    @GetMapping("/session/{sessionId}/my-violation-count")
+    @Operation(summary = "Violation count for the student's own session (live warning indicator)")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ApiResponse<Long>> getMyViolationCount(
+            @PathVariable Long sessionId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(ApiResponse.success("Violation count fetched",
+                proctoringService.getMyViolationCount(sessionId, userDetails.getUsername())));
+    }
+
+    @GetMapping("/session/{sessionId}/events")
+    @Operation(summary = "Get all proctoring events for a session")
+    @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<List<ProctoringEventResponse>>> getSessionEvents(
+            @PathVariable Long sessionId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(ApiResponse.success("Events fetched",
+                proctoringService.getEventsBySession(sessionId, userDetails.getUsername())));
+    }
+}

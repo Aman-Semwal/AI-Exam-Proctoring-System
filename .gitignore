@@ -1,1 +1,15 @@
 .idea
+
+# Environment files
+.env
+*.env
+!.env.example
+.vscode
+.junie
+.claude
+classpath.txt
+# Local scratch scripts
+scratch/
+
+# superpowers plan workspaces
+.superpowers/
