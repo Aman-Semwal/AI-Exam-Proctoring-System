@@ -157,14 +157,18 @@ A full run-through of the exam flow (about 10 minutes, two browsers or one norma
 
 1. **Examiner** (`examiner@tech.edu`): create an exam starting in a few minutes. Open *Proctoring rules* and keep all checks on, with a tab-switch limit of 2. Add a few MCQ questions and publish it.
 2. **Org admin** (`admin@tech.edu`): assign the student and the proctor to the exam.
-3. **Student** (`student@tech.edu`): start the exam, allow camera and microphone, take the reference photo, then start in full screen.
+3. **Student** (`student@tech.edu`): open the exam in Chrome or Edge on a desktop and complete the 4 setup steps:
+   **System check** (camera, microphone — say something, network latency and speed), **Consent**,
+   **Share your screen** (choose *Entire screen*; a window or tab is refused), then take the reference photo and start in full screen.
    - Answer a question: the panel shows *✓ Answer saved*.
+   - Press Ctrl+V or right-click: it is blocked, a red toast appears, and one `COPY_PASTE_ATTEMPT` is recorded.
+   - Click the browser's *Stop sharing*: a blocking overlay appears and `SCREEN_SHARE_STOPPED` is recorded; click **Resume sharing**.
    - Switch tabs once: a warning banner appears and the proctor gets an alert.
    - Talk for a few seconds, hold a phone up to the camera, or let someone else step into view.
-4. **Proctor** (`proctor@tech.edu`): alerts arrive live. Open one, see the evidence snapshot, and **Dismiss** it as a false positive or **Confirm** it.
+4. **Proctor** (`proctor@tech.edu`): alerts arrive live. Open one, see the webcam snapshot and the **screenshot** of the student's screen, and **Dismiss** it as a false positive or **Confirm** it.
    In *Live Sessions*, send a **Warn** message: it appears on the student's screen.
 5. **Student**: switch tabs a second time. The exam is auto-submitted and Results shows the score and trust score.
-6. **Proctor / examiner**: open the **Integrity Report** for the session, then **Export CSV** and **Print / Save as PDF**.
+6. **Proctor / examiner**: open the **Integrity Report** for the session (it shows when consent was given and each violation's screenshot), then **Export CSV** and **Print / Save as PDF**.
 
 ## Docker cleanup
 
