@@ -12,6 +12,9 @@ public interface SessionService {
 
     SessionResponse endSession(Long sessionId, String studentEmail);
 
+    /** Records the student's consent to proctoring capture; idempotent (the first time is kept). */
+    SessionResponse giveConsent(Long sessionId, String studentEmail);
+
     SessionResponse getSessionById(Long sessionId, String requesterEmail);
 
     List<SessionResponse> getMySessionsAsStudent(String studentEmail);

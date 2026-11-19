@@ -114,6 +114,24 @@ public class SessionServiceImpl implements SessionService {
     // endSession
     // -----------------------------------------------------------------------
 
+    /** Records the student's consent to proctoring capture; the first time is kept. */
+    @Override
+    @Transactional
+    public SessionResponse giveConsent(Long sessionId, String studentEmail) {
+        ExamSession session = findSessionById(sessionId);
+        if (!session.getStudent().getEmail().equals(studentEmail)) {
+            throw new UnauthorizedException("You do not own this session");
+        }
+        if (session.getStatus() != SessionStatus.ACTIVE) {
+            throw new IllegalStateException("Session is not active");
+        }
+        if (session.getConsentGivenAt() == null) {
+            session.setConsentGivenAt(LocalDateTime.now(ZoneId.of("UTC")));
+            session = sessionRepository.save(session);
+        }
+        return toResponse(session);
+    }
+
     /**
      * Ends an active session, calculates the score via {@link ScoreCalculationService},
      * and marks the session {@code COMPLETED}.
@@ -404,6 +422,7 @@ public class SessionServiceImpl implements SessionService {
                         && answerRepository.countBySessionIdAndIsCorrectIsNull(session.getId()) > 0)
                 .createdAt(session.getCreatedAt())
                 .referenceEnrolled(session.getReferenceEmbedding() != null)
+                .consentGiven(session.getConsentGivenAt() != null)
                 .trustScore(trust != null ? trust.score() : null)
                 .trustLevel(trust != null ? trust.level() : null)
                 .build();

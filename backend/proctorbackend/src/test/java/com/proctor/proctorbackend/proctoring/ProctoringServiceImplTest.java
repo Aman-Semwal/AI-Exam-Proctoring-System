@@ -102,6 +102,7 @@ class ProctoringServiceImplTest {
                 .id(55L).exam(exam).student(student)
                 .organization(org).status(SessionStatus.ACTIVE)
                 .startTime(LocalDateTime.now().minusMinutes(10))
+                .consentGivenAt(LocalDateTime.now().minusMinutes(11))
                 .attemptNumber(1).build();
 
         // Default Redis mock — valueOps returns non-null for increment
@@ -1181,5 +1182,31 @@ class ProctoringServiceImplTest {
                 .details("test")
                 .faceCount(faceCount)
                 .build();
+    }
+
+    // -----------------------------------------------------------------------
+    // Consent gate
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("processFrame — no consent yet → AccessDenied, AI never called")
+    void processFrame_withoutConsent_throwsAccessDenied() {
+        activeSession.setConsentGivenAt(null);
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> service.processFrame(buildRequest(55L, "frame=="), "student@test.com"));
+        verify(aiServiceClient, never()).analyze(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("enrollReference — no consent yet → AccessDenied")
+    void enrollReference_withoutConsent_throwsAccessDenied() {
+        activeSession.setConsentGivenAt(null);
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> service.enrollReference(55L, "img==", "student@test.com"));
+        verify(aiServiceClient, never()).embed(any());
     }
 }

@@ -36,6 +36,9 @@ public class SessionResponse {
     /** Whether the pre-exam reference photo has been enrolled (the embedding itself is never exposed). */
     private boolean referenceEnrolled;
 
+    /** Whether the student has agreed to proctoring capture for this session. */
+    private boolean consentGiven;
+
     /** 0–100, computed from non-dismissed violations (see TrustScoreService). */
     private Integer trustScore;
     private TrustLevel trustLevel;

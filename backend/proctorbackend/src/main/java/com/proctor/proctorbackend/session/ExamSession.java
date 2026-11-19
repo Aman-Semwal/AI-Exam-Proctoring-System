@@ -67,6 +67,10 @@ public class ExamSession {
     @Column(name = "reference_embedding", columnDefinition = "TEXT")
     private List<Double> referenceEmbedding;
 
+    /** When the student agreed to camera, mic and screen capture (UTC); null = not yet. */
+    @Column(name = "consent_given_at")
+    private LocalDateTime consentGivenAt;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
 

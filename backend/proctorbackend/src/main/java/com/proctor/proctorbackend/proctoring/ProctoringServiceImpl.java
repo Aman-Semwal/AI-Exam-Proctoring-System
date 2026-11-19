@@ -216,6 +216,7 @@ public class ProctoringServiceImpl implements ProctoringService {
         if (session.getStatus() != SessionStatus.ACTIVE) {
             throw new IllegalStateException("Session is not active");
         }
+        requireConsent(session);
 
         // ── Identity check every N frames ────────────────────────────────────
         // The reference embedding comes only from the server-side enrollment
@@ -413,6 +414,7 @@ public class ProctoringServiceImpl implements ProctoringService {
         if (session.getStatus() != SessionStatus.ACTIVE) {
             throw new IllegalStateException("Session is not active");
         }
+        requireConsent(session);
         // Once set, the reference is fixed — re-enrolling mid-exam would let a
         // stand-in replace the original candidate's face.
         if (session.getReferenceEmbedding() != null) {
@@ -591,6 +593,13 @@ public class ProctoringServiceImpl implements ProctoringService {
     // -----------------------------------------------------------------------
     // Private helpers
     // -----------------------------------------------------------------------
+
+    /** Nothing is captured until the student has agreed to proctoring (403). */
+    private static void requireConsent(ExamSession session) {
+        if (session.getConsentGivenAt() == null) {
+            throw new org.springframework.security.access.AccessDeniedException("Consent required");
+        }
+    }
 
     /** Stores the frame behind a violation so a reviewer can see why it was flagged. */
     private void saveEvidence(Violation violation, String frameBase64) {

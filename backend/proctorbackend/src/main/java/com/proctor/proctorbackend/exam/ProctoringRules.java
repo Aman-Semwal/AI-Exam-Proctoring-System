@@ -54,4 +54,14 @@ public class ProctoringRules {
     @Max(10)
     @Column(name = "max_attempts", nullable = false)
     private int maxAttempts = 1;
+
+    /** Entire screen must be shared; screenshots are kept as evidence. */
+    @Builder.Default
+    @Column(name = "screen_monitoring_enabled", nullable = false)
+    private boolean screenMonitoringEnabled = true;
+
+    /** Copy, paste, right-click and blocked shortcuts are prevented and recorded. */
+    @Builder.Default
+    @Column(name = "clipboard_blocking_enabled", nullable = false)
+    private boolean clipboardBlockingEnabled = true;
 }

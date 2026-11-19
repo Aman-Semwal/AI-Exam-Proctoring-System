@@ -346,4 +346,34 @@ class SessionServiceImplTest {
 
         assertDoesNotThrow(() -> service.getExamResult(55L, "admin@infosys.com"));
     }
+
+    // --- giveConsent ---
+
+    @Test
+    void giveConsent_setsTimestampOnce() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(sessionRepository.save(any(ExamSession.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        SessionResponse first = service.giveConsent(55L, "rahul@gmail.com");
+        LocalDateTime firstAt = activeSession.getConsentGivenAt();
+        assertNotNull(firstAt);
+        assertTrue(first.isConsentGiven());
+
+        service.giveConsent(55L, "rahul@gmail.com");
+        assertEquals(firstAt, activeSession.getConsentGivenAt());
+    }
+
+    @Test
+    void giveConsent_notOwner_throwsUnauthorized() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        assertThrows(UnauthorizedException.class, () -> service.giveConsent(55L, "other@gmail.com"));
+        verify(sessionRepository, never()).save(any());
+    }
+
+    @Test
+    void giveConsent_sessionNotActive_throwsIllegalState() {
+        activeSession.setStatus(SessionStatus.COMPLETED);
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        assertThrows(IllegalStateException.class, () -> service.giveConsent(55L, "rahul@gmail.com"));
+    }
 }

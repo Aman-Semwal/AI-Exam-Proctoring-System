@@ -45,6 +45,16 @@ public class SessionController {
                 .body(ApiResponse.success("Session started", response));
     }
 
+    @PostMapping("/{id}/consent")
+    @Operation(summary = "Student agrees to camera, mic and screen capture for this session")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ApiResponse<SessionResponse>> giveConsent(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        SessionResponse response = sessionService.giveConsent(id, userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success("Consent recorded", response));
+    }
+
     @PutMapping("/{id}/end")
     @Operation(summary = "End an exam session")
     @PreAuthorize("hasRole('STUDENT')")
