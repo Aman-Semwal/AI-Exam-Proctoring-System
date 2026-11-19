@@ -67,6 +67,12 @@ public enum ViolationType {
     /** Student exited fullscreen mode during the exam. Detected by the frontend. */
     FULLSCREEN_EXIT,
 
+    /** The student stopped sharing their entire screen (HIGH). */
+    SCREEN_SHARE_STOPPED,
+
+    /** Copy, cut, paste, right-click or a blocked shortcut was tried (LOW, deduplicated). */
+    COPY_PASTE_ATTEMPT,
+
     // ── Manual ────────────────────────────────────────────────────────────
 
     /** Manually recorded by a proctor for miscellaneous observations. */

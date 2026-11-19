@@ -1209,4 +1209,102 @@ class ProctoringServiceImplTest {
                 () -> service.enrollReference(55L, "img==", "student@test.com"));
         verify(aiServiceClient, never()).embed(any());
     }
+
+    // -----------------------------------------------------------------------
+    // Screen share stopped / copy-paste attempts
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("SCREEN_SHARE_STOPPED — HIGH, never counts toward the tab-switch auto-submit")
+    void recordBrowserEvent_screenShareStopped_persistsHigh_notCounted() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        lenient().when(violationRepository.countNotDismissedBySessionIdAndType(55L, ViolationType.TAB_SWITCH))
+                .thenReturn(5L);
+
+        BrowserEventResponse resp = service.recordBrowserEvent(55L, ViolationType.SCREEN_SHARE_STOPPED,
+                null, null, "student@test.com");
+
+        verify(violationRepository).save(argThat(v ->
+                v.getType() == ViolationType.SCREEN_SHARE_STOPPED
+                        && v.getSeverity() == ViolationSeverity.HIGH
+                        && v.getBrowserSignal() == BrowserSignal.SCREEN_SHARE_ENDED));
+        assertFalse(resp.isAutoSubmitted());
+        assertEquals(SessionStatus.ACTIVE, activeSession.getStatus());
+    }
+
+    @Test
+    @DisplayName("COPY_PASTE_ATTEMPT — LOW, keeps the signal, describes the paste")
+    void recordBrowserEvent_copyPaste_persistsLow() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+
+        service.recordBrowserEvent(55L, ViolationType.COPY_PASTE_ATTEMPT, BrowserSignal.PASTE, null,
+                "student@test.com");
+
+        verify(violationRepository).save(argThat(v ->
+                v.getType() == ViolationType.COPY_PASTE_ATTEMPT
+                        && v.getSeverity() == ViolationSeverity.LOW
+                        && v.getBrowserSignal() == BrowserSignal.PASTE
+                        && v.getDetails().toLowerCase().contains("paste")));
+    }
+
+    @Test
+    @DisplayName("COPY_PASTE_ATTEMPT — a repeat inside the 30 s window is not stored")
+    void recordBrowserEvent_copyPaste_dedupedWithin30s() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(stringRedisTemplate.hasKey("proctor:dedupe:copy_paste_attempt:55")).thenReturn(true);
+
+        BrowserEventResponse resp = service.recordBrowserEvent(55L, ViolationType.COPY_PASTE_ATTEMPT,
+                BrowserSignal.PASTE, null, "student@test.com");
+
+        verify(violationRepository, never()).save(any());
+        assertNull(resp.getViolationId());
+        assertFalse(resp.isAutoSubmitted());
+    }
+
+    @Test
+    @DisplayName("COPY_PASTE_ATTEMPT — sets the 30 s dedupe key")
+    void recordBrowserEvent_copyPaste_setsDedupKey() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+
+        service.recordBrowserEvent(55L, ViolationType.COPY_PASTE_ATTEMPT, BrowserSignal.COPY, null,
+                "student@test.com");
+
+        verify(valueOps).set("proctor:dedupe:copy_paste_attempt:55", "1", java.time.Duration.ofSeconds(30));
+    }
+
+    @Test
+    @DisplayName("A browser event whose rule is off for the exam is rejected (409)")
+    void recordBrowserEvent_ruleDisabled_throwsConflict() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        exam.getProctoringRules().setClipboardBlockingEnabled(false);
+        exam.getProctoringRules().setScreenMonitoringEnabled(false);
+
+        assertThrows(IllegalStateException.class, () -> service.recordBrowserEvent(55L,
+                ViolationType.COPY_PASTE_ATTEMPT, BrowserSignal.PASTE, null, "student@test.com"));
+        assertThrows(IllegalStateException.class, () -> service.recordBrowserEvent(55L,
+                ViolationType.SCREEN_SHARE_STOPPED, null, null, "student@test.com"));
+        verify(violationRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("return — time away is recorded for a stopped screen share")
+    void recordBrowserReturn_allowedForScreenShareStopped() {
+        Violation v = browserViolation(activeSession, 902L);
+        v.setType(ViolationType.SCREEN_SHARE_STOPPED);
+        v.setBrowserSignal(BrowserSignal.SCREEN_SHARE_ENDED);
+
+        service.recordBrowserReturn(55L, 902L, 7, false, "student@test.com");
+
+        assertEquals(7, v.getAwaySeconds());
+    }
+
+    @Test
+    @DisplayName("return — copy/paste attempts have no time away")
+    void recordBrowserReturn_rejectsCopyPaste() {
+        Violation v = browserViolation(activeSession, 903L);
+        v.setType(ViolationType.COPY_PASTE_ATTEMPT);
+
+        assertThrows(BadRequestException.class,
+                () -> service.recordBrowserReturn(55L, 903L, 3, false, "student@test.com"));
+    }
 }

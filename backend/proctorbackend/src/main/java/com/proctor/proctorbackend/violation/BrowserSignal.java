@@ -7,5 +7,17 @@ public enum BrowserSignal {
     /** The window lost focus but the tab stayed visible — another app, or a system pop-up. */
     WINDOW_BLUR,
     /** The student left full-screen mode. */
-    FULLSCREEN_EXIT
+    FULLSCREEN_EXIT,
+    /** The entire-screen share ended (the student clicked "Stop sharing"). */
+    SCREEN_SHARE_ENDED,
+    /** Blocked clipboard copy. */
+    COPY,
+    /** Blocked clipboard cut. */
+    CUT,
+    /** Blocked clipboard paste. */
+    PASTE,
+    /** Blocked right-click menu. */
+    CONTEXT_MENU,
+    /** Blocked keyboard shortcut (print, save, view source, DevTools…). */
+    SHORTCUT
 }

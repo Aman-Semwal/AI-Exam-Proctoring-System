@@ -443,6 +443,8 @@ public class ProctoringServiceImpl implements ProctoringService {
         ViolationSeverity severity = switch (type) {
             case TAB_SWITCH      -> ViolationSeverity.HIGH;
             case FULLSCREEN_EXIT -> ViolationSeverity.MEDIUM;
+            case SCREEN_SHARE_STOPPED -> ViolationSeverity.HIGH;
+            case COPY_PASTE_ATTEMPT   -> ViolationSeverity.LOW;
             default -> throw new BadRequestException("Unsupported browser event type: " + type);
         };
 
@@ -454,9 +456,30 @@ public class ProctoringServiceImpl implements ProctoringService {
         if (session.getStatus() != SessionStatus.ACTIVE) {
             throw new IllegalStateException("Session is not active");
         }
+        ProctoringRules rules = session.getExam().getProctoringRules();
+        if ((type == ViolationType.SCREEN_SHARE_STOPPED && !rules.isScreenMonitoringEnabled())
+                || (type == ViolationType.COPY_PASTE_ATTEMPT && !rules.isClipboardBlockingEnabled())) {
+            throw new IllegalStateException("Rule disabled");
+        }
+        // A burst of Ctrl+V presses is one attempt, not twenty violations
+        if (type == ViolationType.COPY_PASTE_ATTEMPT) {
+            String dedupKey = DEDUP_PREFIX + type.name().toLowerCase() + ":" + session.getId();
+            if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(dedupKey))) {
+                return BrowserEventResponse.builder()
+                        .tabSwitchCount(violationRepository.countNotDismissedBySessionIdAndType(
+                                session.getId(), ViolationType.TAB_SWITCH))
+                        .autoSubmitted(false)
+                        .build();
+            }
+            stringRedisTemplate.opsForValue().set(dedupKey, "1", Duration.ofSeconds(dedupIntervalSeconds));
+        }
 
-        BrowserSignal recordedSignal = signal != null ? signal
-                : type == ViolationType.FULLSCREEN_EXIT ? BrowserSignal.FULLSCREEN_EXIT : BrowserSignal.WINDOW_BLUR;
+        BrowserSignal recordedSignal = signal != null ? signal : switch (type) {
+            case FULLSCREEN_EXIT      -> BrowserSignal.FULLSCREEN_EXIT;
+            case SCREEN_SHARE_STOPPED -> BrowserSignal.SCREEN_SHARE_ENDED;
+            case COPY_PASTE_ATTEMPT   -> BrowserSignal.SHORTCUT;
+            default                   -> BrowserSignal.WINDOW_BLUR;
+        };
         String detail = describe(recordedSignal);
         Violation stored = Violation.builder()
                 .session(session)
@@ -535,7 +558,8 @@ public class ProctoringServiceImpl implements ProctoringService {
         if (!session.getId().equals(sessionId)) {
             throw new BadRequestException("Violation does not belong to this session");
         }
-        if (violation.getType() != ViolationType.TAB_SWITCH && violation.getType() != ViolationType.FULLSCREEN_EXIT) {
+        if (violation.getType() != ViolationType.TAB_SWITCH && violation.getType() != ViolationType.FULLSCREEN_EXIT
+                && violation.getType() != ViolationType.SCREEN_SHARE_STOPPED) {
             throw new BadRequestException("Only browser events record a time away");
         }
         // Set once — the student must not be able to shorten it afterwards
@@ -556,6 +580,12 @@ public class ProctoringServiceImpl implements ProctoringService {
             case TAB_HIDDEN      -> "Exam tab was hidden — another tab, or the browser was minimised";
             case WINDOW_BLUR     -> "Exam window lost focus — another app or a system pop-up";
             case FULLSCREEN_EXIT -> "Student exited full-screen mode";
+            case SCREEN_SHARE_ENDED -> "Screen sharing was stopped";
+            case COPY         -> "Tried to copy exam content";
+            case CUT          -> "Tried to cut exam content";
+            case PASTE        -> "Tried to paste into the exam";
+            case CONTEXT_MENU -> "Tried to open the right-click menu";
+            case SHORTCUT     -> "Used a blocked keyboard shortcut";
         };
     }
 
