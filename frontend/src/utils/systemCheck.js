@@ -8,6 +8,8 @@ const NETWORK_OK_MS = 1500;
 // 1 Mbps leaves headroom. Below it is a warning, not a block.
 const SPEED_OK_MBPS = 1;
 const SPEED_TEST_KB = 512;
+// A stalled request must not leave the check "running" forever (Start would never enable)
+const REQUEST_TIMEOUT_MS = 10000;
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -78,7 +80,7 @@ export async function checkNetwork(api) {
   for (let i = 0; i < 3; i++) {
     const t0 = performance.now();
     try {
-      await api.get("/health");
+      await api.get("/health", { timeout: REQUEST_TIMEOUT_MS });
     } catch {
       return { ok: false, avgMs: null };
     }
@@ -99,13 +101,17 @@ export async function checkSpeed(api) {
     let t0 = performance.now();
     const down = await api.get(`/speedtest/download?kb=${SPEED_TEST_KB}&t=${Date.now()}`, {
       responseType: "arraybuffer",
+      timeout: REQUEST_TIMEOUT_MS,
     });
     const downMbps = toMbps(down.data.byteLength, performance.now() - t0);
 
     const payload = new Uint8Array(SPEED_TEST_KB * 1024);
     crypto.getRandomValues(payload.subarray(0, 65536)); // random head: defeats compression enough
     t0 = performance.now();
-    await api.post("/speedtest/upload", payload, { headers: { "Content-Type": "application/octet-stream" } });
+    await api.post("/speedtest/upload", payload, {
+      headers: { "Content-Type": "application/octet-stream" },
+      timeout: REQUEST_TIMEOUT_MS,
+    });
     const upMbps = toMbps(payload.byteLength, performance.now() - t0);
 
     return { ok: downMbps >= SPEED_OK_MBPS && upMbps >= SPEED_OK_MBPS, downMbps, upMbps };

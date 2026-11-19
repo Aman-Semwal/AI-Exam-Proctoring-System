@@ -73,7 +73,10 @@ const LiveExam = () => {
   const [examTitle, setExamTitle] = useState("Proctored Exam");
   const [rules, setRules] = useState(DEFAULT_PROCTORING_RULES);
   // What a resumed session already has, so setup doesn't ask for it twice
-  const [resumeInfo, setResumeInfo] = useState({ consentGiven: false, referenceEnrolled: false });
+  const [resumeInfo, setResumeInfo] = useState({ consentGiven: false, referenceEnrolled: false, resumed: false });
+  // A reload drops the screen share: the gap until it is shared again is recorded as a
+  // SCREEN_SHARE_STOPPED violation with its time away, so the proctor sees it
+  const resumeGapRef = useRef(null);
   const photoRequired = rules.identityCheckEnabled && !resumeInfo.referenceEnrolled;
   const consentRequired = !resumeInfo.consentGiven;
   const screenRequired = rules.screenMonitoringEnabled;
@@ -85,7 +88,7 @@ const LiveExam = () => {
   const [screenStream, setScreenStream] = useState(null);
   const screenStreamRef = useRef(null);
   const consentDone = consented || !consentRequired;
-  const screenDone = !screenRequired || !!screenStream;
+  const screenDone = !screenRequired || screenStream?.getVideoTracks()[0]?.readyState === "live";
 
   // Lockdown state
   const [tabWarnings, setTabWarnings] = useState(0);
@@ -131,7 +134,27 @@ const LiveExam = () => {
         return api.get(`/exams/${session.examId}`).then((examRes) => {
           const examRules = { ...DEFAULT_PROCTORING_RULES, ...examRes.data?.data?.proctoringRules };
           setRules(examRules);
-          setResumeInfo({ consentGiven: !!session.consentGiven, referenceEnrolled: !!session.referenceEnrolled });
+          setResumeInfo({
+            consentGiven: !!session.consentGiven,
+            referenceEnrolled: !!session.referenceEnrolled,
+            resumed: true,
+          });
+          // The checks already passed when this session started — don't repeat them
+          setSystemOk(true);
+          // Guarded: React StrictMode runs this effect twice in dev — record the gap once
+          if (examRules.screenMonitoringEnabled && !resumeGapRef.current) {
+            const leftAt = Date.now();
+            resumeGapRef.current = { violationId: null, leftAt };
+            api
+              .post(`/proctor/session/${existingSessionId}/browser-event`, {
+                type: "SCREEN_SHARE_STOPPED",
+                signal: "SCREEN_SHARE_ENDED",
+              })
+              .then((r) => {
+                if (resumeGapRef.current) resumeGapRef.current.violationId = r.data?.data?.violationId;
+              })
+              .catch((err) => console.warn("Could not record the reload gap:", err?.response?.data?.message || err.message));
+          }
           const needsPhoto = examRules.identityCheckEnabled && !session.referenceEnrolled;
           // A reload drops the screen share, so it must be asked for again
           const needsSetup = needsPhoto || !session.consentGiven || examRules.screenMonitoringEnabled;
@@ -371,6 +394,11 @@ const LiveExam = () => {
       setScreenStopped(true);
       reportEventRef.current?.("SCREEN_SHARE_STOPPED", "SCREEN_SHARE_ENDED");
     };
+    // Already ended before the exam page attached (e.g. stopped right at Start)
+    if (track.readyState === "ended") {
+      onEnded();
+      return;
+    }
     track.addEventListener("ended", onEnded);
     // Removed before the tracks are stopped on unmount/submit, so ending the exam
     // never reports a stopped share (stop() itself does not fire "ended" either)
@@ -459,6 +487,22 @@ const LiveExam = () => {
 
   const canStart = systemOk && consentDone && screenDone && (!photoRequired || photoTaken);
 
+  // Stopped during setup → reopen the share step (otherwise the exam would start unmonitored)
+  useEffect(() => {
+    if (step !== "setup" || !screenStream) return;
+    const track = screenStream.getVideoTracks()[0];
+    const onEnded = () => {
+      if (screenStreamRef.current === screenStream) screenStreamRef.current = null;
+      setScreenStream(null);
+    };
+    if (!track || track.readyState === "ended") {
+      onEnded();
+      return;
+    }
+    track.addEventListener("ended", onEnded);
+    return () => track.removeEventListener("ended", onEnded);
+  }, [step, screenStream]);
+
   const handleStartExam = async () => {
     if (!canStart || enrolling) return;
 
@@ -496,6 +540,17 @@ const LiveExam = () => {
 
       if (cameraStream) {
         cameraStream.getTracks().forEach((track) => track.stop());
+      }
+
+      const gap = resumeGapRef.current;
+      if (gap?.violationId) {
+        resumeGapRef.current = null;
+        api
+          .post(`/proctor/session/${activeSessionId}/browser-event/${gap.violationId}/return`, {
+            awaySeconds: Math.max(0, Math.round((Date.now() - gap.leftAt) / 1000)),
+            tabHidden: false,
+          })
+          .catch((err) => console.warn("Could not record the reload gap:", err?.response?.data?.message || err.message));
       }
 
       navigate(`/student/live-exam?examId=${examId}&sessionId=${activeSessionId}`, { replace: true });
@@ -567,9 +622,11 @@ const LiveExam = () => {
           )}
 
           <ol className="space-y-3 mb-6 text-left">
-            <SetupStep n={1} title="System check" done={systemOk}>
-              <SystemCheck rules={rules} cameraStream={cameraStream} onPassed={setSystemOk} />
-            </SetupStep>
+            {!resumeInfo.resumed && (
+              <SetupStep n={1} title="System check" done={systemOk}>
+                <SystemCheck rules={rules} cameraStream={cameraStream} onPassed={setSystemOk} />
+              </SetupStep>
+            )}
             {consentRequired && (
               <SetupStep n={2} title="Consent" done={consented} locked={!systemOk}>
                 <ConsentStep rules={rules} onConsented={() => setConsented(true)} />
