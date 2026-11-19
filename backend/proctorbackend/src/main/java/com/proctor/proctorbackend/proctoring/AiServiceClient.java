@@ -33,9 +33,11 @@ import java.util.List;
  *
  * <h3>Resilience</h3>
  * <p>If the AI service is unavailable or returns any error, the call falls back to a
- * synthetic {@link AnalyzeResponse} that reports {@code face_count = 0} (treated as
- * {@code NO_FACE_DETECTED}) so the proctoring flow is never fully broken by a transient
- * AI failure. The fallback is logged at ERROR level so failures are observable.
+ * synthetic {@link AnalyzeResponse} with no violations and the gaze reason
+ * {@code "ai_service_unavailable"}; {@code ProctoringServiceImpl} sees that sentinel and
+ * skips the frame, so an outage never penalises the student. {@link #embed} is the
+ * exception and throws instead. The fallback is logged at ERROR level so failures are
+ * observable.
  */
 @Component
 @RequiredArgsConstructor

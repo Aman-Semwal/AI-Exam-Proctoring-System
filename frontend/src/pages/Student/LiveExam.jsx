@@ -117,14 +117,24 @@ const LiveExam = () => {
 
   // 1. Setup Camera
   useEffect(() => {
+    // Tracked locally — the cleanup's closure would only ever see the initial null state
+    let setupStream = null;
+    let cancelled = false;
+
     if (step === "setup") {
       // Ask for the mic here too, so its permission prompt can't appear mid-exam
       // (a prompt steals focus and would count as leaving the exam window)
       navigator.mediaDevices.getUserMedia({ video: true, audio: true })
         .catch(() => navigator.mediaDevices.getUserMedia({ video: true }))
         .then((stream) => {
+          // Left the setup step before the camera came up — release it right away
+          if (cancelled) {
+            stream.getTracks().forEach((track) => track.stop());
+            return;
+          }
           // Only the camera preview is needed here; the mic was requested for permission
           stream.getAudioTracks().forEach((track) => track.stop());
+          setupStream = stream;
           setCameraStream(stream);
           if (setupVideoRef.current) {
             setupVideoRef.current.srcObject = stream;
@@ -137,8 +147,9 @@ const LiveExam = () => {
     }
 
     return () => {
-      if (cameraStream) {
-        cameraStream.getTracks().forEach((track) => track.stop());
+      cancelled = true;
+      if (setupStream) {
+        setupStream.getTracks().forEach((track) => track.stop());
       }
     };
   }, [step]);

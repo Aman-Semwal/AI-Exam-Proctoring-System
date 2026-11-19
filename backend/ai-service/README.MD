@@ -78,13 +78,12 @@ downloaded model weights) — no mocks on the inference path.
   MEDIUM boundary was widened from 15 to 19 points so a single `NO_FACE`
   violation — often just a camera glitch, not real cheating — doesn't
   sit exactly on the boundary.)
-- **Backend integration is partial.** Spring Boot's `AiServiceClient`
-  currently only calls `/infer/face`. The other endpoints exist and are
-  tested but nothing in the backend invokes them yet, and
-  `ViolationType` doesn't yet have entries matching this service's
-  violation strings (`looking_away`, `unauthorized_object`,
-  `identity_mismatch`).
-- **Frontend audio format.** `/infer/audio/*` requires 16-bit PCM WAV
-  mono 16kHz; browser `MediaRecorder` defaults to WebM/Opus. Conversion
-  needs to happen client-side (Web Audio API) before calling that
-  endpoint — not yet implemented.
+- **Backend calls only the aggregate endpoints.** Spring Boot's
+  `AiServiceClient` uses `/infer/analyze` for every frame (with the
+  reference embedding and audio chunk attached when enabled) and
+  `/infer/identity/embed` for enrollment. The per-detector endpoints
+  (`/infer/face`, `/infer/gaze`, `/infer/object`, `/infer/identity/verify`,
+  `/infer/audio/voice-activity`) are not called directly by the backend.
+  `/infer/audio/*` requires 16-bit PCM WAV mono 16kHz; the frontend
+  (`frontend/src/utils/audioRecorder.js`) resamples and encodes to that
+  format client-side.
