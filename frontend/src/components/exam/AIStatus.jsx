@@ -3,7 +3,8 @@ import { FaShieldAlt, FaCheckCircle, FaExclamationTriangle } from "react-icons/f
 import api from "../../services/api";
 
 /** `tabSwitches` comes from LiveExam, which gets the server-side count. */
-const AIStatus = ({ sessionId, tabSwitches = 0 }) => {
+// tabSwitchLimit: the exam's auto-submit limit (0 = never auto-submits)
+const AIStatus = ({ sessionId, tabSwitches = 0, tabSwitchLimit = 0 }) => {
   const [warningCount, setWarningCount] = useState(0);
 
   // Poll violation count for this session
@@ -30,7 +31,7 @@ const AIStatus = ({ sessionId, tabSwitches = 0 }) => {
     };
   }, [sessionId]);
 
-  const isCritical = warningCount >= 3 || tabSwitches >= 3;
+  const isCritical = tabSwitchLimit > 0 && tabSwitches >= tabSwitchLimit - 1 && tabSwitches > 0;
   const isElevated = warningCount > 0 || tabSwitches > 0;
 
   return (
@@ -93,7 +94,7 @@ const AIStatus = ({ sessionId, tabSwitches = 0 }) => {
                 : "bg-white/4 text-slate-300"
             }`}
           >
-            {tabSwitches}
+            {tabSwitchLimit > 0 ? `${tabSwitches} / ${tabSwitchLimit}` : tabSwitches}
           </span>
         </div>
 
@@ -109,7 +110,7 @@ const AIStatus = ({ sessionId, tabSwitches = 0 }) => {
             }`}
           >
             {isCritical && <FaExclamationTriangle size={9} />}
-            {warningCount} / 3
+            {warningCount}
           </span>
         </div>
       </div>

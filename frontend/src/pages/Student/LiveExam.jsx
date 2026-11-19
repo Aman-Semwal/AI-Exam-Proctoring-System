@@ -589,7 +589,7 @@ const LiveExam = () => {
                 snapshotRef={snapshotRef}
               />
 
-              <AIStatus sessionId={sessionId} tabSwitches={tabWarnings} />
+              <AIStatus sessionId={sessionId} tabSwitches={tabWarnings} tabSwitchLimit={rules.tabSwitchLimit} />
 
               <SubmitCard sessionId={sessionId} beforeSubmit={flushAnswers} />
             </div>

@@ -5,6 +5,8 @@ const TOGGLES = [
   { key: "audioMonitoringEnabled", label: "Audio monitoring", hint: "Flags speech picked up by the microphone" },
   { key: "gazeTrackingEnabled", label: "Gaze tracking", hint: "Flags looking away from the screen" },
   { key: "objectDetectionEnabled", label: "Object detection", hint: "Flags phones, books and other devices" },
+  { key: "screenMonitoringEnabled", label: "Screen monitoring", hint: "Entire screen shared; screenshots kept as evidence" },
+  { key: "clipboardBlockingEnabled", label: "Block copy & paste", hint: "Blocks clipboard, right-click and shortcuts" },
 ];
 
 const ProctoringRulesFields = ({ value, onChange }) => {

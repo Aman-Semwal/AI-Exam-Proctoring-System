@@ -6,4 +6,6 @@ export const DEFAULT_PROCTORING_RULES = {
   objectDetectionEnabled: true,
   tabSwitchLimit: 2,
   maxAttempts: 1,
+  screenMonitoringEnabled: true,
+  clipboardBlockingEnabled: true,
 };
