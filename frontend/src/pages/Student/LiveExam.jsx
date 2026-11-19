@@ -10,6 +10,9 @@ import QuestionPanel from "../../components/exam/QuestionPanel";
 import ExamTimer from "../../components/exam/ExamTimer";
 import AIStatus from "../../components/exam/AIStatus";
 import SubmitCard from "../../components/exam/SubmitCard";
+import SystemCheck from "../../components/exam/setup/SystemCheck";
+import ConsentStep from "../../components/exam/setup/ConsentStep";
+import ScreenShareStep from "../../components/exam/setup/ScreenShareStep";
 
 import api from "../../services/api";
 import useWebSocket from "../../services/useWebSocket";
@@ -19,6 +22,28 @@ import { DEFAULT_PROCTORING_RULES } from "../../utils/proctoringRules";
 const EVENT_DEBOUNCE_MS = 3000;
 // Longest we wait for pending answers to save before submitting anyway
 const FLUSH_TIMEOUT_MS = 3000;
+
+// One numbered step of the pre-exam setup. Locked steps are shown dimmed without content.
+const SetupStep = ({ n, title, done, locked = false, children }) => (
+  <li
+    className={`border rounded-xl p-4 transition ${
+      done ? "border-emerald-500/30 bg-emerald-500/5" : locked ? "border-white/5 opacity-50" : "border-white/10 bg-white/2"
+    }`}
+  >
+    <div className="flex items-center gap-3 mb-2">
+      <span
+        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+          done ? "bg-emerald-500 text-white" : "bg-white/10 text-slate-300"
+        }`}
+      >
+        {done ? <FaCheckCircle size={12} /> : n}
+      </span>
+      <span className="text-sm font-semibold text-white">{title}</span>
+    </div>
+    {!locked && !done && children}
+    {done && n === 3 && children}
+  </li>
+);
 
 const LiveExam = () => {
   const [searchParams] = useSearchParams();
@@ -45,7 +70,20 @@ const LiveExam = () => {
   const [sessionId, setSessionId] = useState(existingSessionId);
   const [examTitle, setExamTitle] = useState("Proctored Exam");
   const [rules, setRules] = useState(DEFAULT_PROCTORING_RULES);
-  const photoRequired = rules.identityCheckEnabled;
+  // What a resumed session already has, so setup doesn't ask for it twice
+  const [resumeInfo, setResumeInfo] = useState({ consentGiven: false, referenceEnrolled: false });
+  const photoRequired = rules.identityCheckEnabled && !resumeInfo.referenceEnrolled;
+  const consentRequired = !resumeInfo.consentGiven;
+  const screenRequired = rules.screenMonitoringEnabled;
+
+  // Pre-exam steps: 1 system check → 2 consent → 3 entire-screen share → 4 photo
+  const [systemOk, setSystemOk] = useState(false);
+  const [consented, setConsented] = useState(false);
+  // Kept for the whole exam: screenshots are taken from it (see WebcamCard)
+  const [screenStream, setScreenStream] = useState(null);
+  const screenStreamRef = useRef(null);
+  const consentDone = consented || !consentRequired;
+  const screenDone = !screenRequired || !!screenStream;
 
   // Lockdown state
   const [tabWarnings, setTabWarnings] = useState(0);
@@ -84,8 +122,11 @@ const LiveExam = () => {
         return api.get(`/exams/${session.examId}`).then((examRes) => {
           const examRules = { ...DEFAULT_PROCTORING_RULES, ...examRes.data?.data?.proctoringRules };
           setRules(examRules);
+          setResumeInfo({ consentGiven: !!session.consentGiven, referenceEnrolled: !!session.referenceEnrolled });
           const needsPhoto = examRules.identityCheckEnabled && !session.referenceEnrolled;
-          setStep(needsPhoto ? "setup" : "active_exam");
+          // A reload drops the screen share, so it must be asked for again
+          const needsSetup = needsPhoto || !session.consentGiven || examRules.screenMonitoringEnabled;
+          setStep(needsSetup ? "setup" : "active_exam");
         });
       })
       .catch((err) => {
@@ -337,8 +378,15 @@ const LiveExam = () => {
     setSetupError("");
   };
 
+  const handleScreenShared = (stream) => {
+    screenStreamRef.current = stream;
+    setScreenStream(stream);
+  };
+
+  const canStart = systemOk && consentDone && screenDone && (!photoRequired || photoTaken);
+
   const handleStartExam = async () => {
-    if ((photoRequired && !photoTaken) || enrolling) return;
+    if (!canStart || enrolling) return;
 
     if (!examId) {
       setSetupError("Exam ID is missing. Please select an exam first.");
@@ -357,6 +405,9 @@ const LiveExam = () => {
 
     try {
       const activeSessionId = await ensureSession();
+
+      // Nothing is captured server-side until consent is recorded (idempotent)
+      await api.post(`/sessions/${activeSessionId}/consent`);
 
       if (photoRequired) {
         try {
@@ -378,6 +429,7 @@ const LiveExam = () => {
     } catch (err) {
       console.error("Failed to start exam:", err);
       if (err.response?.status === 400) setPhoto(null); // no face — force a retake
+      if (err.response?.status === 403) setConsented(false); // consent missing — ask again
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
       setSetupError(err.response?.data?.message || "Unable to start the exam. Please try again.");
     } finally {
@@ -403,11 +455,7 @@ const LiveExam = () => {
       <div className="flex bg-[#090a0f] min-h-screen text-slate-100 items-center justify-center p-6">
         <div className="bg-[#121520] border border-white/7 rounded-2xl p-8 max-w-2xl w-full text-center shadow-xl">
           <h1 className="text-2xl font-bold text-white mb-2">Pre-Exam Setup</h1>
-          <p className="text-slate-400 mb-6 text-sm">
-            {photoRequired
-              ? "Please allow camera access and take a verification photo to proceed."
-              : "Please allow camera access to proceed."}
-          </p>
+          <p className="text-slate-400 mb-6 text-sm">Complete each step to start your proctored exam.</p>
 
           {camError ? (
             <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl flex items-center justify-center gap-3 mb-6">
@@ -444,6 +492,34 @@ const LiveExam = () => {
             </div>
           )}
 
+          <ol className="space-y-3 mb-6 text-left">
+            <SetupStep n={1} title="System check" done={systemOk}>
+              <SystemCheck rules={rules} cameraStream={cameraStream} onPassed={setSystemOk} />
+            </SetupStep>
+            {consentRequired && (
+              <SetupStep n={2} title="Consent" done={consented} locked={!systemOk}>
+                <ConsentStep rules={rules} onConsented={() => setConsented(true)} />
+              </SetupStep>
+            )}
+            {screenRequired && (
+              <SetupStep n={3} title="Share your screen" done={!!screenStream} locked={!systemOk || !consentDone}>
+                <ScreenShareStep stream={screenStream} onShared={handleScreenShared} />
+              </SetupStep>
+            )}
+            <SetupStep
+              n={4}
+              title={photoRequired ? "Verify identity" : "Start"}
+              done={false}
+              locked={!systemOk || !consentDone || !screenDone}
+            >
+              <p className="text-xs text-slate-400">
+                {photoRequired
+                  ? "Take a verification photo with your face inside the oval, then start."
+                  : "You're ready. The exam opens in full screen."}
+              </p>
+            </SetupStep>
+          </ol>
+
           {setupError && (
             <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl flex items-center justify-center gap-3 mb-6 text-sm">
               <FaExclamationTriangle />
@@ -455,7 +531,7 @@ const LiveExam = () => {
             {photoRequired && !photoTaken ? (
               <button
                 onClick={capturePhoto}
-                disabled={!!camError || !cameraStream}
+                disabled={!!camError || !cameraStream || !systemOk || !consentDone || !screenDone}
                 className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-lg font-medium transition"
               >
                 <FaCamera />
@@ -474,8 +550,8 @@ const LiveExam = () => {
                 )}
                 <button
                   onClick={handleStartExam}
-                  disabled={enrolling}
-                  className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 disabled:cursor-wait text-white px-8 py-2.5 rounded-lg font-bold shadow-lg shadow-emerald-500/20 transition"
+                  disabled={enrolling || !canStart}
+                  className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed text-white px-8 py-2.5 rounded-lg font-bold shadow-lg shadow-emerald-500/20 transition"
                 >
                   {enrolling ? "Verifying photo..." : "Start Exam (Full Screen)"}
                 </button>
@@ -487,6 +563,12 @@ const LiveExam = () => {
             <strong className="text-blue-400 block mb-1">Anti-Cheat Rules Active:</strong>
             <ul className="list-disc pl-4 space-y-1">
               <li>This exam requires <strong>full-screen mode</strong>.</li>
+              {rules.screenMonitoringEnabled && (
+                <li>Your <strong>entire screen</strong> is shared; stopping the share is recorded.</li>
+              )}
+              {rules.clipboardBlockingEnabled && (
+                <li>Copy, paste, right-click and shortcuts like print or DevTools are blocked and recorded.</li>
+              )}
               <li>Your photo is used to verify that the same person takes the whole exam.</li>
               <li>Your webcam feed is continuously monitored by AI for multiple faces, absence, or looking away.</li>
               <li><strong>Do not switch tabs or minimize the browser.</strong> Doing so will result in an automatic submission of your exam!</li>
