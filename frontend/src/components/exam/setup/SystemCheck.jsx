@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaRedo } from "react-icons/fa";
 
 import api from "../../../services/api";
-import { checkBrowser, checkCamera, checkMicLevel, checkNetwork } from "../../../utils/systemCheck";
+import { checkBrowser, checkCamera, checkMicLevel, checkNetwork, checkSpeed } from "../../../utils/systemCheck";
 
 // status: "pending" | "running" | "ok" | "warn" | "fail"
 const Row = ({ label, status, note }) => (
@@ -33,7 +33,13 @@ const SystemCheck = ({ rules, cameraStream, onPassed }) => {
     if (!cameraStream) return;
     setRunning(true);
     onPassed(false);
-    const r = { camera: "running", mic: rules.audioMonitoringEnabled ? "running" : "skip", network: "running", browser: "running" };
+    const r = {
+      camera: "running",
+      mic: rules.audioMonitoringEnabled ? "running" : "skip",
+      network: "running",
+      speed: "running",
+      browser: "running",
+    };
     setResults({ ...r });
 
     const browser = checkBrowser({ needScreen: rules.screenMonitoringEnabled });
@@ -47,6 +53,11 @@ const SystemCheck = ({ rules, cameraStream, onPassed }) => {
     const net = await checkNetwork(api);
     r.network = net.ok ? "ok" : "warn";
     r.networkNote = net.avgMs != null ? `${net.avgMs} ms` : "unreachable";
+    setResults({ ...r });
+
+    const speed = await checkSpeed(api);
+    r.speed = speed.ok ? "ok" : "warn";
+    r.speedNote = speed.downMbps != null ? `↓ ${speed.downMbps} Mbps · ↑ ${speed.upMbps} Mbps` : "test failed";
     setResults({ ...r });
 
     if (rules.audioMonitoringEnabled) {
@@ -85,7 +96,8 @@ const SystemCheck = ({ rules, cameraStream, onPassed }) => {
           <div className="h-full bg-emerald-500 transition-all" style={{ width: `${Math.round(micLevel * 100)}%` }} />
         </div>
       )}
-      <Row label="Network" status={results.network ?? "pending"} note={results.networkNote} />
+      <Row label="Network latency" status={results.network ?? "pending"} note={results.networkNote} />
+      <Row label="Network speed" status={results.speed ?? "pending"} note={results.speedNote} />
       <Row label="Browser" status={results.browser ?? "pending"} note={results.browserNote} />
       {!running && Object.values(results).some((s) => s === "fail") && (
         <button
@@ -96,8 +108,10 @@ const SystemCheck = ({ rules, cameraStream, onPassed }) => {
           <FaRedo size={10} /> Re-run checks
         </button>
       )}
-      {results.network === "warn" && (
-        <p className="text-xs text-amber-400 mt-1">Your connection is slow. You can continue, but frames may arrive late.</p>
+      {(results.network === "warn" || results.speed === "warn") && (
+        <p className="text-xs text-amber-400 mt-1">
+          Your connection is slow (under 1 Mbps or high latency). You can continue, but proctoring frames may arrive late.
+        </p>
       )}
     </div>
   );

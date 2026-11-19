@@ -1,9 +1,13 @@
-// Pre-exam system checks. Nothing here talks to the proctoring backend except the
-// health ping — results stay in the browser and only gate the Start button.
+// Pre-exam system checks. Only the health ping and the speed test talk to the backend;
+// results stay in the browser and only gate the Start button.
 
 const BLACK_FRAME_MEAN = 8; // 0–255; below this the camera is covered or not sending
 const MIC_RMS_THRESHOLD = 0.02; // 0–1; above this something was said into the mic
 const NETWORK_OK_MS = 1500;
+// Each 5 s exam tick uploads a webcam frame + screenshot + audio chunk (~300 KB ≈ 0.5 Mbps);
+// 1 Mbps leaves headroom. Below it is a warning, not a block.
+const SPEED_OK_MBPS = 1;
+const SPEED_TEST_KB = 512;
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -82,6 +86,32 @@ export async function checkNetwork(api) {
   }
   const avgMs = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
   return { ok: avgMs < NETWORK_OK_MS, avgMs };
+}
+
+const toMbps = (bytes, ms) => Math.round(((bytes * 8) / (ms / 1000) / 1_000_000) * 10) / 10;
+
+/**
+ * Measures download and upload speed against the backend with a 512 KB payload each way.
+ * Resolves { ok, downMbps, upMbps }; ok is false when either is under 1 Mbps or the test fails.
+ */
+export async function checkSpeed(api) {
+  try {
+    let t0 = performance.now();
+    const down = await api.get(`/speedtest/download?kb=${SPEED_TEST_KB}&t=${Date.now()}`, {
+      responseType: "arraybuffer",
+    });
+    const downMbps = toMbps(down.data.byteLength, performance.now() - t0);
+
+    const payload = new Uint8Array(SPEED_TEST_KB * 1024);
+    crypto.getRandomValues(payload.subarray(0, 65536)); // random head: defeats compression enough
+    t0 = performance.now();
+    await api.post("/speedtest/upload", payload, { headers: { "Content-Type": "application/octet-stream" } });
+    const upMbps = toMbps(payload.byteLength, performance.now() - t0);
+
+    return { ok: downMbps >= SPEED_OK_MBPS && upMbps >= SPEED_OK_MBPS, downMbps, upMbps };
+  } catch {
+    return { ok: false, downMbps: null, upMbps: null };
+  }
 }
 
 /** Screen sharing and full screen need a desktop Chrome/Edge-class browser. */

@@ -63,6 +63,7 @@ monitoring is off, no photo when identity checks are off.
 | Camera | `getUserMedia` video track is `live` and a sampled frame is not all black | Blocks the exam |
 | Microphone (only if audio monitoring is on) | Audio track is live and the input level goes above silence within 5 s ("say something") | Blocks the exam |
 | Network | `GET /api/health` round-trip under 1500 ms, average of 3 calls | Warning only; the student can continue |
+| Network speed (added 2026-11-19 at the user's request) | 512 KB down via `GET /api/speedtest/download` and 512 KB up via `POST /api/speedtest/upload` (login required, 2 MB cap); both ≥ 1 Mbps. Each exam tick sends ~300 KB, about 0.5 Mbps | Warning only; shows ↓/↑ Mbps |
 | Browser | `navigator.mediaDevices.getDisplayMedia` exists (if screen monitoring is on), and `requestFullscreen` exists | Blocks, with the message "Use Chrome or Edge on a desktop computer" |
 
 There's a "Re-run checks" button. Nothing is sent to the server.
