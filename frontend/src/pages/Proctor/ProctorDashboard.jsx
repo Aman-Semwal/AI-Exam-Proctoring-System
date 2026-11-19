@@ -371,6 +371,7 @@ export default function ProctorDashboard() {
         reviewed: Boolean(v.reviewed ?? prev.reviewed),
         reviewOutcome: v.reviewOutcome || null,
         hasEvidence: Boolean(v.hasEvidence),
+        hasScreenEvidence: Boolean(v.hasScreenEvidence),
         details: v.details || "",
       }));
     } catch (err) {
@@ -1062,6 +1063,17 @@ export default function ProctorDashboard() {
                   <div>
                     <p className="text-[11px] text-slate-500 mb-1.5">Evidence snapshot</p>
                     <EvidenceImage violationId={reviewingIncident.rawId} className="w-full max-h-64 object-contain bg-black" />
+                  </div>
+                )}
+
+                {reviewingIncident.hasScreenEvidence && (
+                  <div>
+                    <p className="text-[11px] text-slate-500 mb-1.5">Screen</p>
+                    <EvidenceImage
+                      violationId={reviewingIncident.rawId}
+                      kind="SCREEN"
+                      className="w-full max-h-64 object-contain bg-black"
+                    />
                   </div>
                 )}
 

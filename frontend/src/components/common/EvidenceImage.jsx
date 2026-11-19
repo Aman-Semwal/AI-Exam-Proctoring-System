@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import api from "../../services/api";
 
-// Loads a violation's webcam snapshot through the authenticated API client —
-// a plain <img src> can't send the JWT, so the image is fetched as a blob.
-const EvidenceImage = ({ violationId, className = "" }) => {
+// Loads a violation's evidence image (kind CAMERA = webcam snapshot, SCREEN = screenshot)
+// through the authenticated API client — a plain <img src> can't send the JWT, so the
+// image is fetched as a blob.
+const EvidenceImage = ({ violationId, kind = "CAMERA", className = "" }) => {
   const [url, setUrl] = useState(null);
   const [failed, setFailed] = useState(false);
 
@@ -13,7 +14,7 @@ const EvidenceImage = ({ violationId, className = "" }) => {
     let cancelled = false;
 
     api
-      .get(`/violations/${violationId}/evidence`, { responseType: "blob" })
+      .get(`/violations/${violationId}/evidence?kind=${kind}`, { responseType: "blob" })
       .then((res) => {
         if (cancelled) return;
         objectUrl = URL.createObjectURL(res.data);
@@ -25,11 +26,13 @@ const EvidenceImage = ({ violationId, className = "" }) => {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [violationId]);
+  }, [violationId, kind]);
 
-  if (failed) return <p className="text-[11px] text-slate-500">Snapshot unavailable.</p>;
+  const label = kind === "SCREEN" ? "Screenshot" : "Snapshot";
+  if (failed) return <p className="text-[11px] text-slate-500">{label} unavailable.</p>;
   if (!url) return <div className={`bg-white/3 animate-pulse rounded-lg ${className}`} />;
-  return <img src={url} alt="Webcam snapshot when the violation was detected" className={`rounded-lg ${className}`} />;
+  const alt = kind === "SCREEN" ? "Student's screen when the violation was detected" : "Webcam snapshot when the violation was detected";
+  return <img src={url} alt={alt} className={`rounded-lg ${className}`} />;
 };
 
 export default EvidenceImage;

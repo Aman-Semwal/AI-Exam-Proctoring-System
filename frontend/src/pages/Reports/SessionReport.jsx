@@ -18,7 +18,17 @@ const SEVERITY_COLORS = {
 const csvCell = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
 
 const downloadCsv = (report) => {
-  const header = ["Time", "Type", "Severity", "Details", "Browser signal", "Away (s)", "Review outcome", "Evidence"];
+  const header = [
+    "Time",
+    "Type",
+    "Severity",
+    "Details",
+    "Browser signal",
+    "Away (s)",
+    "Review outcome",
+    "Evidence",
+    "Screen evidence",
+  ];
   const rows = report.timeline.map((e) => [
     fmt(e.time),
     e.type,
@@ -28,6 +38,7 @@ const downloadCsv = (report) => {
     e.awaySeconds ?? "",
     e.reviewOutcome || "Not reviewed",
     e.hasEvidence ? "Yes" : "No",
+    e.hasScreenEvidence ? "Yes" : "No",
   ]);
   const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n");
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
@@ -76,6 +87,7 @@ const SessionReport = () => {
     ["Ended", fmt(report.endTime)],
     ["Duration", report.durationMinutes != null ? `${report.durationMinutes} min` : "—"],
     ["Score", report.score ?? "—"],
+    ["Consent given", fmt(report.consentGivenAt)],
   ];
 
   return (
@@ -180,11 +192,14 @@ const SessionReport = () => {
                     </div>
                     <p className="text-sm text-slate-300 print:text-black mt-1.5">{e.details}</p>
                   </div>
-                  <div className="sm:w-48 shrink-0">
+                  <div className="sm:w-48 shrink-0 space-y-2">
                     {e.hasEvidence ? (
                       <EvidenceImage violationId={e.violationId} className="w-full h-28 object-cover" />
                     ) : (
                       <p className="text-[11px] text-slate-600 print:text-black/50">No snapshot</p>
+                    )}
+                    {e.hasScreenEvidence && (
+                      <EvidenceImage violationId={e.violationId} kind="SCREEN" className="w-full h-28 object-cover" />
                     )}
                   </div>
                 </li>
