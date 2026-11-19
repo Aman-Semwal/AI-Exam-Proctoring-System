@@ -10,3 +10,6 @@
 classpath.txt
 # Local scratch scripts
 scratch/
+
+# superpowers plan workspaces
+.superpowers/
