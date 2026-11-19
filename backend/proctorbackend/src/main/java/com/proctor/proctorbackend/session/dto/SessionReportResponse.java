@@ -31,6 +31,9 @@ public class SessionReportResponse {
     private String examTitle;
     private Integer score;
 
+    /** When the student agreed to proctoring capture (UTC); null when never given. */
+    private LocalDateTime consentGivenAt;
+
     private Integer trustScore;
     private TrustLevel trustLevel;
 
@@ -49,6 +52,7 @@ public class SessionReportResponse {
         private String details;
         private ReviewOutcome reviewOutcome;
         private boolean hasEvidence;
+        private boolean hasScreenEvidence;
         /** Browser events: which signal fired, and seconds until the student came back. */
         private BrowserSignal browserSignal;
         private Integer awaySeconds;

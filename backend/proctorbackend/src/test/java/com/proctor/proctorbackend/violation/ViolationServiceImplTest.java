@@ -54,14 +54,14 @@ class ViolationServiceImplTest {
     void getEvidence_sameOrg_returnsImage() {
         ViolationEvidence evidence = ViolationEvidence.builder()
                 .violation(violation).contentType("image/jpeg").data(new byte[]{9}).build();
-        when(evidenceRepository.findFirstByViolationId(9L)).thenReturn(Optional.of(evidence));
+        when(evidenceRepository.findFirstByViolationIdAndKind(9L, EvidenceKind.CAMERA)).thenReturn(Optional.of(evidence));
 
         assertArrayEquals(new byte[]{9}, service.getEvidence(9L, "admin@a.com").getData());
     }
 
     @Test
     void getEvidence_none_throwsNotFound() {
-        when(evidenceRepository.findFirstByViolationId(9L)).thenReturn(Optional.empty());
+        when(evidenceRepository.findFirstByViolationIdAndKind(9L, EvidenceKind.CAMERA)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> service.getEvidence(9L, "admin@a.com"));
     }
@@ -88,5 +88,22 @@ class ViolationServiceImplTest {
         ViolationResponse resp = service.markReviewed(9L, null, "admin@a.com");
 
         assertEquals(ReviewOutcome.CONFIRMED, resp.getReviewOutcome());
+    }
+
+    @Test
+    void getEvidence_byKind_returnsScreenshot() {
+        ViolationEvidence screen = ViolationEvidence.builder().violation(violation)
+                .kind(EvidenceKind.SCREEN).contentType("image/jpeg").data(new byte[]{7}).build();
+        when(evidenceRepository.findFirstByViolationIdAndKind(9L, EvidenceKind.SCREEN)).thenReturn(Optional.of(screen));
+
+        assertArrayEquals(new byte[]{7}, service.getEvidence(9L, EvidenceKind.SCREEN, "admin@a.com").getData());
+    }
+
+    @Test
+    void getEvidence_missingKind_throwsNotFound() {
+        when(evidenceRepository.findFirstByViolationIdAndKind(9L, EvidenceKind.SCREEN)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.getEvidence(9L, EvidenceKind.SCREEN, "admin@a.com"));
     }
 }

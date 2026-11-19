@@ -19,4 +19,8 @@ public class BrowserEventRequest {
     /** Webcam frame at the moment the student left (base64 JPEG, optional). */
     @Size(max = 2_000_000, message = "Snapshot is too large")
     private String snapshotBase64;
+
+    /** Optional screenshot taken at the moment of the event. */
+    @Size(max = 2_000_000, message = "Screenshot is too large")
+    private String screenBase64;
 }

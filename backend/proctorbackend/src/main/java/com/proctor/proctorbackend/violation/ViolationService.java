@@ -19,5 +19,7 @@ public interface ViolationService {
     /** The webcam frame behind a violation; 404 when there is none (e.g. browser events). */
     ViolationEvidence getEvidence(Long violationId, String requesterEmail);
 
+    ViolationEvidence getEvidence(Long violationId, EvidenceKind kind, String requesterEmail);
+
     ViolationResponse markReviewed(Long id, ReviewOutcome outcome, String requesterEmail);
 }

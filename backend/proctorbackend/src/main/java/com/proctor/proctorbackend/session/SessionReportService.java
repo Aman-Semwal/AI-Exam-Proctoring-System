@@ -49,9 +49,11 @@ public class SessionReportService {
         List<Violation> violations = violationRepository.findBySessionId(sessionId).stream()
                 .sorted(Comparator.comparing(Violation::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
-        Set<Long> withEvidence = violations.isEmpty() ? Set.of()
-                : new HashSet<>(evidenceRepository.findViolationIdsWithEvidence(
-                        violations.stream().map(Violation::getId).toList()));
+        List<Long> ids = violations.stream().map(Violation::getId).toList();
+        Set<Long> withEvidence = ids.isEmpty() ? Set.of()
+                : new HashSet<>(evidenceRepository.findViolationIdsWithEvidence(ids));
+        Set<Long> withScreen = ids.isEmpty() ? Set.of()
+                : new HashSet<>(evidenceRepository.findViolationIdsWithScreenEvidence(ids));
         TrustScore trust = trustScoreService.calculate(sessionId);
 
         return SessionReportResponse.builder()
@@ -67,6 +69,7 @@ public class SessionReportService {
                 .examId(session.getExam().getId())
                 .examTitle(session.getExam().getTitle())
                 .score(session.getScore())
+                .consentGivenAt(session.getConsentGivenAt())
                 .trustScore(trust.score())
                 .trustLevel(trust.level())
                 .countsByType(countBy(violations, v -> v.getType().name()))
@@ -79,6 +82,7 @@ public class SessionReportService {
                         .details(v.getDetails())
                         .reviewOutcome(v.getReviewOutcome())
                         .hasEvidence(withEvidence.contains(v.getId()))
+                        .hasScreenEvidence(withScreen.contains(v.getId()))
                         .browserSignal(v.getBrowserSignal())
                         .awaySeconds(v.getAwaySeconds())
                         .build()).toList())

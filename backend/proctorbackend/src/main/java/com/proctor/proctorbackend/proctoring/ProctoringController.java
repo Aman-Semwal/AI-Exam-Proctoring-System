@@ -59,7 +59,8 @@ public class ProctoringController {
             @Valid @RequestBody BrowserEventRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
         BrowserEventResponse response = proctoringService.recordBrowserEvent(sessionId, request.getType(),
-                request.getSignal(), request.getSnapshotBase64(), userDetails.getUsername());
+                request.getSignal(), request.getSnapshotBase64(), request.getScreenBase64(),
+                userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success("Browser event recorded", response));
     }
 

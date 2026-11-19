@@ -22,6 +22,7 @@ import com.proctor.proctorbackend.user.User;
 import com.proctor.proctorbackend.user.UserRepository;
 import com.proctor.proctorbackend.violation.Violation;
 import com.proctor.proctorbackend.violation.BrowserSignal;
+import com.proctor.proctorbackend.violation.EvidenceKind;
 import com.proctor.proctorbackend.violation.ViolationEvidence;
 import com.proctor.proctorbackend.violation.ViolationEvidenceRepository;
 import com.proctor.proctorbackend.violation.ViolationRepository;
@@ -1306,5 +1307,66 @@ class ProctoringServiceImplTest {
 
         assertThrows(BadRequestException.class,
                 () -> service.recordBrowserReturn(55L, 903L, 3, false, "student@test.com"));
+    }
+
+    // -----------------------------------------------------------------------
+    // Screenshot evidence
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("screenshot — a frame that records a violation stores webcam AND screen evidence")
+    void processFrame_violation_storesCameraAndScreenEvidence() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.analyze(anyString(), any(), any()))
+                .thenReturn(buildAnalyzeResponse(0, List.of("no_face"), "HIGH", 15));
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.NO_FACE_DETECTED, 0));
+        FrameUploadRequest req = buildRequest(55L, JPEG_B64);
+        req.setScreenBase64(JPEG_B64);
+
+        service.processFrame(req, "student@test.com");
+
+        verify(evidenceRepository).save(argThat((ViolationEvidence e) -> e.getKind() == EvidenceKind.CAMERA));
+        verify(evidenceRepository).save(argThat((ViolationEvidence e) -> e.getKind() == EvidenceKind.SCREEN));
+    }
+
+    @Test
+    @DisplayName("screenshot — a clean frame stores no screenshot")
+    void processFrame_noViolation_storesNoScreenshot() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.analyze(anyString(), any(), any()))
+                .thenReturn(buildAnalyzeResponse(1, List.of(), "LOW", 0));
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.FACE_DETECTED, 1));
+        FrameUploadRequest req = buildRequest(55L, JPEG_B64);
+        req.setScreenBase64(JPEG_B64);
+
+        service.processFrame(req, "student@test.com");
+
+        verify(evidenceRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("screenshot — a bad screenshot is skipped, the webcam evidence is still stored")
+    void processFrame_invalidScreenBase64_keepsCameraEvidence() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+        when(aiServiceClient.analyze(anyString(), any(), any()))
+                .thenReturn(buildAnalyzeResponse(0, List.of("no_face"), "HIGH", 15));
+        when(eventRepository.save(any())).thenReturn(buildEvent(ProctoringEvent.EventType.NO_FACE_DETECTED, 0));
+        FrameUploadRequest req = buildRequest(55L, JPEG_B64);
+        req.setScreenBase64("not base64 !!");
+
+        service.processFrame(req, "student@test.com");
+
+        verify(evidenceRepository, times(1)).save(argThat((ViolationEvidence e) -> e.getKind() == EvidenceKind.CAMERA));
+    }
+
+    @Test
+    @DisplayName("screenshot — a browser event stores the screenshot taken at that moment")
+    void recordBrowserEvent_storesScreenEvidence() {
+        when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
+
+        service.recordBrowserEvent(55L, ViolationType.TAB_SWITCH, null, null, JPEG_B64, "student@test.com");
+
+        verify(evidenceRepository).save(argThat((ViolationEvidence e) ->
+                e.getKind() == EvidenceKind.SCREEN && e.getViolation().getType() == ViolationType.TAB_SWITCH));
     }
 }

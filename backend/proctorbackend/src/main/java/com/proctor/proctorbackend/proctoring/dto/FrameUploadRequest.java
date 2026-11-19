@@ -18,4 +18,8 @@ public class FrameUploadRequest {
     /** Optional 16-bit PCM mono 16 kHz WAV (base64) covering the last frame interval. */
     @Size(max = 1_000_000, message = "Audio chunk is too large")
     private String audioBase64;
+
+    /** Optional screenshot (JPEG, base64) of the student's shared screen; stored only with a violation. */
+    @Size(max = 2_000_000, message = "Screenshot is too large")
+    private String screenBase64;
 }

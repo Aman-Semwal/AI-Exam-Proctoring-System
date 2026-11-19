@@ -124,4 +124,21 @@ class SessionReportServiceTest {
 
         assertThrows(UnauthorizedException.class, () -> service.getReport(55L, "u@x.com"));
     }
+
+    @Test
+    void report_carriesConsentAndScreenFlags() {
+        actingAs(Role.ORG_ADMIN, org);
+        session.setConsentGivenAt(t0.minusMinutes(1));
+        when(violationRepository.findBySessionId(55L)).thenReturn(List.of(
+                v(1, ViolationType.TAB_SWITCH, ViolationSeverity.HIGH, 5),
+                v(2, ViolationType.LOOKING_AWAY, ViolationSeverity.MEDIUM, 9)));
+        when(evidenceRepository.findViolationIdsWithScreenEvidence(anyCollection())).thenReturn(List.of(1L));
+        when(trustScoreService.calculate(55L)).thenReturn(new TrustScore(85, TrustLevel.TRUSTED));
+
+        SessionReportResponse r = service.getReport(55L, "u@x.com");
+
+        assertEquals(t0.minusMinutes(1), r.getConsentGivenAt());
+        assertTrue(r.getTimeline().get(0).isHasScreenEvidence());
+        assertFalse(r.getTimeline().get(1).isHasScreenEvidence());
+    }
 }

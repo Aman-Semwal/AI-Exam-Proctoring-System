@@ -28,6 +28,8 @@ public class ViolationResponse {
     private ReviewOutcome reviewOutcome;
     /** True when a webcam snapshot is stored (GET /api/violations/{id}/evidence). */
     private boolean hasEvidence;
+    /** Whether a screenshot was stored with this violation. */
+    private boolean hasScreenEvidence;
     private BrowserSignal browserSignal;
     private Integer awaySeconds;
     private LocalDateTime createdAt;

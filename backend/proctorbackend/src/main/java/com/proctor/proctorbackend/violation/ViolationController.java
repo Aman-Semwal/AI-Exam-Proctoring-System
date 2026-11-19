@@ -72,12 +72,13 @@ public class ViolationController {
     }
 
     @GetMapping("/{id}/evidence")
-    @Operation(summary = "Webcam snapshot that triggered the violation (image/jpeg)")
+    @Operation(summary = "Webcam snapshot (kind=CAMERA, default) or screenshot (kind=SCREEN) behind the violation")
     @PreAuthorize("hasAnyRole('EXAM_CREATOR', 'PROCTOR', 'ORG_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<byte[]> getEvidence(
             @PathVariable Long id,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "CAMERA") EvidenceKind kind,
             @AuthenticationPrincipal UserDetails userDetails) {
-        ViolationEvidence evidence = violationService.getEvidence(id, userDetails.getUsername());
+        ViolationEvidence evidence = violationService.getEvidence(id, kind, userDetails.getUsername());
         return ResponseEntity.ok()
                 .contentType(org.springframework.http.MediaType.parseMediaType(evidence.getContentType()))
                 .header("Cache-Control", "private, max-age=3600")

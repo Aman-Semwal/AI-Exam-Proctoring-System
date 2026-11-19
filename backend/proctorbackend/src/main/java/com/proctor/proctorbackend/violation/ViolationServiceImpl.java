@@ -96,9 +96,15 @@ public class ViolationServiceImpl implements ViolationService {
     @Override
     @Transactional(readOnly = true)
     public ViolationEvidence getEvidence(Long violationId, String requesterEmail) {
+        return getEvidence(violationId, EvidenceKind.CAMERA, requesterEmail);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ViolationEvidence getEvidence(Long violationId, EvidenceKind kind, String requesterEmail) {
         Violation violation = findById(violationId);
         validateSameOrganization(getUserByEmail(requesterEmail), violation);
-        return evidenceRepository.findFirstByViolationId(violationId)
+        return evidenceRepository.findFirstByViolationIdAndKind(violationId, kind)
                 .orElseThrow(() -> new ResourceNotFoundException("Evidence for violation", violationId));
     }
 
@@ -138,20 +144,26 @@ public class ViolationServiceImpl implements ViolationService {
 
     private List<ViolationResponse> toResponses(List<Violation> violations) {
         if (violations.isEmpty()) return List.of();
-        java.util.Set<Long> withEvidence = new java.util.HashSet<>(
-                evidenceRepository.findViolationIdsWithEvidence(violations.stream().map(Violation::getId).toList()));
-        return violations.stream().map(v -> toResponse(v, withEvidence.contains(v.getId()))).toList();
+        List<Long> ids = violations.stream().map(Violation::getId).toList();
+        java.util.Set<Long> withEvidence = new java.util.HashSet<>(evidenceRepository.findViolationIdsWithEvidence(ids));
+        java.util.Set<Long> withScreen = new java.util.HashSet<>(evidenceRepository.findViolationIdsWithScreenEvidence(ids));
+        return violations.stream()
+                .map(v -> toResponse(v, withEvidence.contains(v.getId()), withScreen.contains(v.getId())))
+                .toList();
     }
 
     private ViolationResponse toResponse(Violation v) {
         boolean hasEvidence = v.getId() != null
                 && !evidenceRepository.findViolationIdsWithEvidence(List.of(v.getId())).isEmpty();
-        return toResponse(v, hasEvidence);
+        boolean hasScreen = v.getId() != null
+                && !evidenceRepository.findViolationIdsWithScreenEvidence(List.of(v.getId())).isEmpty();
+        return toResponse(v, hasEvidence, hasScreen);
     }
 
-    private ViolationResponse toResponse(Violation v, boolean hasEvidence) {
+    private ViolationResponse toResponse(Violation v, boolean hasEvidence, boolean hasScreenEvidence) {
         return ViolationResponse.builder()
                 .hasEvidence(hasEvidence)
+                .hasScreenEvidence(hasScreenEvidence)
                 .id(v.getId())
                 .sessionId(v.getSession().getId())
                 .orgId(v.getOrganization() != null ? v.getOrganization().getId() : null)

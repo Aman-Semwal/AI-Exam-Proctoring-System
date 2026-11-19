@@ -5,7 +5,7 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 
-/** The webcam frame that triggered an AI violation (see V28). */
+/** An image behind a violation: the webcam frame, or a screenshot (see V28, V32). */
 @Entity
 @Table(name = "violation_evidence")
 @Getter
@@ -22,6 +22,11 @@ public class ViolationEvidence {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "violation_id", nullable = false)
     private Violation violation;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private EvidenceKind kind = EvidenceKind.CAMERA;
 
     @Column(name = "content_type", nullable = false, length = 50)
     private String contentType;

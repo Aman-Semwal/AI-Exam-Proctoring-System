@@ -19,6 +19,7 @@ import com.proctor.proctorbackend.user.User;
 import com.proctor.proctorbackend.user.UserRepository;
 import com.proctor.proctorbackend.violation.Violation;
 import com.proctor.proctorbackend.violation.BrowserSignal;
+import com.proctor.proctorbackend.violation.EvidenceKind;
 import com.proctor.proctorbackend.violation.ViolationEvidence;
 import com.proctor.proctorbackend.violation.ViolationEvidenceRepository;
 import com.proctor.proctorbackend.violation.ViolationRepository;
@@ -340,7 +341,10 @@ public class ProctoringServiceImpl implements ProctoringService {
                     .build();
             violationRepository.save(violation); // persist() assigns the id to this same instance
             newlyRecorded.add(violation);
-            saveEvidence(violation, request.getFrameBase64());
+            saveEvidence(violation, request.getFrameBase64(), EvidenceKind.CAMERA);
+            if (request.getScreenBase64() != null && !request.getScreenBase64().isBlank()) {
+                saveEvidence(violation, request.getScreenBase64(), EvidenceKind.SCREEN);
+            }
             persistedTypes.add(javaType);
         }
 
@@ -439,6 +443,14 @@ public class ProctoringServiceImpl implements ProctoringService {
     @Transactional
     public BrowserEventResponse recordBrowserEvent(Long sessionId, ViolationType type, BrowserSignal signal,
                                                    String snapshotBase64, String studentEmail) {
+        return recordBrowserEvent(sessionId, type, signal, snapshotBase64, null, studentEmail);
+    }
+
+    @Override
+    @Transactional
+    public BrowserEventResponse recordBrowserEvent(Long sessionId, ViolationType type, BrowserSignal signal,
+                                                   String snapshotBase64, String screenBase64,
+                                                   String studentEmail) {
         // Severity is fixed server-side so a client cannot downgrade its own violations
         ViolationSeverity severity = switch (type) {
             case TAB_SWITCH      -> ViolationSeverity.HIGH;
@@ -493,7 +505,10 @@ public class ProctoringServiceImpl implements ProctoringService {
         violationRepository.save(stored); // persist() assigns the id to this same instance
         // The webcam frame at that moment: what was the student doing when they left?
         if (snapshotBase64 != null && !snapshotBase64.isBlank()) {
-            saveEvidence(stored, snapshotBase64);
+            saveEvidence(stored, snapshotBase64, EvidenceKind.CAMERA);
+        }
+        if (screenBase64 != null && !screenBase64.isBlank()) {
+            saveEvidence(stored, screenBase64, EvidenceKind.SCREEN);
         }
 
         String alertTopic = "/topic/alerts/" + session.getExam().getId();
@@ -632,7 +647,7 @@ public class ProctoringServiceImpl implements ProctoringService {
     }
 
     /** Stores the frame behind a violation so a reviewer can see why it was flagged. */
-    private void saveEvidence(Violation violation, String frameBase64) {
+    private void saveEvidence(Violation violation, String frameBase64, EvidenceKind kind) {
         byte[] image;
         try {
             image = java.util.Base64.getDecoder().decode(frameBase64);
@@ -643,6 +658,7 @@ public class ProctoringServiceImpl implements ProctoringService {
         }
         evidenceRepository.save(ViolationEvidence.builder()
                 .violation(violation)
+                .kind(kind)
                 .contentType("image/jpeg")
                 .data(image)
                 .build());

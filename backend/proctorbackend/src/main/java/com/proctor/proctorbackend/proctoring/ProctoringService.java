@@ -26,6 +26,10 @@ public interface ProctoringService {
     BrowserEventResponse recordBrowserEvent(Long sessionId, ViolationType type, BrowserSignal signal,
                                             String snapshotBase64, String studentEmail);
 
+    /** Same as above, with a screenshot of the student's screen at that moment (may be null). */
+    BrowserEventResponse recordBrowserEvent(Long sessionId, ViolationType type, BrowserSignal signal,
+                                            String snapshotBase64, String screenBase64, String studentEmail);
+
     /** The student is back: record how long they were away (once; owner only). */
     void recordBrowserReturn(Long sessionId, Long violationId, int awaySeconds, boolean tabHidden,
                              String studentEmail);
