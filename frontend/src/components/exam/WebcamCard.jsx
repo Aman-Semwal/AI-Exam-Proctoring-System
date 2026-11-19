@@ -13,6 +13,9 @@ const JPEG_QUALITY = 0.75;
 
 // Frames are scaled down to this width at most (~30–50 KB) — enough for the AI and evidence
 const MAX_FRAME_WIDTH = 640;
+// Screenshots of the shared screen: wide enough to read text, small enough per tick
+const MAX_SCREEN_WIDTH = 1280;
+const SCREEN_JPEG_QUALITY = 0.6;
 
 /**
  * WebcamCard
@@ -32,13 +35,15 @@ const MAX_FRAME_WIDTH = 640;
  *   snapshotRef {Ref} — receives { capture() } → base64 JPEG of the current frame (or null),
  *                       used as evidence when the student leaves the exam window.
  */
-const WebcamCard = ({ sessionId, audioEnabled = false, onSessionEnded, snapshotRef }) => {
+const WebcamCard = ({ sessionId, audioEnabled = false, onSessionEnded, snapshotRef, screenStream = null }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const intervalRef = useRef(null);
   const configErrorLoggedRef = useRef(false);
   const recorderRef = useRef(null);
+  // Off-screen <video> playing the shared screen, so frames can be drawn from it
+  const screenVideoRef = useRef(null);
 
   const [camState, setCamState] = useState("idle"); // idle | loading | active | denied | error
   const [configError, setConfigError] = useState(false);
@@ -82,6 +87,40 @@ const WebcamCard = ({ sessionId, audioEnabled = false, onSessionEnded, snapshotR
     }
   }, [audioEnabled]);
 
+  // ─── Shared screen → off-screen video ──────────────────────────────────────
+  useEffect(() => {
+    if (!screenStream) {
+      screenVideoRef.current = null;
+      return;
+    }
+    const video = document.createElement("video");
+    video.muted = true;
+    video.playsInline = true;
+    video.srcObject = screenStream;
+    video.play().catch(() => {});
+    screenVideoRef.current = video;
+    return () => {
+      video.srcObject = null;
+      if (screenVideoRef.current === video) screenVideoRef.current = null;
+    };
+  }, [screenStream]);
+
+  /** Base64 JPEG of the shared screen right now, or null. Never throws. */
+  const captureScreen = useCallback(() => {
+    try {
+      const video = screenVideoRef.current;
+      if (!video || video.readyState < video.HAVE_CURRENT_DATA || video.videoWidth === 0) return null;
+      const canvas = document.createElement("canvas");
+      const scale = Math.min(1, MAX_SCREEN_WIDTH / video.videoWidth);
+      canvas.width = Math.round(video.videoWidth * scale);
+      canvas.height = Math.round(video.videoHeight * scale);
+      canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL("image/jpeg", SCREEN_JPEG_QUALITY).replace(/^data:image\/jpeg;base64,/, "");
+    } catch {
+      return null; // a failed screenshot must never drop the webcam frame
+    }
+  }, []);
+
   // ─── Capture one frame and POST to backend ─────────────────────────────────
   const captureAndPostFrame = useCallback(async () => {
     if (!sessionId || String(sessionId).trim() === "") {
@@ -115,10 +154,13 @@ const WebcamCard = ({ sessionId, audioEnabled = false, onSessionEnded, snapshotR
 
     try {
       const audioBase64 = recorderRef.current?.takeChunk() ?? undefined;
+      // Stored by the backend only when this frame records a violation
+      const screenBase64 = captureScreen() ?? undefined;
       const response = await api.post("/proctor/frame", {
         sessionId: Number(sessionId),
         frameBase64,
         audioBase64,
+        screenBase64,
       });
 
       const event = response.data?.data;
@@ -140,7 +182,7 @@ const WebcamCard = ({ sessionId, audioEnabled = false, onSessionEnded, snapshotR
       // Otherwise non-fatal — a transient failure shouldn't crash the exam.
       console.warn("Frame POST failed:", err?.response?.data?.message || err.message);
     }
-  }, [sessionId, onSessionEnded]);
+  }, [sessionId, onSessionEnded, captureScreen]);
 
   // ─── Snapshot on demand (evidence for tab switches / full-screen exits) ────
   useEffect(() => {
@@ -156,8 +198,9 @@ const WebcamCard = ({ sessionId, audioEnabled = false, onSessionEnded, snapshotR
         canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
         return canvas.toDataURL("image/jpeg", JPEG_QUALITY).replace(/^data:image\/jpeg;base64,/, "");
       },
+      captureScreen,
     };
-  }, [snapshotRef]);
+  }, [snapshotRef, captureScreen]);
 
   // ─── Lifecycle: mount → start camera; unmount → stop ──────────────────────
   useEffect(() => {

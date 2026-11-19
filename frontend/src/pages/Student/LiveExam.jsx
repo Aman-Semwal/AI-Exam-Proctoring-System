@@ -17,6 +17,8 @@ import ScreenShareStep from "../../components/exam/setup/ScreenShareStep";
 import api from "../../services/api";
 import useWebSocket from "../../services/useWebSocket";
 import { DEFAULT_PROCTORING_RULES } from "../../utils/proctoringRules";
+import { requestEntireScreen } from "../../utils/screenShare";
+import useClipboardGuard from "../../hooks/useClipboardGuard";
 
 // Minimum gap between two reports of the same browser event type
 const EVENT_DEBOUNCE_MS = 3000;
@@ -95,6 +97,13 @@ const LiveExam = () => {
   // The student's own recorded browser events — nothing is hidden from them
   const [myEvents, setMyEvents] = useState([]);
   const [terminatedNotice, setTerminatedNotice] = useState("");
+  // The student stopped sharing their screen; the exam is blocked until they resume
+  const [screenStopped, setScreenStopped] = useState(false);
+  const [screenResumeError, setScreenResumeError] = useState("");
+  const [clipboardToast, setClipboardToast] = useState(false);
+  // Set by the lockdown effect so other handlers can report events through the same path
+  const reportEventRef = useRef(null);
+  const finishAwayRef = useRef(null);
 
   // Pending answers live in QuestionPanel; flush them before anything ends the session
   const answerSyncRef = useRef(null);
@@ -256,7 +265,9 @@ const LiveExam = () => {
     };
 
     const reportEvent = async (type, signal) => {
-      const pending = awayRef.current[type];
+      // Copy/paste attempts: the student never leaves, so no time away is tracked
+      const tracksAway = type !== "COPY_PASTE_ATTEMPT";
+      const pending = tracksAway ? awayRef.current[type] : null;
       if (pending && !pending.returnedAt) {
         // Same absence, another signal (blur then tab hidden) — remember it, don't count twice
         if (signal === "TAB_HIDDEN") pending.hidden = true;
@@ -269,16 +280,24 @@ const LiveExam = () => {
 
       // Grab the frame now, before any await: it shows the moment the student left
       const snapshotBase64 = snapshotRef.current?.capture() ?? undefined;
+      const screenBase64 = snapshotRef.current?.captureScreen?.() ?? undefined;
       const entry = { violationId: null, leftAt: now, returnedAt: null, hidden: signal === "TAB_HIDDEN", done: false };
-      awayRef.current[type] = entry;
+      if (tracksAway) awayRef.current[type] = entry;
 
       try {
         if (type === "TAB_SWITCH") await flushAnswers();
-        const res = await api.post(`/proctor/session/${sessionId}/browser-event`, { type, signal, snapshotBase64 });
+        const res = await api.post(`/proctor/session/${sessionId}/browser-event`, {
+          type,
+          signal,
+          snapshotBase64,
+          screenBase64,
+        });
         const result = res.data?.data;
         entry.violationId = result?.violationId ?? null;
-        setMyEvents((prev) => [...prev, { violationId: entry.violationId, type, at: now, awaySeconds: null }]);
-        sendReturn(entry); // the student may already be back
+        if (entry.violationId) {
+          setMyEvents((prev) => [...prev, { violationId: entry.violationId, type, at: now, awaySeconds: null }]);
+        }
+        if (tracksAway) sendReturn(entry); // the student may already be back
         if (type === "TAB_SWITCH" && result) setTabWarnings(result.tabSwitchCount);
         if (result?.autoSubmitted) {
           // This page unmounts; still record the time away when the student comes back
@@ -303,6 +322,9 @@ const LiveExam = () => {
       }
     };
 
+    reportEventRef.current = reportEvent;
+    finishAwayRef.current = finishAway;
+
     const handleVisibilityChange = () => {
       if (document.hidden) reportEvent("TAB_SWITCH", "TAB_HIDDEN");
       else finishAway("TAB_SWITCH");
@@ -323,8 +345,58 @@ const LiveExam = () => {
       window.removeEventListener("blur", handleBlur);
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      reportEventRef.current = null;
+      finishAwayRef.current = null;
     };
   }, [step, sessionId, navigate, flushAnswers]);
+
+  // 3b. Copy, paste, right-click and blocked shortcuts — blocked, shown, recorded
+  const clipboardToastTimer = useRef(null);
+  useClipboardGuard({
+    enabled: step === "active_exam" && rules.clipboardBlockingEnabled,
+    onBlocked: (signal) => {
+      setClipboardToast(true);
+      clearTimeout(clipboardToastTimer.current);
+      clipboardToastTimer.current = setTimeout(() => setClipboardToast(false), 2000);
+      reportEventRef.current?.("COPY_PASTE_ATTEMPT", signal);
+    },
+  });
+
+  // 3c. The student stops sharing their screen → record it and block the exam
+  useEffect(() => {
+    if (step !== "active_exam" || !screenStream) return;
+    const track = screenStream.getVideoTracks()[0];
+    if (!track) return;
+    const onEnded = () => {
+      setScreenStopped(true);
+      reportEventRef.current?.("SCREEN_SHARE_STOPPED", "SCREEN_SHARE_ENDED");
+    };
+    track.addEventListener("ended", onEnded);
+    // Removed before the tracks are stopped on unmount/submit, so ending the exam
+    // never reports a stopped share (stop() itself does not fire "ended" either)
+    return () => track.removeEventListener("ended", onEnded);
+  }, [step, screenStream]);
+
+  // Release the screen share when the page goes away (submit, results, navigation)
+  useEffect(
+    () => () => {
+      screenStreamRef.current?.getTracks().forEach((t) => t.stop());
+      if (import.meta.env.DEV) delete window.__proctorScreenStream;
+    },
+    []
+  );
+
+  const resumeScreenShare = async () => {
+    setScreenResumeError("");
+    try {
+      const stream = await requestEntireScreen();
+      handleScreenShared(stream);
+      setScreenStopped(false);
+      finishAwayRef.current?.("SCREEN_SHARE_STOPPED");
+    } catch (err) {
+      setScreenResumeError(err.message);
+    }
+  };
 
   // Time is up: save what's pending, submit, and show results. The server may already
   // have expired the session (it checks every 30 s) — results are shown either way.
@@ -381,6 +453,8 @@ const LiveExam = () => {
   const handleScreenShared = (stream) => {
     screenStreamRef.current = stream;
     setScreenStream(stream);
+    // Lets the e2e test stop the share like a student clicking "Stop sharing"
+    if (import.meta.env.DEV) window.__proctorScreenStream = stream;
   };
 
   const canStart = systemOk && consentDone && screenDone && (!photoRequired || photoTaken);
@@ -669,6 +743,7 @@ const LiveExam = () => {
                 audioEnabled={rules.audioMonitoringEnabled}
                 onSessionEnded={handleSessionEnded}
                 snapshotRef={snapshotRef}
+                screenStream={screenStream}
               />
 
               <AIStatus sessionId={sessionId} tabSwitches={tabWarnings} tabSwitchLimit={rules.tabSwitchLimit} />
@@ -690,7 +765,32 @@ const LiveExam = () => {
         </div>
       )}
 
-      {!isFullscreen && !terminatedNotice && (
+      {clipboardToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-60 bg-rose-600 text-white text-sm font-medium px-4 py-2 rounded-lg shadow-lg">
+          Copy and paste are disabled during the exam
+        </div>
+      )}
+
+      {screenStopped && !terminatedNotice && (
+        <div className="fixed inset-0 z-60 bg-black/90 flex items-center justify-center p-6">
+          <div className="bg-[#121520] border border-rose-500/20 rounded-2xl p-8 max-w-md w-full text-center">
+            <FaExclamationTriangle size={36} className="text-rose-400 mx-auto mb-4" />
+            <h2 className="text-lg font-semibold text-white">Screen sharing stopped</h2>
+            <p className="text-sm text-slate-400 mt-2">
+              Screen sharing stopped. Resume sharing to continue. This has been recorded and reported to your proctor.
+            </p>
+            {screenResumeError && <p className="text-xs text-rose-400 mt-3">{screenResumeError}</p>}
+            <button
+              onClick={resumeScreenShare}
+              className="mt-6 bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-lg font-semibold transition"
+            >
+              Resume sharing
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!isFullscreen && !terminatedNotice && !screenStopped && (
         <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-6">
           <div className="bg-[#121520] border border-amber-500/20 rounded-2xl p-8 max-w-md w-full text-center">
             <FaExclamationTriangle size={36} className="text-amber-400 mx-auto mb-4" />
