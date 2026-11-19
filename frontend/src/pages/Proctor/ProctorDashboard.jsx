@@ -984,7 +984,8 @@ export default function ProctorDashboard() {
       ════════════════════════════════════════════════════════════════════════ */}
       {reviewingIncident && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-[#121520] border border-white/10 rounded-xl shadow-2xl p-6">
+          {/* Scrolls when two evidence images make it taller than the screen */}
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto bg-[#121520] border border-white/10 rounded-xl shadow-2xl p-6">
             <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/7">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <FaExclamationTriangle className="text-amber-400" size={14} />
