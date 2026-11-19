@@ -471,7 +471,8 @@ public class ProctoringServiceImpl implements ProctoringService {
         ProctoringRules rules = session.getExam().getProctoringRules();
         if ((type == ViolationType.SCREEN_SHARE_STOPPED && !rules.isScreenMonitoringEnabled())
                 || (type == ViolationType.COPY_PASTE_ATTEMPT && !rules.isClipboardBlockingEnabled())) {
-            throw new IllegalStateException("Rule disabled");
+            // 400, not 409: the exam page treats any 409 as "session ended"
+            throw new BadRequestException("Rule disabled for this exam: " + type);
         }
         // A burst of Ctrl+V presses is one attempt, not twenty violations
         if (type == ViolationType.COPY_PASTE_ATTEMPT) {

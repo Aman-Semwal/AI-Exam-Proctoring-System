@@ -1274,15 +1274,15 @@ class ProctoringServiceImplTest {
     }
 
     @Test
-    @DisplayName("A browser event whose rule is off for the exam is rejected (409)")
-    void recordBrowserEvent_ruleDisabled_throwsConflict() {
+    @DisplayName("A browser event whose rule is off is rejected as 400 — never 409, which the client reads as session ended")
+    void recordBrowserEvent_ruleDisabled_throwsBadRequest() {
         when(sessionRepository.findById(55L)).thenReturn(Optional.of(activeSession));
         exam.getProctoringRules().setClipboardBlockingEnabled(false);
         exam.getProctoringRules().setScreenMonitoringEnabled(false);
 
-        assertThrows(IllegalStateException.class, () -> service.recordBrowserEvent(55L,
+        assertThrows(BadRequestException.class, () -> service.recordBrowserEvent(55L,
                 ViolationType.COPY_PASTE_ATTEMPT, BrowserSignal.PASTE, null, "student@test.com"));
-        assertThrows(IllegalStateException.class, () -> service.recordBrowserEvent(55L,
+        assertThrows(BadRequestException.class, () -> service.recordBrowserEvent(55L,
                 ViolationType.SCREEN_SHARE_STOPPED, null, null, "student@test.com"));
         verify(violationRepository, never()).save(any());
     }
