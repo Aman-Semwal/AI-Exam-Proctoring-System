@@ -13,3 +13,6 @@ scratch/
 
 # superpowers plan workspaces
 .superpowers/
+
+# graphify knowledge graph output (regenerate with graphify update .)
+graphify-out/
