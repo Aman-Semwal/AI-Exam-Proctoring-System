@@ -294,7 +294,7 @@ const HowItWorks = () => {
                 isDark ? "text-blue-400" : "text-blue-600"
               }`}
             >
-              Live & Synchronized
+              Live &amp; Synchronized
             </span>
             <h2
               className={`text-3xl sm:text-5xl font-extrabold tracking-tight mt-2 ${
@@ -396,7 +396,7 @@ const HowItWorks = () => {
                       isDark ? "text-slate-400" : "text-slate-600"
                     }`}
                   >
-                    Scan a QR code on candidate's mobile for secondary hands &
+                    Scan a QR code on candidate's mobile for secondary hands &amp;
                     desk monitoring.
                   </p>
                 </div>
